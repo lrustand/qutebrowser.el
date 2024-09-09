@@ -58,33 +58,34 @@
     (cdr (or (assoc selected candidates)
              (cons nil selected)))))
 
-(defun qute-launcher--internal (target)
-  (let ((url (qute-launcher--select-from-history))
+(defun qute-launcher--internal (&optional url target)
+  (let ((url (or url
+                 (qute-launcher--select-from-history)))
         (pipe (getenv "QUTE_FIFO"))
         (flag (pcase target
                     ('window "-w")
                     ('tab "-t")
                     ('private-window "-p")
-                    ('auto "auto"))))
+                    ('auto ""))))
     (if pipe
         (write-region (format "open %s %s" flag url) nil pipe t)
       (start-process "qutebrowser" nil "qutebrowser" "--target" (symbol-name target) url))))
 
-(defun qute-launcher ()
+(defun qute-launcher (&optional url _)
   (interactive)
-  (qute-launcher--internal 'auto))
+  (qute-launcher--internal url 'auto))
 
-(defun qute-launcher-tab ()
+(defun qute-launcher-tab (&optional url _)
   (interactive)
-  (qute-launcher--internal 'tab))
+  (qute-launcher--internal url 'tab))
 
-(defun qute-launcher-window ()
+(defun qute-launcher-window (&optional url _)
   (interactive)
-  (qute-launcher--internal 'window))
+  (qute-launcher--internal url 'window))
 
-(defun qute-launcher-private ()
+(defun qute-launcher-private (&optional url _)
   (interactive)
-  (qute-launcher--internal 'private-window))
+  (qute-launcher--internal url 'private-window))
 
 
 (provide 'qute-launcher)
