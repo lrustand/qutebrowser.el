@@ -30,7 +30,7 @@
 ;; i.e. remove Google, Ebay, Amazon, Youtube searches etc
 (require 'sqlite)
 (require 'marginalia)
-(defun qute-launcher--select-from-history ()
+(defun qute-launcher--select-from-history (url)
   (let* ((db (sqlite-open "~/.local/share/qutebrowser/history.sqlite"))
          (history (sqlite-select db "SELECT url,substr(title,0,99) FROM History GROUP BY url ORDER BY COUNT(url) DESC"))
          (candidates (mapcar (lambda (row)
@@ -53,14 +53,16 @@
                   (category . qutebrowser-history)
                   (annotation-function . nil))
               (complete-with-action action candidates string pred))))
-         (selected (completing-read "Choose URL from history: " completion-table nil nil)))
+         (selected (completing-read "Choose URL from history: " completion-table nil nil url)))
     ;; Return the URL of the selected candidate
-    (cdr (or (assoc selected candidates)
-             (cons nil selected)))))
+    (if selected
+        (cdr (or (assoc selected candidates)
+                 (cons nil selected)))
+      nil)))
 
-(defun qute-launcher--internal (&optional url target)
-  (let ((url (or url
-                 (qute-launcher--select-from-history)))
+(defun qute-launcher--internal (&optional url target prefilled)
+  (let ((url (or (and (not prefilled) url)
+                 (qute-launcher--select-from-history url)))
         (pipe (getenv "QUTE_FIFO"))
         (flag (pcase target
                     ('window "-w")
@@ -71,21 +73,21 @@
         (write-region (format "open %s %s" flag url) nil pipe t)
       (start-process "qutebrowser" nil "qutebrowser" "--target" (symbol-name target) url))))
 
-(defun qute-launcher (&optional url _)
+(defun qute-launcher (&optional url _ prefilled)
   (interactive)
-  (qute-launcher--internal url 'auto))
+  (qute-launcher--internal url 'auto prefilled))
 
-(defun qute-launcher-tab (&optional url _)
+(defun qute-launcher-tab (&optional url _ prefilled)
   (interactive)
-  (qute-launcher--internal url 'tab))
+  (qute-launcher--internal url 'tab prefilled))
 
-(defun qute-launcher-window (&optional url _)
+(defun qute-launcher-window (&optional url _ prefilled)
   (interactive)
-  (qute-launcher--internal url 'window))
+  (qute-launcher--internal url 'window prefilled))
 
-(defun qute-launcher-private (&optional url _)
+(defun qute-launcher-private (&optional url _ prefilled)
   (interactive)
-  (qute-launcher--internal url 'private-window))
+  (qute-launcher--internal url 'private-window prefilled))
 
 
 (provide 'qute-launcher)
