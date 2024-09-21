@@ -34,9 +34,11 @@
 (require 'exwm)
 
 (defvar qutebrowser--target 'auto)
+(defvar qutebrowser-history-database
+  "~/.local/share/qutebrowser/history.sqlite")
 
 (defun qutebrowser-history ()
-  (let ((db (sqlite-open "~/.local/share/qutebrowser/history.sqlite")))
+  (let ((db (sqlite-open qutebrowser-history-database)))
     (sqlite-select db "SELECT url,substr(title,0,99) FROM History GROUP BY url ORDER BY
 COUNT(url) DESC")))
 
