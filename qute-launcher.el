@@ -116,7 +116,6 @@ website title, to allow searching based on either one."
     ;; Specify either :action or :state
     :action ,#'consult--buffer-action ;; No preview
     ;; :state ,#'consult--buffer-state  ;; Preview
-    ;; HACK to workaround that it doesn't work in the other source
     :items
     ,(lambda () (consult--buffer-query
                  :sort 'visibility
