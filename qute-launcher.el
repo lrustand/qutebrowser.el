@@ -42,21 +42,23 @@
     (sqlite-select db "SELECT url,substr(title,0,99) FROM History GROUP BY url ORDER BY
 COUNT(url) DESC")))
 
+(defun qutebrowser--pseudo-annotate (row)
+  (let* ((url (nth 0 row))
+         (title (nth 1 row))
+         (display-url (truncate-string-to-width url 50 0 ?\ )))
+    (cons
+     (format "%s %s"
+             display-url
+             (propertize title
+                         'face 'marginalia-value))
+     url)))
+
 (defun qutebrowser-history-candidates ()
   "Returns a list of completion candidates from qutebrowser
 history. Candidates contain the url, and a pseudo-annotation with the
 website title, to allow searching based on either one."
   (let* ((history (qutebrowser-history)))
-    (mapcar (lambda (row)
-              (let* ((url (nth 0 row))
-                     (title (nth 1 row))
-                     (display-url (truncate-string-to-width url 50 0 ?\ )))
-                (cons
-                 (format "%s %s"
-                         display-url
-                         (propertize title
-                                     'face 'marginalia-value))
-                 url)))
+    (mapcar #'qutebrowser--pseudo-annotate
             history)))
 
 (defun qutebrowser-open-url (url)
