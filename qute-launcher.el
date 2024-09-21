@@ -32,6 +32,7 @@
 (require 'marginalia)
 (require 'consult)
 (require 'exwm)
+(require 'json)
 
 (defvar qutebrowser--target 'auto)
 (defvar qutebrowser-history-database
@@ -140,6 +141,46 @@ website title, to allow searching based on either one."
 
 ;;(add-to-list 'consult-buffer-sources 'qutebrowser-buffer-source 'append)
 
+
+(defvar qutebrowser-ipc-protocol-version 1
+  "The protocol version for qutebrowser IPC.")
+
+(defun qutebrowser-ipc-socket-path ()
+  "Return the path to qutebrowser's IPC socket."
+  (expand-file-name
+   (format "qutebrowser/ipc-%s" (md5 (user-login-name)))
+   (or (getenv "XDG_RUNTIME_DIR")
+       (format "/run/user/%d" (user-real-uid)))))
+
+(defun qutebrowser-ipc-send (&rest commands)
+  "Send COMMANDS to qutebrowser via IPC."
+  (let* ((socket-path (qutebrowser-ipc-socket-path))
+         (data (json-encode `(("args" . ,commands)
+                              ("target_arg" . nil)
+                              ("protocol_version" . ,qutebrowser-ipc-protocol-version))))
+         process)
+    (condition-case err
+        (progn
+          (setq process (make-network-process :name "qutebrowser-ipc"
+                                              :family 'local
+                                              :service socket-path
+                                              :coding 'utf-8))
+          (process-send-string process (concat data "\n"))
+          (let ((response (or (process-buffer process)
+                              (with-temp-buffer
+                                (set-process-buffer process (current-buffer))
+                                (accept-process-output process 1)
+                                (buffer-string))))))
+          (delete-process process))
+      (file-error
+       (message "Error connecting to qutebrowser IPC socket: %s" (error-message-string err)))
+      (error
+       (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err))))))
+
+(defun qutebrowser-ipc-open-url (url)
+  "Open URL in qutebrowser."
+  (interactive "sEnter URL: ")
+  (qutebrowser-ipc-send (format ":open %s" url))))
 
 
 (provide 'qute-launcher)
