@@ -91,7 +91,7 @@ website title, to allow searching based on either one."
 URL is the url to open, and PREFILLED is t if the url should be used as
 the initial input for completion."
   (if (and url (not prefilled))
-      (qutebrowser-open-url url)
+      (qutebrowser-ipc-open-url url)
     (let* ((res (consult--multi '(qutebrowser-buffer-source
                                   qutebrowser-history-buffer-source)
                                 :initial url
