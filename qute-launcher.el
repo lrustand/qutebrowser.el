@@ -90,7 +90,7 @@ website title, to allow searching based on either one."
            (selected (car res)))
       ;; If none of the buffer sources handled it
       (unless (plist-get plist :match)
-        (qutebrowser-open-url selected)))))
+        (qutebrowser-ipc-open-url selected)))))
 
 (defun qute-launcher (&optional url _ prefilled)
   (interactive)
@@ -151,7 +151,7 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
     :narrow ?h
     :history nil
     :category buffer
-    :action ,#'qutebrowser-open-url
+    :action ,#'qutebrowser-ipc-open-url
     :items
     ,#'qutebrowser-history-candidates))
 
@@ -195,8 +195,9 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
 
 (defun qutebrowser-ipc-open-url (url)
   "Open URL in qutebrowser."
-  (interactive "sEnter URL: ")
-  (qutebrowser-ipc-send (format ":open %s" url))))
+  (let* ((target (or qutebrowser--target 'auto))
+         (flag (qutebrowser-target-to-flag target)))
+    (qutebrowser-ipc-send (format ":open %s %s" flag url))))
 
 
 (provide 'qute-launcher)
