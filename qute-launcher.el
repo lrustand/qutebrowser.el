@@ -112,6 +112,19 @@ website title, to allow searching based on either one."
     (qute-launcher--internal url prefilled)))
 
 
+(defun qutebrowser-format-window-entry (buffer)
+  "Format a `consult--multi' entry for BUFFER.
+Expects the `buffer-name' of BUFFER to be propertized with a url field."
+  (let* ((bufname (buffer-name buffer))
+         (title (substring-no-properties bufname))
+         (url (get-text-property 0 'url bufname)))
+    (cons
+     (qutebrowser--pseudo-annotate
+      (list
+       (truncate-string-to-width (or url "") 50)
+       (truncate-string-to-width title 99)))
+     buffer)))
+
 (defvar qutebrowser-buffer-source
   `(;; consult-buffer source for open Qutebrowser windows
     :name "Qutebrowser buffers"
@@ -119,12 +132,11 @@ website title, to allow searching based on either one."
     :narrow ?q
     :category buffer
     ;; Specify either :action or :state
-    :action ,#'consult--buffer-action ;; No preview
-    ;; :state ,#'consult--buffer-state  ;; Preview
+    :action ,#'switch-to-buffer
     :items
     ,(lambda () (consult--buffer-query
                  :sort 'visibility
-                 :as #'buffer-name
+                 :as #'qutebrowser-format-window-entry
                  :predicate (lambda (buf)
                               (with-current-buffer buf
                                 (string-equal "qutebrowser"
