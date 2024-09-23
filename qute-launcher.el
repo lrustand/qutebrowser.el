@@ -18,7 +18,7 @@
 
 ;; Author: Lars Rustand
 ;; URL: http://githhub.com/lrustand/qute-launcher
-;; Version: 
+;; Version: 0
 
 ;;; Commentary:
 
@@ -39,24 +39,31 @@
   "~/.local/share/qutebrowser/history.sqlite")
 
 (defun qutebrowser-history ()
+  "Get the Qutebrowser history from the sqlite database."
   (let ((db (sqlite-open qutebrowser-history-database)))
-    (sqlite-select db "SELECT url,substr(title,0,99) FROM History GROUP BY url ORDER BY
-COUNT(url) DESC")))
+    (sqlite-select db "SELECT url,substr(title,0,99)
+                       FROM History
+                       GROUP BY url
+                       ORDER BY
+                       COUNT(url) DESC")))
 
-(defun qutebrowser--pseudo-annotate (row)
+(defun qutebrowser--pseudo-annotate (row &optional buffer)
+  "Create pseudo-annotated entries from each ROW.
+Optionally embeds BUFFER as a text property."
   (let* ((url (nth 0 row))
          (title (nth 1 row))
          (display-url (truncate-string-to-width url 50 0 ?\ )))
-    (cons
-     (format "%s %s"
-             display-url
-             (propertize title
-                         'face 'marginalia-value))
-     url)))
+    (format "%s %s"
+            (propertize display-url
+                        'url url
+                        'title title
+                        'buffer buffer)
+            (propertize title
+                        'face 'marginalia-value))))
 
 (defun qutebrowser-history-candidates ()
-  "Returns a list of completion candidates from qutebrowser
-history. Candidates contain the url, and a pseudo-annotation with the
+  "Lists completion candidates from Qutebrowser history.
+Candidates contain the url, and a pseudo-annotation with the
 website title, to allow searching based on either one."
   (let* ((history (qutebrowser-history)))
     (mapcar #'qutebrowser--pseudo-annotate
@@ -80,6 +87,9 @@ website title, to allow searching based on either one."
       (start-process "qutebrowser" nil "qutebrowser" "--target" (symbol-name target) url))))
 
 (defun qute-launcher--internal (&optional url prefilled)
+  "Internal dispatcher for the user-facing commands.
+URL is the url to open, and PREFILLED is t if the url should be used as
+the initial input for completion."
   (if (and url (not prefilled))
       (qutebrowser-open-url url)
     (let* ((res (consult--multi '(qutebrowser-buffer-source
@@ -93,6 +103,9 @@ website title, to allow searching based on either one."
         (qutebrowser-ipc-open-url selected)))))
 
 (defun qute-launcher (&optional url _ prefilled)
+  "Open URL in Qutebrowser in the default target.
+PREFILLED is t if the URL instead should be used as the initial text
+input."
   (interactive)
   (qute-launcher--internal url prefilled))
 
@@ -182,11 +195,6 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
                                               :service socket-path
                                               :coding 'utf-8))
           (process-send-string process (concat data "\n"))
-          (let ((response (or (process-buffer process)
-                              (with-temp-buffer
-                                (set-process-buffer process (current-buffer))
-                                (accept-process-output process 1)
-                                (buffer-string))))))
           (delete-process process))
       (file-error
        (message "Error connecting to qutebrowser IPC socket: %s" (error-message-string err)))
