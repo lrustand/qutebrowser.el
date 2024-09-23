@@ -62,14 +62,19 @@ website title, to allow searching based on either one."
     (mapcar #'qutebrowser--pseudo-annotate
             history)))
 
+(defun qutebrowser-target-to-flag (target)
+  "Return the flag for TARGET."
+  (pcase target
+    ('window "-w")
+    ('tab "-t")
+    ('private-window "-p")
+    ('auto "")))
+
 (defun qutebrowser-open-url (url)
+  "Open URL in Qutebrowser using cmdline or fifo."
   (let* ((pipe (getenv "QUTE_FIFO"))
          (target (or qutebrowser--target 'auto))
-         (flag (pcase target
-                 ('window "-w")
-                 ('tab "-t")
-                 ('private-window "-p")
-                 ('auto ""))))
+         (flag (qutebrowser-target-to-flag target)))
     (if pipe
         (write-region (format "open %s %s" flag url) nil pipe t)
       (start-process "qutebrowser" nil "qutebrowser" "--target" (symbol-name target) url))))
