@@ -77,15 +77,14 @@ website title, to allow searching based on either one."
     ('private-window "-p")
     ('auto "")))
 
-(defun qute-launcher--internal (&optional url prefilled)
+(defun qute-launcher--internal (&optional url initial)
   "Internal dispatcher for the user-facing commands.
-URL is the url to open, and PREFILLED is t if the url should be used as
-the initial input for completion."
-  (if (and url (not prefilled))
+URL is the url to open, and INITIAL is the initial input for completion."
+  (if url
       (qutebrowser-ipc-open-url url)
     (let* ((res (consult--multi '(qutebrowser-buffer-source
                                   qutebrowser-history-buffer-source)
-                                :initial url
+                                :initial initial
                                 :sort nil))
            (plist (cdr res))
            (selected (car res)))
@@ -95,22 +94,27 @@ the initial input for completion."
 
 (defun qute-launcher (&optional url _ prefilled)
   "Open URL in Qutebrowser in the default target.
-PREFILLED is t if the URL instead should be used as the initial text
-input."
+Set initial completion input to PREFILLED."
   (interactive)
   (qute-launcher--internal url prefilled))
 
 (defun qute-launcher-tab (&optional url _ prefilled)
+  "Open URL in Qutebrowser in a new tab.
+Set initial completion input to PREFILLED."
   (interactive)
   (let ((qutebrowser--target 'tab))
     (qute-launcher--internal url prefilled)))
 
 (defun qute-launcher-window (&optional url _ prefilled)
+  "Open URL in Qutebrowser in a new window.
+Set initial completion input to PREFILLED."
   (interactive)
   (let ((qutebrowser--target 'window))
     (qute-launcher--internal url prefilled)))
 
 (defun qute-launcher-private (&optional url _ prefilled)
+  "Open URL in Qutebrowser in a private window.
+Set initial completion input to PREFILLED."
   (interactive)
   (let ((qutebrowser--target 'private-window))
     (qute-launcher--internal url prefilled)))
@@ -135,7 +139,6 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
     :hidden nil
     :narrow ?q
     :category buffer
-    ;; Specify either :action or :state
     :action ,#'switch-to-buffer
     :items
     ,(lambda () (consult--buffer-query
