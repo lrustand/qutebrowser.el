@@ -77,15 +77,6 @@ website title, to allow searching based on either one."
     ('private-window "-p")
     ('auto "")))
 
-(defun qutebrowser-open-url (url)
-  "Open URL in Qutebrowser using cmdline or fifo."
-  (let* ((pipe (getenv "QUTE_FIFO"))
-         (target (or qutebrowser--target 'auto))
-         (flag (qutebrowser-target-to-flag target)))
-    (if pipe
-        (write-region (format "open %s %s" flag url) nil pipe t)
-      (start-process "qutebrowser" nil "qutebrowser" "--target" (symbol-name target) url))))
-
 (defun qute-launcher--internal (&optional url prefilled)
   "Internal dispatcher for the user-facing commands.
 URL is the url to open, and PREFILLED is t if the url should be used as
@@ -164,7 +155,9 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
     :narrow ?h
     :history nil
     :category buffer
-    :action ,#'qutebrowser-ipc-open-url
+    :action ,(lambda (entry)
+               (qutebrowser-ipc-open-url (or (get-text-property 0 'url entry)
+                                             entry)))
     :items
     ,#'qutebrowser-history-candidates))
 
@@ -197,7 +190,9 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
           (process-send-string process (concat data "\n"))
           (delete-process process))
       (file-error
-       (message "Error connecting to qutebrowser IPC socket: %s" (error-message-string err)))
+       (message "Error connecting to qutebrowser IPC socket: %s" (error-message-string err))
+       (message "Starting new Qutebrowser instance.")
+       (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
       (error
        (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err))))))
 
