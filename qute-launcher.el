@@ -193,9 +193,10 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
           (process-send-string process (concat data "\n"))
           (delete-process process))
       (file-error
-       (message "Error connecting to qutebrowser IPC socket: %s" (error-message-string err))
-       (message "Starting new Qutebrowser instance.")
-       (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
+       (progn
+        (message "Error connecting to qutebrowser IPC socket: %s" (error-message-string err))
+        (message "Starting new Qutebrowser instance.")
+        (apply #'start-process "qutebrowser" nil "qutebrowser" commands)))
       (error
        (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err))))))
 
