@@ -26,8 +26,6 @@
 
 ;;; Code:
 
-;; TODO Separate out search history from regular history
-;; i.e. remove Google, Ebay, Amazon, Youtube searches etc
 (require 'sqlite)
 (require 'marginalia)
 (require 'consult)
@@ -43,6 +41,19 @@
   (let ((db (sqlite-open qutebrowser-history-database)))
     (sqlite-select db "SELECT url,substr(title,0,99)
                        FROM History
+                       WHERE url NOT LIKE 'https://www.google.%/search?%'
+                         AND url NOT LIKE 'https://www.google.com/sorry/%'
+                         AND url NOT LIKE 'https://%youtube.com/results?%'
+                         AND url NOT LIKE 'https://%perplexity.ai/search/%'
+                         AND url NOT LIKE 'https://%/search?%'
+                         AND url NOT LIKE 'https://%?search=%'
+                         AND url NOT LIKE 'https://%/search/?%'
+                         AND url NOT LIKE 'https://%/search_result?%'
+                         AND url NOT LIKE 'https://www.finn.no/%/search.html?%'
+                         AND url NOT LIKE 'https://www.finn.no/globalsearchlander?%'
+                         AND url NOT LIKE 'https://%ebay.%/sch/%'
+                         AND url NOT LIKE 'https://%amazon.%/s?%'
+                         AND url NOT LIKE 'https://%duckduckgo.com/?%q=%'
                        GROUP BY url
                        ORDER BY
                        COUNT(url) DESC")))
