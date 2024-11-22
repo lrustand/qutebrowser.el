@@ -217,6 +217,31 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
          (flag (qutebrowser-target-to-flag target)))
     (qutebrowser-ipc-send (format ":open %s %s" flag url))))
 
+(define-minor-mode qutebrowser-exwm-mode
+  "Minor mode for Qutebrowser buffers in EXWM."
+  :lighter nil
+  :keymap nil)
+
+(defun qutebrowser-bookmark-make-record ()
+  "Make a bookmark record for qutebrowser buffers."
+  `(,(buffer-name)
+    (handler . qutebrowser-bookmark-jump)
+    (url . ,(get-text-property 0 'url (buffer-name)))))
+
+(defun qutebrowser-bookmark-jump (bookmark)
+  "Jump to a qutebrowser bookmark."
+  (let ((url (bookmark-prop-get bookmark 'url)))
+    (qute-launcher-tab url)))
+
+(add-hook 'qutebrowser-exwm-mode-hook
+          (lambda ()
+            (setq-local bookmark-make-record-function
+                        #'qutebrowser-bookmark-make-record)))
+
+(add-hook 'exwm-manage-finish-hook
+          (lambda ()
+            (when (string-match-p "qutebrowser" exwm-class-name)
+              (qutebrowser-exwm-mode 1))))
 
 (provide 'qute-launcher)
 
