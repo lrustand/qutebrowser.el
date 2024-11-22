@@ -190,26 +190,24 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
 
 (defun qutebrowser-ipc-send (&rest commands)
   "Send COMMANDS to qutebrowser via IPC."
-  (let* ((socket-path (qutebrowser-ipc-socket-path))
-         (data (json-encode `(("args" . ,commands)
-                              ("target_arg" . nil)
-                              ("protocol_version" . ,qutebrowser-ipc-protocol-version))))
-         process)
-    (condition-case err
-        (progn
-          (setq process (make-network-process :name "qutebrowser-ipc"
-                                              :family 'local
-                                              :service socket-path
-                                              :coding 'utf-8))
-          (process-send-string process (concat data "\n"))
-          (delete-process process))
-      (file-error
-       (progn
-        (message "Error connecting to qutebrowser IPC socket: %s" (error-message-string err))
-        (message "Starting new Qutebrowser instance.")
-        (apply #'start-process "qutebrowser" nil "qutebrowser" commands)))
-      (error
-       (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err))))))
+  (condition-case err
+      (let* ((socket-path (qutebrowser-ipc-socket-path))
+             (data (json-encode `(("args" . ,commands)
+                                  ("target_arg" . nil)
+                                  ("protocol_version" . ,qutebrowser-ipc-protocol-version))))
+             (process (make-network-process :name "qutebrowser-ipc"
+                                            :family 'local
+                                            :service socket-path
+                                            :coding 'utf-8)))
+        (process-send-string process (concat data "\n"))
+        (delete-process process))
+    (file-error
+     (progn
+       (message "Error connecting to qutebrowser IPC socket: %s" (error-message-string err))
+       (message "Starting new Qutebrowser instance.")
+       (apply #'start-process "qutebrowser" nil "qutebrowser" commands)))
+    (error
+     (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
 (defun qutebrowser-ipc-open-url (url)
   "Open URL in qutebrowser."
