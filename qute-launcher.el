@@ -229,7 +229,7 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
 (defun qutebrowser-bookmark-jump (bookmark)
   "Jump to a qutebrowser bookmark."
   (let ((url (bookmark-prop-get bookmark 'url)))
-    (qute-launcher-tab url)))
+    (qute-launcher url)))
 
 (add-hook 'qutebrowser-exwm-mode-hook
           (lambda ()
