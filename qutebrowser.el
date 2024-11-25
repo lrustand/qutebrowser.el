@@ -54,7 +54,7 @@
            (completion.item.selected.bg . highlight)
            (completion.item.selected.border.top . highlight)
            (completion.item.selected.border.bottom . highlight)
-           (completion.match.fg . iedit-occurrence)
+           (completion.match.fg . dired-directory)
            (completion.scrollbar.fg . scroll-bar)
            (completion.scrollbar.bg . scroll-bar)
            (contextmenu.disabled.bg . default)
@@ -74,7 +74,7 @@
            (hints.match.fg . avy-lead-face-0)
            (keyhint.fg . default)
            (keyhint.suffix.fg . font-lock-constant-face)
-           (keyhint.bg . default)
+           (keyhint.bg . highlight)
            (messages.error.fg . error)
            (messages.error.bg . error)
            (messages.error.border . error)
@@ -85,7 +85,7 @@
            (messages.info.bg . success)
            (messages.info.border . success)
            (prompts.fg . minibuffer-prompt)
-           (prompts.bg . default)
+           (prompts.bg . highlight)
            (prompts.border . minibuffer-prompt)
            (prompts.selected.fg . success)
            (prompts.selected.bg . success)
@@ -139,8 +139,7 @@
          :group 'qutebrowser)
 
 (defcustom qutebrowser-default-open-target 'auto
-  "The default open target for Qutebrowser.
-Valid values are 'auto, 'tab, 'window, 'private-window."
+  "The default open target for Qutebrowser."
   :type '(choice (const :tag "Auto" auto)
                  (const :tag "Tab" tab)
                  (const :tag "Window" window)
@@ -153,54 +152,92 @@ Valid values are 'auto, 'tab, 'window, 'private-window."
   :type 'file
   :group 'qutebrowser)
 
+(defcustom qutebrowser-history-exclusion-patterns
+  '("https://www.google.%/search?%"
+    "https://www.google.com/sorry/%"
+    "https://scholar.google.com/scholar?%&q=%"
+    "https://%youtube.com/results?%"
+    "https://%perplexity.ai/search/%"
+    "https://%/search?%"
+    "https://%?search=%"
+    "https://%/search/?%"
+    "https://%/search_result?%"
+    "https://www.finn.no/%/search.html?%"
+    "https://www.finn.no/globalsearchlander?%"
+    "https://%ebay.%/sch/%"
+    "https://%amazon.%/s?%"
+    "https://%duckduckgo.com/?%q=%")
+  "URL patterns to exclude from the Qutebrowser history list.
+The patterns are SQlite wildcard patterns, and will be used to build up
+the WHERE clause of the database query.  See 'qutebrowser--history' for
+more details on how the query is built."
+  :type '(repeat string)
+  :group 'qutebrowser)
+
+(defcustom qutebrowser-title-display-length 100
+  "Max display length of Qutebrowser titles in completion lists."
+  :type 'integer
+  :group 'qutebrowser)
+
+(defcustom qutebrowser-url-display-length 50
+  "Max display length of Qutebrowser URLs in completion lists."
+  :type 'integer
+  :group 'qutebrowser)
+
+(defcustom qutebrowser-history-order-by "COUNT(url) DESC"
+  "How to sort the history entries in the completion lists."
+  :type '(choice
+          (const :tag "Unsorted" nil)
+          (const :tag "Frequency" "COUNT(url) DESC")
+          (cosnt :tag "Recency" "atime DESC")
+          (string :tag "Custom ORDER BY clause"))
+  :group 'qutebrowser)
+
 (defun qutebrowser--history ()
   "Get the Qutebrowser history from the sqlite database."
-  (let ((db (sqlite-open qutebrowser-history-database)))
-    (sqlite-select db "SELECT url,substr(title,0,99)
-                       FROM History
-                       WHERE url NOT LIKE 'https://www.google.%/search?%'
-                         AND url NOT LIKE 'https://www.google.com/sorry/%'
-                         AND url NOT LIKE 'https://%youtube.com/results?%'
-                         AND url NOT LIKE 'https://%perplexity.ai/search/%'
-                         AND url NOT LIKE 'https://%/search?%'
-                         AND url NOT LIKE 'https://%?search=%'
-                         AND url NOT LIKE 'https://%/search/?%'
-                         AND url NOT LIKE 'https://%/search_result?%'
-                         AND url NOT LIKE 'https://www.finn.no/%/search.html?%'
-                         AND url NOT LIKE 'https://www.finn.no/globalsearchlander?%'
-                         AND url NOT LIKE 'https://%ebay.%/sch/%'
-                         AND url NOT LIKE 'https://%amazon.%/s?%'
-                         AND url NOT LIKE 'https://%duckduckgo.com/?%q=%'
-                       GROUP BY url
-                       ORDER BY
-                       COUNT(url) DESC")))
+  (let* ((db (sqlite-open qutebrowser-history-database))
+         (where (format "WHERE url NOT LIKE '%s'"
+                        (string-join qutebrowser-history-exclusion-patterns
+                                     "' AND url NOT LIKE '")))
+         (order (when qutebrowser-history-order-by
+                  (format "ORDER BY %s" qutebrowser-history-order-by)))
+         (query (format "SELECT url,substr(title,0,%d)
+                         FROM History
+                         %s
+                         GROUP BY url
+                         %s"
+                        (1- qutebrowser-title-display-length)
+                        where
+                        order)))
+    (sqlite-select db query)))
 
 (defun qutebrowser--pseudo-annotate (row &optional buffer)
   "Create pseudo-annotated entries from each ROW.
 This simulates marginalia annotations, but allows the text in the
-annotation to be searchable. Optionally embeds BUFFER as a text
+annotation to be searchable.  Optionally embeds BUFFER as a text
 property."
   (let* ((url (nth 0 row))
          (title (nth 1 row))
-         (display-url (truncate-string-to-width url 50 0 ?\ )))
+         (display-url (truncate-string-to-width url qutebrowser-url-display-length 0 ?\ ))
+         (display-title (truncate-string-to-width title qutebrowser-title-display-length 0 ?\ )))
     (format "%s %s"
             (propertize display-url
                         'url url
                         'title title
                         'buffer buffer)
-            (propertize title
+            (propertize display-title
                         'face 'marginalia-value))))
 
 (defun qutebrowser--history-candidates ()
   "Lists completion candidates from Qutebrowser history.
 Candidates contain the url, and a pseudo-annotation with the
 website title, to allow searching based on either one."
-  (let* ((history (qutebrowser-history)))
+  (let* ((history (qutebrowser--history)))
     (mapcar #'qutebrowser--pseudo-annotate
             history)))
 
 (defun qutebrowser--target-to-flag (target)
-  "Return the flag for TARGET."
+  "Return the :open flag corresponding to TARGET."
   (pcase target
     ('window "-w")
     ('tab "-t")
@@ -213,8 +250,10 @@ URL is the url to open, and INITIAL is the initial input for completion."
   (if url
       (qutebrowser-ipc-open-url url)
     (let* ((res (consult--multi '(qutebrowser--exwm-buffer-source
+                                  qutebrowser--bookmark-source
                                   qutebrowser--history-source)
                                 :initial initial
+                                :annotate nil
                                 :sort nil))
            (plist (cdr res))
            (selected (car res)))
@@ -222,12 +261,14 @@ URL is the url to open, and INITIAL is the initial input for completion."
       (unless (plist-get plist :match)
         (qutebrowser-ipc-open-url selected)))))
 
+;;;###autoload
 (defun qutebrowser-launcher (&optional url _ prefilled)
   "Open URL in Qutebrowser in the default target.
 Set initial completion input to PREFILLED."
   (interactive)
   (qutebrowser-launcher--internal url prefilled))
 
+;;;###autoload
 (defun qutebrowser-launcher-tab (&optional url _ prefilled)
   "Open URL in Qutebrowser in a new tab.
 Set initial completion input to PREFILLED."
@@ -235,6 +276,7 @@ Set initial completion input to PREFILLED."
   (let ((qutebrowser-default-open-target 'tab))
     (qutebrowser-launcher--internal url prefilled)))
 
+;;;###autoload
 (defun qutebrowser-launcher-window (&optional url _ prefilled)
   "Open URL in Qutebrowser in a new window.
 Set initial completion input to PREFILLED."
@@ -242,6 +284,7 @@ Set initial completion input to PREFILLED."
   (let ((qutebrowser-default-open-target 'window))
     (qutebrowser-launcher--internal url prefilled)))
 
+;;;###autoload
 (defun qutebrowser-launcher-private (&optional url _ prefilled)
   "Open URL in Qutebrowser in a private window.
 Set initial completion input to PREFILLED."
@@ -255,46 +298,68 @@ Set initial completion input to PREFILLED."
 Expects the `buffer-name' of BUFFER to be propertized with a url field."
   (let* ((bufname (buffer-name buffer))
          (title (substring-no-properties bufname))
-         (url (get-text-property 0 'url bufname)))
+         (url (or (get-text-property 0 'url bufname) "")))
     (cons
      (qutebrowser--pseudo-annotate
-      (list
-       (truncate-string-to-width (or url "") 50)
-       (truncate-string-to-width title 99)))
+      (list url title))
      buffer)))
 
 (defun qutebrowser-exwm-p (&optional buffer)
+  "Return t if BUFFER is a Qutebrowser EXWM buffer."
   (with-current-buffer (or buffer (current-buffer))
     (string-equal "qutebrowser"
                   exwm-class-name)))
 
 (defvar qutebrowser--exwm-buffer-source
-  `(;; consult-buffer source for open Qutebrowser windows
-    :name "Qutebrowser buffers"
-    :hidden nil
-    :narrow ?q
-    :category buffer
-    :action ,#'switch-to-buffer
-    :items
-    ,(lambda () (consult--buffer-query
-                 :sort 'visibility
-                 :as #'qutebrowser--format-window-entry
-                 :predicate #'qutebrowser-exwm-p
-                 :mode 'exwm-mode))))
+  (list :name "Qutebrowser buffers"
+        :hidden nil
+        :narrow ?q
+        :history nil
+        :category 'other
+        :action #'switch-to-buffer
+        :annotate nil
+        :items
+        (lambda () (mapcar #'qutebrowser--format-window-entry
+                           (consult--buffer-query
+                            :sort 'visibility
+                            :predicate #'qutebrowser-exwm-p))))
+  "'consult-buffer' source for open Qutebrowser windows.")
+
+(defun qutebrowser-bookmark-p (bookmark)
+  "Return t if BOOKMARK is a Qutebrowser bookmark."
+  (eq 'qutebrowser-bookmark-jump
+      (bookmark-get-handler bookmark)))
+
+(defun qutebrowser-bookmarks-list ()
+  "Return a list of Qutebrowser bookmarks."
+  (seq-filter #'qutebrowser-bookmark-p
+              (bookmark-all-names)))
+
+(defvar qutebrowser--bookmark-source
+  (list :name "Qutebrowser bookmarks"
+        :hidden nil
+        :narrow ?m
+        :history nil
+        :category 'other
+        :face 'consult-bookmark
+        :action #'qutebrowser-bookmark-jump
+        :items #'qutebrowser-bookmarks-list)
+  "'consult-buffer' source for Qutebrowser bookmarks.")
 
 
 (defvar qutebrowser--history-source
-  `(;; consult-buffer source for Qutebrowser history
-    :name "Qutebrowser history"
-    :hidden nil
-    :narrow ?h
-    :history nil
-    :category buffer
-    :action ,(lambda (entry)
-               (let ((url (or (get-text-property 0 'url entry)
-                              entry)))
-                 (qutebrowser-ipc-open-url url)))
-    :items ,#'qutebrowser--history-candidates))
+  (list :name "Qutebrowser history"
+        :hidden nil
+        :narrow ?h
+        :history nil
+        :category 'buffer
+        :annotate nil
+        :action (lambda (entry)
+                  (let ((url (or (get-text-property 0 'url entry)
+                                 entry)))
+                    (qutebrowser-ipc-open-url url)))
+        :items #'qutebrowser--history-candidates)
+  "'consult-buffer' source for Qutebrowser history.")
 
 
 (defvar qutebrowser-ipc-protocol-version 1
@@ -307,6 +372,7 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
    (or (getenv "XDG_RUNTIME_DIR")
        (format "/run/user/%d" (user-real-uid)))))
 
+;;;###autoload
 (defun qutebrowser-ipc-send (&rest commands)
   "Send COMMANDS to Qutebrowser via IPC."
   (condition-case err
@@ -329,11 +395,13 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
 (defun qutebrowser-ipc-open-url (url &optional target)
-  "Open URL in Qutebrowser through IPC."
+  "Open URL in Qutebrowser through IPC.
+TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
   (let* ((target (or target qutebrowser-default-open-target))
          (flag (qutebrowser--target-to-flag target)))
     (qutebrowser-ipc-send (format ":open %s %s" flag url))))
 
+;;;###autoload
 (define-minor-mode qutebrowser-exwm-mode
   "Minor mode for Qutebrowser buffers in EXWM."
   :lighter nil
@@ -349,10 +417,11 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
     (url . ,(get-text-property 0 'url (buffer-name)))))
 
 (defun qutebrowser-bookmark-jump (bookmark)
-  "Jump to a Qutebrowser bookmark in a new tab."
+  "Jump to a Qutebrowser BOOKMARK in a new tab."
   (let ((url (bookmark-prop-get bookmark 'url)))
     (qutebrowser-launcher-tab url)))
 
+;; Automatically enable qutebrowser-exwm-mode in Qutebrowser buffers.
 (add-hook 'exwm-manage-finish-hook
           (lambda ()
             (when (qutebrowser-exwm-p)
@@ -374,6 +443,7 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
     (write-file "~/.config/qutebrowser/emacs_theme.py")))
 
 (defun qutebrowser-theme-export-and-apply (&rest _)
+  "Export and apply theme to running Qutebrowser instance."
   (qutebrowser-theme-export)
   (qutebrowser-ipc-send ":config-source ~/.config/qutebrowser/emacs_theme.py"))
 
