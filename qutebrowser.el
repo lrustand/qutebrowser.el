@@ -193,6 +193,16 @@ more details on how the query is built."
           (string :tag "Custom ORDER BY clause"))
   :group 'qutebrowser)
 
+(defgroup qutebrowser-faces nil
+  "Faces used by qutebrowser.el."
+  :group 'qutebrowser
+  :group 'faces)
+
+(defface qutebrowser-title-face
+  '((t :inherit marginalia-key))
+  "Face used to highlight Qutebrowser titles."
+  :group 'qutebrowser-faces)
+
 (defun qutebrowser--history ()
   "Get the Qutebrowser history from the sqlite database."
   (let* ((db (sqlite-open qutebrowser-history-database))
@@ -226,7 +236,7 @@ property."
                         'title title
                         'buffer buffer)
             (propertize display-title
-                        'face 'marginalia-value))))
+                        'face 'qutebrowser-title-face))))
 
 (defun qutebrowser--history-candidates ()
   "Lists completion candidates from Qutebrowser history.
