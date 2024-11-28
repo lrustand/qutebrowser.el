@@ -433,6 +433,20 @@ TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
          (flag (qutebrowser--target-to-flag target)))
     (qutebrowser-send-commands (format ":open %s %s" flag url))))
 
+(defun qutebrowser-config-source (&optional config-file)
+  "Source CONFIG-FILE in running Qutebrowser instance."
+  (interactive)
+  (qutebrowser-send-commands (concat ":config-source " config-file)))
+
+(defun qutebrowser-execute-python (python-code)
+  "Execute PYTHON-CODE in running Qutebrowser instance."
+  (let ((temp-conf-file (make-temp-file "qutebrowser-temp-config" nil nil python-code)))
+    (qutebrowser-config-source temp-conf-file)))
+
+(defun qutebrowser-execute-js (js-code)
+  "Execute JS-CODE in running Qutebrowser instance."
+  (qutebrowser-send-commands (format ":jseval -w main %s" js-code)))
+
 ;;;###autoload
 (define-minor-mode qutebrowser-exwm-mode
   "Minor mode for Qutebrowser buffers in EXWM."
@@ -478,7 +492,7 @@ TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
   "Export and apply theme to running Qutebrowser instance."
   (qutebrowser-theme-export)
   ;; TODO only if qutebrowser is running
-  (qutebrowser-send-commands ":config-source ~/.config/qutebrowser/emacs_theme.py"))
+  (qutebrowser-config-source "~/.config/qutebrowser/emacs_theme.py"))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-theme-export-mode
