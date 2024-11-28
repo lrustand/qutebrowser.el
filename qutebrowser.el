@@ -146,6 +146,14 @@
                  (const :tag "Private Window" private-window))
   :group 'qutebrowser)
 
+(defcustom qutebrowser-command-backend 'qutebrowser-ipc-send
+  "The backend to use when sending commands to Qutebrowser."
+  :type '(choice (const :tag "IPC" qutebrowser-ipc-send)
+                 (const :tag "FIFO" qutebrowser-fifo-send)
+                 (const :tag "Commandline" qutebrowser-commandline-send)
+                 (function :tag "Custom command"))
+  :group 'qutebrowser)
+
 (defcustom qutebrowser-history-database
   "~/.local/share/qutebrowser/history.sqlite"
   "Path to the Qutebrowser history database."
@@ -258,7 +266,7 @@ website title, to allow searching based on either one."
   "Internal dispatcher for the user-facing commands.
 URL is the url to open, and INITIAL is the initial input for completion."
   (if url
-      (qutebrowser-ipc-open-url url)
+      (qutebrowser-open-url url)
     (let* ((res (consult--multi '(qutebrowser--exwm-buffer-source
                                   qutebrowser--bookmark-source
                                   qutebrowser--history-source)
@@ -269,7 +277,7 @@ URL is the url to open, and INITIAL is the initial input for completion."
            (selected (car res)))
       ;; If none of the buffer sources handled it
       (unless (plist-get plist :match)
-        (qutebrowser-ipc-open-url selected)))))
+        (qutebrowser-open-url selected)))))
 
 ;;;###autoload
 (defun qutebrowser-launcher (&optional url _ prefilled)
@@ -367,7 +375,7 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
         :action (lambda (entry)
                   (let ((url (or (get-text-property 0 'url entry)
                                  entry)))
-                    (qutebrowser-ipc-open-url url)))
+                    (qutebrowser-open-url url)))
         :items #'qutebrowser--history-candidates)
   "'consult-buffer' source for Qutebrowser history.")
 
@@ -382,9 +390,9 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
    (or (getenv "XDG_RUNTIME_DIR")
        (format "/run/user/%d" (user-real-uid)))))
 
-;;;###autoload
 (defun qutebrowser-ipc-send (&rest commands)
-  "Send COMMANDS to Qutebrowser via IPC."
+  "Send COMMANDS to Qutebrowser via IPC.
+Falls back to sending over commandline if IPC fails."
   (condition-case err
       (let* ((socket-path (qutebrowser-ipc-socket-path))
              (data (json-encode `(("args" . ,commands)
@@ -400,16 +408,30 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
      (progn
        (message "Error connecting to Qutebrowser IPC socket: %s" (error-message-string err))
        (message "Starting new Qutebrowser instance.")
-       (apply #'start-process "qutebrowser" nil "qutebrowser" commands)))
+       (apply #'qutebrowser-commandline-send commands)))
     (error
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
-(defun qutebrowser-ipc-open-url (url &optional target)
-  "Open URL in Qutebrowser through IPC.
+(defun qutebrowser-commandline-send (&rest commands)
+  "Send COMMANDS to Qutebrowser via commandline."
+  (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
+
+(defun qutebrowser-fifo-send (&rest commands)
+  "Send COMMANDS to Qutebrowser via FIFO."
+  (let ((pipe (getenv "QUTE_FIFO")))
+    (dolist (cmd commands)
+      (write-region (concat cmd "\n") nil pipe t))))
+
+(defun qutebrowser-send-commands (&rest commands)
+  "Send COMMANDS to Qutebrowser via the selected backend."
+  (apply qutebrowser-command-backend commands))
+
+(defun qutebrowser-open-url (url &optional target)
+  "Open URL in Qutebrowser.
 TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
   (let* ((target (or target qutebrowser-default-open-target))
          (flag (qutebrowser--target-to-flag target)))
-    (qutebrowser-ipc-send (format ":open %s %s" flag url))))
+    (qutebrowser-send-commands (format ":open %s %s" flag url))))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-exwm-mode
@@ -455,7 +477,8 @@ TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
 (defun qutebrowser-theme-export-and-apply (&rest _)
   "Export and apply theme to running Qutebrowser instance."
   (qutebrowser-theme-export)
-  (qutebrowser-ipc-send ":config-source ~/.config/qutebrowser/emacs_theme.py"))
+  ;; TODO only if qutebrowser is running
+  (qutebrowser-send-commands ":config-source ~/.config/qutebrowser/emacs_theme.py"))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-theme-export-mode
