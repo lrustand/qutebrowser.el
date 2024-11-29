@@ -175,6 +175,7 @@
     "https://%ebay.%/sch/%"
     "https://%amazon.%/s?%"
     "https://%duckduckgo.com/?%q=%")
+
   "URL patterns to exclude from the Qutebrowser history list.
 The patterns are SQlite wildcard patterns, and will be used to build up
 the WHERE clause of the database query.  See 'qutebrowser--history' for
@@ -452,9 +453,24 @@ TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
   "Minor mode for Qutebrowser buffers in EXWM."
   :lighter nil
   :global nil
-  (when qutebrowser-exwm-mode
-    (setq-local bookmark-make-record-function
-                #'qutebrowser-bookmark-make-record)))
+  (if qutebrowser-exwm-mode
+      (setq-local bookmark-make-record-function
+                  #'qutebrowser-bookmark-make-record)
+    (kill-local-variable 'bookmark-make-record-function)))
+
+(defun qutebrowser-exwm-mode-maybe-enable ()
+  "Enable 'qutebrowser-exwm-mode' if the buffer is a Qutebrowser buffer."
+  (when (qutebrowser-exwm-p)
+    (qutebrowser-exwm-mode 1)))
+
+;;;###autoload
+(define-globalized-minor-mode global-qutebrowser-exwm-mode
+  qutebrowser-exwm-mode
+  #'qutebrowser-exwm-mode-maybe-enable
+  (if global-qutebrowser-exwm-mode
+      (add-hook 'exwm-manage-finish-hook #'qutebrowser-exwm-mode-maybe-enable)
+    (remove-hook 'exwm-manage-finish-hook #'qutebrowser-exwm-mode-maybe-enable)))
+
 
 (defun qutebrowser-bookmark-make-record ()
   "Make a bookmark record for Qutebrowser buffers."
@@ -466,13 +482,6 @@ TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
   "Jump to a Qutebrowser BOOKMARK in a new tab."
   (let ((url (bookmark-prop-get bookmark 'url)))
     (qutebrowser-launcher-tab url)))
-
-;; Automatically enable qutebrowser-exwm-mode in Qutebrowser buffers.
-(add-hook 'exwm-manage-finish-hook
-          (lambda ()
-            (when (qutebrowser-exwm-p)
-              (qutebrowser-exwm-mode 1))))
-
 
 (defun qutebrowser-theme-export ()
   "Export selected Emacs faces to Qutebrowser theme format."
