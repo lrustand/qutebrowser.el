@@ -143,6 +143,9 @@ raising the last used window when sending commands using the
 commandline backend. It might not be necessary to set this option when
 using the IPC backend.
 
+If you are using the theme synchronization, add this line to your
+=config.py= to load the exported theme on Qutebrowser startup:
+
 #+begin_src python
 config.source("emacs_theme.py")
 #+end_src
