@@ -380,6 +380,22 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
         :items #'qutebrowser--history-candidates)
   "'consult-buffer' source for Qutebrowser history.")
 
+;; Prevent Prescient history from being clogged up by web pages.
+(with-eval-after-load 'vertico-prescient
+  (defun vertico-prescient--dont-remember-urls (orig-fun &rest args)
+    "Exclude URLs from prescient history."
+    (unless (string-match-p "^https?://" (minibuffer-contents-no-properties))
+      (funcall orig-fun)))
+  (defun vertico-prescient--dont-remember-qutebrowser-buffers (orig-fun &rest args)
+    "Exclude Qutebrowser buffers from prescient history."
+    (let* ((selected-candidate (substring (minibuffer-contents-no-properties) 0 -1))
+           (selected-buffer (get-buffer selected-candidate)))
+      (unless (qutebrowser-exwm-p selected-buffer)
+        (funcall orig-fun))))
+  (advice-add 'vertico-prescient--remember-minibuffer-contents :around
+              #'vertico-prescient--dont-remember-qutebrowser-buffers)
+  (advice-add 'vertico-prescient--remember-minibuffer-contents :around
+              #'vertico-prescient--dont-remember-urls))
 
 (defvar qutebrowser-ipc-protocol-version 1
   "The protocol version for Qutebrowser IPC.")
