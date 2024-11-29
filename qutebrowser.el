@@ -263,53 +263,53 @@ website title, to allow searching based on either one."
     ('private-window "-p")
     ('auto "")))
 
-(defun qutebrowser-launcher--internal (&optional url initial)
-  "Internal dispatcher for the user-facing commands.
-URL is the url to open, and INITIAL is the initial input for completion."
-  (if url
-      (qutebrowser-open-url url)
-    (let* ((res (consult--multi '(qutebrowser--exwm-buffer-source
-                                  qutebrowser--bookmark-source
-                                  qutebrowser--history-source)
-                                :initial initial
-                                :annotate nil
-                                :sort nil))
-           (plist (cdr res))
-           (selected (car res)))
-      ;; If none of the buffer sources handled it
-      (unless (plist-get plist :match)
-        (qutebrowser-open-url selected)))))
+(defun qutebrowser-launcher--internal (&optional initial)
+  "Internal dispatcher for the user-facing launcher commands.
+INITIAL is the initial input for completion."
+  (let* ((res (consult--multi '(qutebrowser--exwm-buffer-source
+                                qutebrowser--bookmark-source
+                                qutebrowser--history-source)
+                              :initial initial
+                              :annotate nil
+                              :sort nil))
+         (plist (cdr res))
+         (selected (car res)))
+    ;; If none of the buffer sources handled it
+    (unless (plist-get plist :match)
+      (qutebrowser-open-url selected))))
 
 ;;;###autoload
-(defun qutebrowser-launcher (&optional url _ prefilled)
-  "Open URL in Qutebrowser in the default target.
-Set initial completion input to PREFILLED."
+(defun qutebrowser-launcher (&optional initial target)
+  "Open URL in Qutebrowser.
+Set initial completion input to INITIAL. Open the URL in TARGET or the
+default target if nil."
   (interactive)
-  (qutebrowser-launcher--internal url prefilled))
+  (let ((qutebrowser-default-open-target (or target qutebrowser-default-open-target)))
+    (qutebrowser-launcher--internal initial)))
 
 ;;;###autoload
-(defun qutebrowser-launcher-tab (&optional url _ prefilled)
+(defun qutebrowser-launcher-tab (&optional initial)
   "Open URL in Qutebrowser in a new tab.
-Set initial completion input to PREFILLED."
+Set initial completion input to INITIAL."
   (interactive)
   (let ((qutebrowser-default-open-target 'tab))
-    (qutebrowser-launcher--internal url prefilled)))
+    (qutebrowser-launcher--internal initial)))
 
 ;;;###autoload
-(defun qutebrowser-launcher-window (&optional url _ prefilled)
+(defun qutebrowser-launcher-window (&optional initial)
   "Open URL in Qutebrowser in a new window.
-Set initial completion input to PREFILLED."
+Set initial completion input to INITIAL."
   (interactive)
   (let ((qutebrowser-default-open-target 'window))
-    (qutebrowser-launcher--internal url prefilled)))
+    (qutebrowser-launcher--internal initial)))
 
 ;;;###autoload
-(defun qutebrowser-launcher-private (&optional url _ prefilled)
+(defun qutebrowser-launcher-private (&optional initial)
   "Open URL in Qutebrowser in a private window.
-Set initial completion input to PREFILLED."
+Set initial completion input to INITIAL."
   (interactive)
   (let ((qutebrowser-default-open-target 'private-window))
-    (qutebrowser-launcher--internal url prefilled)))
+    (qutebrowser-launcher--internal initial)))
 
 
 (defun qutebrowser--format-window-entry (buffer)
@@ -417,11 +417,15 @@ Falls back to sending over commandline if IPC fails."
   "Send COMMANDS to Qutebrowser via commandline."
   (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
 
+(defvar qute-fifo nil
+  "Holds the path of the Qutebrowser FIFO when called as a userscript.")
+
 (defun qutebrowser-fifo-send (&rest commands)
-  "Send COMMANDS to Qutebrowser via FIFO."
-  (let ((pipe (getenv "QUTE_FIFO")))
-    (dolist (cmd commands)
-      (write-region (concat cmd "\n") nil pipe t))))
+  "Send COMMANDS to Qutebrowser via FIFO.
+Expects to be called from Qutebrowser through a userscript that
+let-binds the path to the Qutebrowser FIFO to the variable 'qute-fifo'."
+  (dolist (cmd commands)
+    (write-region (concat cmd "\n") nil qute-fifo t)))
 
 (defun qutebrowser-send-commands (&rest commands)
   "Send COMMANDS to Qutebrowser via the selected backend."
@@ -479,9 +483,9 @@ TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
     (url . ,(get-text-property 0 'url (buffer-name)))))
 
 (defun qutebrowser-bookmark-jump (bookmark)
-  "Jump to a Qutebrowser BOOKMARK in a new tab."
+  "Jump to a Qutebrowser BOOKMARK."
   (let ((url (bookmark-prop-get bookmark 'url)))
-    (qutebrowser-launcher-tab url)))
+    (qutebrowser-open-url url)))
 
 (defun qutebrowser-theme-export ()
   "Export selected Emacs faces to Qutebrowser theme format."
