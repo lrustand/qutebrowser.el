@@ -329,6 +329,35 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
     (string-equal "qutebrowser"
                   exwm-class-name)))
 
+(defun qutebrowser-propertize-buffer-name (window-title)
+  "Propertize the buffer name of Qutebrowser buffer.
+WINDOW-TITLE is the title of the Qutebrowser window, as reported by
+'exwm-title'.  Expects the window title to be formatted in the following
+way:
+
+c.window.title_format = '{audio}{private}{current_title}{title_sep}{current_url}'
+
+This function should be added to 'exwm-update-title-hook'.  If you
+already have set up a hook to update buffer names, the hook should be
+modified so that it runs this function for Qutebrowser buffers.
+
+The following is what I have in my own init.el:
+
+  (defun exwm-update-title ()
+    (if (string-equal \"qutebrowser\" exwm-class-name)
+        (exwm-workspace-rename-buffer
+         (qutebrowser-propertize-buffer-name exwm-title))
+      (exwm-workspace-rename-buffer exwm-title)))
+  (add-hook 'exwm-update-title-hook #'exwm-update-title)"
+
+  (let ((mid (string-match " - https?://.*$"
+                           window-title)))
+    (if mid
+        (let ((title (substring window-title 0 mid))
+              (url (substring window-title (+ 3 mid))))
+          (propertize title 'url url))
+      window-title)))
+
 (defvar qutebrowser--exwm-buffer-source
   (list :name "Qutebrowser buffers"
         :hidden nil
