@@ -283,15 +283,15 @@ interactive commands =qutebrowser-launcher=, =qutebrowswer-launcher-tab=,
 Qutebrowser.el provides the following ways to execute commands and/or
 code in Qutebrowser:
 
-- =qutebrowser-send-commands=: Send Qutebrowser commands such as =:open=,
+- *qutebrowser-send-commands:* Send Qutebrowser commands such as =:open=,
   =:back=, etc.
-- =qutebrowser-execute-js=: Execute JavaScript code in Qutebrowser. The
+- *qutebrowser-execute-js:* Execute JavaScript code in Qutebrowser. The
   code is executed in the same environment as the web page code,
   making it possible to interact with the web page and any
   Greasemonkey script that is active there.
-- =qutebrowser-execute-python=: Execute Python code as if it was written
+- *qutebrowser-execute-python:* Execute Python code as if it was written
   in =config.py=. Uses =:config-source= to source a temporary file.
-- =qutebrowser-config-source=: Sources the given file as a Qutebrowser
+- *qutebrowser-config-source:* Sources the given file as a Qutebrowser
   config file, or reloads =config.py= if none is given.
 
 ** Theme synchronization
