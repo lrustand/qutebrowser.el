@@ -279,7 +279,7 @@ INITIAL is the initial input for completion."
 
 ;;;###autoload
 (defun qutebrowser-launcher (&optional initial target)
-  "Open URL in Qutebrowser.
+  "Select a URL to open in Qutebrowser.
 Set initial completion input to INITIAL.  Open the URL in TARGET or the
 default target if nil."
   (interactive)
@@ -288,7 +288,7 @@ default target if nil."
 
 ;;;###autoload
 (defun qutebrowser-launcher-tab (&optional initial)
-  "Open URL in Qutebrowser in a new tab.
+  "Select a URL to open in a new tab.
 Set initial completion input to INITIAL."
   (interactive)
   (let ((qutebrowser-default-open-target 'tab))
@@ -296,7 +296,7 @@ Set initial completion input to INITIAL."
 
 ;;;###autoload
 (defun qutebrowser-launcher-window (&optional initial)
-  "Open URL in Qutebrowser in a new window.
+  "Select a URL to open in a new window.
 Set initial completion input to INITIAL."
   (interactive)
   (let ((qutebrowser-default-open-target 'window))
@@ -304,7 +304,7 @@ Set initial completion input to INITIAL."
 
 ;;;###autoload
 (defun qutebrowser-launcher-private (&optional initial)
-  "Open URL in Qutebrowser in a private window.
+  "Select a URL to open in a private window.
 Set initial completion input to INITIAL."
   (interactive)
   (let ((qutebrowser-default-open-target 'private-window))
