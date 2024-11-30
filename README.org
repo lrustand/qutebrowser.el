@@ -251,7 +251,7 @@ also potentially be used to set keybindings for Qutebrowser buffers.
 
 When =qutebrowser-exwm-mode= is active in any buffer, the bookmarking
 system is automatically set up and can be used just like any other
-bookmarks through =bookmar-set= and =bookmark-jump= (=C-x r m= and =C-x r b=
+bookmarks through =bookmark-set= and =bookmark-jump= (=C-x r m= and =C-x r b=
 by default).
 
 ** URL launcher
