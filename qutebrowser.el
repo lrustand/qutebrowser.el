@@ -177,7 +177,7 @@
 
   "URL patterns to exclude from the Qutebrowser history list.
 The patterns are SQlite wildcard patterns, and will be used to build up
-the WHERE clause of the database query.  See 'qutebrowser--history' for
+the WHERE clause of the database query.  See `qutebrowser--history' for
 more details on how the query is built."
   :type '(repeat string)
   :group 'qutebrowser)
@@ -280,7 +280,7 @@ INITIAL is the initial input for completion."
 ;;;###autoload
 (defun qutebrowser-launcher (&optional initial target)
   "Open URL in Qutebrowser.
-Set initial completion input to INITIAL. Open the URL in TARGET or the
+Set initial completion input to INITIAL.  Open the URL in TARGET or the
 default target if nil."
   (interactive)
   (let ((qutebrowser-default-open-target (or target qutebrowser-default-open-target)))
@@ -331,12 +331,12 @@ Expects the `buffer-name' of BUFFER to be propertized with a url field."
 (defun qutebrowser-propertize-buffer-name (window-title)
   "Propertize the buffer name of Qutebrowser buffer.
 WINDOW-TITLE is the title of the Qutebrowser window, as reported by
-'exwm-title'.  Expects the window title to be formatted in the following
+`exwm-title'.  Expects the window title to be formatted in the following
 way:
 
 c.window.title_format = '{audio}{private}{current_title}{title_sep}{current_url}'
 
-This function should be added to 'exwm-update-title-hook'.  If you
+This function should be added to `exwm-update-title-hook'.  If you
 already have set up a hook to update buffer names, the hook should be
 modified so that it runs this function for Qutebrowser buffers.
 
@@ -370,7 +370,7 @@ The following is what I have in my own init.el:
                            (consult--buffer-query
                             :sort 'visibility
                             :predicate #'qutebrowser-exwm-p))))
-  "'consult-buffer' source for open Qutebrowser windows.")
+  "`consult-buffer' source for open Qutebrowser windows.")
 
 (defun qutebrowser-bookmark-p (bookmark)
   "Return t if BOOKMARK is a Qutebrowser bookmark."
@@ -391,7 +391,7 @@ The following is what I have in my own init.el:
         :face 'consult-bookmark
         :action #'qutebrowser-bookmark-jump
         :items #'qutebrowser-bookmarks-list)
-  "'consult-buffer' source for Qutebrowser bookmarks.")
+  "`consult-buffer' source for Qutebrowser bookmarks.")
 
 
 (defvar qutebrowser--history-source
@@ -406,7 +406,7 @@ The following is what I have in my own init.el:
                                  entry)))
                     (qutebrowser-open-url url)))
         :items #'qutebrowser--history-candidates)
-  "'consult-buffer' source for Qutebrowser history.")
+  "`consult-buffer' source for Qutebrowser history.")
 
 ;; Prevent Prescient history from being clogged up by web pages.
 (with-eval-after-load 'vertico-prescient
@@ -467,7 +467,7 @@ Falls back to sending over commandline if IPC fails."
 (defun qutebrowser-fifo-send (&rest commands)
   "Send COMMANDS to Qutebrowser via FIFO.
 Expects to be called from Qutebrowser through a userscript that
-let-binds the path to the Qutebrowser FIFO to the variable 'qute-fifo'."
+let-binds the path to the Qutebrowser FIFO to the variable `qute-fifo'."
   (dolist (cmd commands)
     (write-region (concat cmd "\n") nil qute-fifo t)))
 
@@ -477,7 +477,7 @@ let-binds the path to the Qutebrowser FIFO to the variable 'qute-fifo'."
 
 (defun qutebrowser-open-url (url &optional target)
   "Open URL in Qutebrowser.
-TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
+TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
   (let* ((target (or target qutebrowser-default-open-target))
          (flag (qutebrowser--target-to-flag target)))
     (qutebrowser-send-commands (format ":open %s %s" flag url))))
@@ -507,7 +507,7 @@ TARGET specifies where to open it, or 'qutebrowser-default-open-target' if nil."
     (kill-local-variable 'bookmark-make-record-function)))
 
 (defun qutebrowser-exwm-mode-maybe-enable ()
-  "Enable 'qutebrowser-exwm-mode' if the buffer is a Qutebrowser buffer."
+  "Enable `qutebrowser-exwm-mode' if the buffer is a Qutebrowser buffer."
   (when (qutebrowser-exwm-p)
     (qutebrowser-exwm-mode 1)))
 
