@@ -19,6 +19,7 @@ sending commands and code to Qutebrowser using various backends.
 :CONTENTS:
 - [[#features][Features]]
   - [[#planned-features][Planned features]]
+  - [[#ideas][Ideas]]
 - [[#installation][Installation]]
   - [[#manual-installation][Manual Installation]]
   - [[#installation-with-quelpa][Installation with quelpa]]
@@ -55,6 +56,34 @@ I also plan to implement the following features sometime in the near(ish) future
 - Setting keybinds for Qutebrowser commands in an Emacs keymap
 - Hooks for various events in Qutebrowser (some initial experimental
   work already done, see [[#experimental-features][Experimental features]])
+
+** Ideas
+
+Some ideas for possible future features. These are not currently
+planned for implementation, but I keep them around for future
+use.
+
+- Special mode for editing =config.py= with implementation of
+  =eval-buffer=, =eval-defun=, and =eval-region=, allowing for live
+  reloading of (parts) of the config in a similar way as elisp code.
+- Live Python REPL connected to Qutebrowser. (Not really sure how to
+  accomplish this)
+- Password-store integration.
+- Integrated searching, synchronizing the searches of search engines,
+  Emacs isearch and similar, and Qutebrowser text searches.
+- Open devtools in an EXWM split.
+- Edit text fields in an EXWM split.
+- URL interceptors for dispatching Emacs commands when URLs matching a
+  pattern is loaded.
+- DWIM on currently open URL. (open youtube in mpv, open code files in Emacs, etc.)
+- A (limited) set of Qutebrowser commands replicated as Emacs
+  commands. This would be a simple convenience wrapper around
+  =qutebrowser-send-commands=.
+- Option to manage Qutebrowser configurations from Emacs.
+- Integrate with =auto-dim-other-buffers-mode= to dim inactive
+  Qutebrowser buffers.
+- Some kind of Greasemonkey script handling. Unsure what type of
+  features make sense, and how best to handle things.
   
 * Installation
 :PROPERTIES:
