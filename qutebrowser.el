@@ -595,7 +595,8 @@ TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
          (password (password-store-get selected)))
     (qutebrowser-fake-keys username)
     (qutebrowser-fake-keys--raw "<Tab>")
-    (qutebrowser-fake-keys password)))
+    (qutebrowser-fake-keys password)
+    (qutebrowser-fake-keys--raw "<Return>")))
 
 (provide 'qutebrowser)
 
