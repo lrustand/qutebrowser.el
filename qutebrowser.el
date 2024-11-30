@@ -587,7 +587,9 @@ TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
      (string-match-p pattern entry))
    (password-store-list)))
 
+;;;###autoload
 (defun qutebrowser-pass (url)
+  "Autofill username and password matching URL."
   (let* ((domain (url-domain (url-generic-parse-url url)))
          (pass-entries (qutebrowser-pass--find-matching domain))
          (selected (completing-read "Select: " pass-entries))
