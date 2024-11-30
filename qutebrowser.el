@@ -34,7 +34,6 @@
 ;;; Code:
 
 (require 'sqlite)
-(require 'marginalia)
 (require 'consult)
 (require 'exwm)
 (require 'json)
@@ -208,7 +207,7 @@ more details on how the query is built."
   :group 'faces)
 
 (defface qutebrowser-title-face
-  '((t :inherit marginalia-key))
+  '((t :inherit font-lock-keyword-face))
   "Face used to highlight Qutebrowser titles."
   :group 'qutebrowser-faces)
 
