@@ -262,10 +262,12 @@ website title, to allow searching based on either one."
     ('private-window "-p")
     ('auto "")))
 
-(defun qutebrowser-launcher--internal (&optional initial)
+(defun qutebrowser-launcher--internal (&optional initial target)
   "Internal dispatcher for the user-facing launcher commands.
 INITIAL is the initial input for completion."
-  (let* ((res (consult--multi '(qutebrowser--exwm-buffer-source
+  (let* ((qutebrowser-default-open-target
+          (or target qutebrowser-default-open-target))
+         (res (consult--multi '(qutebrowser--exwm-buffer-source
                                 qutebrowser--bookmark-source
                                 qutebrowser--history-source)
                               :initial initial
@@ -283,32 +285,28 @@ INITIAL is the initial input for completion."
 Set initial completion input to INITIAL.  Open the URL in TARGET or the
 default target if nil."
   (interactive)
-  (let ((qutebrowser-default-open-target (or target qutebrowser-default-open-target)))
-    (qutebrowser-launcher--internal initial)))
+  (qutebrowser-launcher--internal initial target))
 
 ;;;###autoload
 (defun qutebrowser-launcher-tab (&optional initial)
   "Select a URL to open in a new tab.
 Set initial completion input to INITIAL."
   (interactive)
-  (let ((qutebrowser-default-open-target 'tab))
-    (qutebrowser-launcher--internal initial)))
+  (qutebrowser-launcher--internal initial 'tab))
 
 ;;;###autoload
 (defun qutebrowser-launcher-window (&optional initial)
   "Select a URL to open in a new window.
 Set initial completion input to INITIAL."
   (interactive)
-  (let ((qutebrowser-default-open-target 'window))
-    (qutebrowser-launcher--internal initial)))
+  (qutebrowser-launcher--internal initial 'window))
 
 ;;;###autoload
 (defun qutebrowser-launcher-private (&optional initial)
   "Select a URL to open in a private window.
 Set initial completion input to INITIAL."
   (interactive)
-  (let ((qutebrowser-default-open-target 'private-window))
-    (qutebrowser-launcher--internal initial)))
+  (qutebrowser-launcher--internal initial 'private-window))
 
 
 (defun qutebrowser--format-window-entry (buffer)
