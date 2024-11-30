@@ -33,6 +33,7 @@ sending commands and code to Qutebrowser using various backends.
   - [[#url-launcher][URL launcher]]
   - [[#qutebrowser-command-execution][Qutebrowser command execution]]
   - [[#theme-synchronization][Theme synchronization]]
+  - [[#password-store][Password store]]
 - [[#recommended-configurations-and-packages][Recommended configurations and packages]]
 - [[#experimental-features][Experimental features]]
   - [[#mode-hooks][Mode hooks]]
@@ -47,6 +48,7 @@ The currently implemented features are:
 - Theme synchronization
 - Bookmarks
 - URL launcher with browsing history completion
+- Password-store autofill
 
 ** Planned features
 
@@ -68,7 +70,6 @@ use.
   reloading of (parts) of the config in a similar way as elisp code.
 - Live Python REPL connected to Qutebrowser. (Not really sure how to
   accomplish this)
-- Password-store integration.
 - Integrated searching, synchronizing the searches of search engines,
   Emacs isearch and similar, and Qutebrowser text searches.
 - Open devtools in an EXWM split.
@@ -303,6 +304,15 @@ Enable the theme synchronization by enabling the global minor mode
 =qutebrowser-theme-export-mode=. This generates a color scheme for
 Qutebrowser based on the current Emacs theme any time the Emacs theme
 changes.
+
+** Password store
+
+Username and password autofill can be accomplished by using the
+=qutebrowser-pass= command, which can be bound like this:
+
+#+begin_src python
+config.bind(',p', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass \"{url}\")'")
+#+end_src
 
 * Recommended configurations and packages
 

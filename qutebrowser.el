@@ -558,6 +558,45 @@ TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
       (advice-add 'enable-theme :after #'qutebrowser-theme-export-and-apply)
     (advice-remove 'enable-theme #'qutebrowser-theme-export-and-apply)))
 
+(defun qutebrowser-fake-keys--escape (text)
+  "Escape any special characters from TEXT to be sent to :fake-keys."
+  (apply #'concat
+   (mapcar (lambda (chr)
+             (pcase chr
+               (?< "<less>")
+               (?> "<greater>")
+               (?\" "\\\"")
+               (?\' "'")
+               (?\\ "\\\\")
+               (_ (char-to-string chr))))
+           text)))
+
+(defun qutebrowser-fake-keys--raw (raw-keys)
+  "Send RAW-KEYS without escaping special characters."
+  (qutebrowser-send-commands (format ":fake-key %s" raw-keys)))
+
+(defun qutebrowser-fake-keys (text)
+  "Send TEXT as input to Qutebrowser."
+  (let* ((escaped-text (qutebrowser-fake-keys--escape text)))
+    (funcall #'qutebrowser-fake-keys--raw (format "\"%s\"" escaped-text))))
+
+(defun qutebrowser-pass--find-matching (pattern)
+  "Return list of password-store entries matching PATTERN."
+  (cl-remove-if-not
+   (lambda (entry)
+     (string-match-p pattern entry))
+   (password-store-list)))
+
+(defun qutebrowser-pass (url)
+  (let* ((domain (url-domain (url-generic-parse-url url)))
+         (pass-entries (qutebrowser-pass--find-matching domain))
+         (selected (completing-read "Select: " pass-entries))
+         (username (car (last (string-split selected "/"))))
+         (password (password-store-get selected)))
+    (qutebrowser-fake-keys username)
+    (qutebrowser-fake-keys--raw "<Tab>")
+    (qutebrowser-fake-keys password)))
+
 (provide 'qutebrowser)
 
 ;;; qutebrowser.el ends here
