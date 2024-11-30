@@ -98,8 +98,11 @@ Emacs configuration:
 :CUSTOM_ID: prerequisites
 :END:
 
-- *Qutebrowser:* This probably goes qithout saying.
-- *EXWM:* Most features are targetting EXWM, and the main aim of the package is to 
+- *Qutebrowser:* This probably goes without saying.
+- *EXWM:* Most features are targetting EXWM, and the main aim of the
+  package is to improve usage of Qutebrowser inside EXWM. It should
+  still be possible to get some use out of the package even if you
+  aren't an EXWM user though.
 - *Consult:* The URL launcher builds upon Consult and is implemented as
   Consult buffer sources. The buffer sources can also be added to your
   =consult-buffer-sources= to make them available through the
