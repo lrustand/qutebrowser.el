@@ -486,7 +486,7 @@ Expects to be called from Qutebrowser through a userscript that
 let-binds the path to the Qutebrowser FIFO to the variable
 `qutebrowser-fifo'."
   (dolist (cmd commands)
-    (write-region (concat cmd "\n") nil qutebrowser-fifo t)))
+    (write-region (concat cmd "\n") nil qutebrowser-fifo t 'novisit)))
 
 (defun qutebrowser-send-commands (&rest commands)
   "Send COMMANDS to Qutebrowser via the selected backend."
@@ -555,7 +555,7 @@ Creates a temporary file and sources it in Qutebrowser using the
 (defun qutebrowser-theme-export ()
   "Export selected Emacs faces to Qutebrowser theme format."
   (interactive)
-  (with-temp-buffer
+  (with-temp-file "~/.config/qutebrowser/emacs_theme.py"
     (insert "# Qutebrowser theme exported from Emacs\n\n")
     (dolist (mapping qutebrowser-theme-export-face-mappings)
       (let* ((qute-face (symbol-name (car mapping)))
@@ -565,8 +565,7 @@ Creates a temporary file and sources it in Qutebrowser using the
              (color (face-attribute emacs-face attribute nil 'default))
              (hex-color (apply #'color-rgb-to-hex
                                (append (color-name-to-rgb color) '(2)))))
-        (insert (format "c.colors.%s = '%s'\n" qute-face hex-color))))
-    (write-file "~/.config/qutebrowser/emacs_theme.py")))
+        (insert (format "c.colors.%s = '%s'\n" qute-face hex-color))))))
 
 (defun qutebrowser-theme-export-and-apply (&rest _)
   "Export and apply theme to running Qutebrowser instance."
