@@ -37,6 +37,7 @@
 (require 'consult)
 (require 'exwm)
 (require 'json)
+(require 'color)
 
 (defgroup qutebrowser nil
   "Customizing EXWM enhancements for Qutebrowser.")
@@ -539,8 +540,10 @@ TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
              (emacs-face (cdr mapping))
              (is-fg (string-match-p "\\.fg$" qute-face))
              (attribute (if is-fg :foreground :background))
-             (color (face-attribute emacs-face attribute nil 'default)))
-        (insert (format "c.colors.%s = '%s'\n" qute-face color))))
+             (color (face-attribute emacs-face attribute nil 'default))
+             (hex-color (apply #'color-rgb-to-hex
+                               (append (color-name-to-rgb color) '(2)))))
+        (insert (format "c.colors.%s = '%s'\n" qute-face hex-color))))
     (write-file "~/.config/qutebrowser/emacs_theme.py")))
 
 (defun qutebrowser-theme-export-and-apply (&rest _)
