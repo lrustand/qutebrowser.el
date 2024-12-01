@@ -539,8 +539,9 @@ TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
              (emacs-face (cdr mapping))
              (is-fg (string-match-p "\\.fg$" qute-face))
              (attribute (if is-fg :foreground :background))
-             (color (face-attribute emacs-face attribute nil 'default)))
-        (insert (format "c.colors.%s = '%s'\n" qute-face color))))
+             (color (face-attribute emacs-face attribute nil 'default))
+             (rgb (apply #'color-rgb-to-hex `(,@(color-name-to-rgb color) 2))))
+        (insert (format "c.colors.%s = '%s'\n" qute-face rgb))))
     (write-file "~/.config/qutebrowser/emacs_theme.py")))
 
 (defun qutebrowser-theme-export-and-apply (&rest _)
