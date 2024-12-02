@@ -627,6 +627,26 @@ Creates a temporary file and sources it in Qutebrowser using the
     (qutebrowser-fake-keys password)
     (qutebrowser-fake-keys--raw "<Return>")))
 
+;;;###autoload
+(defun qutebrowser-pass-username-only (url)
+  "Autofill username matching URL."
+  (let* ((domain (url-domain (url-generic-parse-url url)))
+         (pass-entries (qutebrowser-pass--find-matching domain))
+         (selected (completing-read "Select: " pass-entries))
+         (username (car (last (string-split selected "/")))))
+    (qutebrowser-fake-keys username)
+    (qutebrowser-fake-keys--raw "<Return>")))
+
+;;;###autoload
+(defun qutebrowser-pass-password-only (url)
+  "Autofill password matching URL."
+  (let* ((domain (url-domain (url-generic-parse-url url)))
+         (pass-entries (qutebrowser-pass--find-matching domain))
+         (selected (completing-read "Select: " pass-entries))
+         (password (password-store-get selected)))
+    (qutebrowser-fake-keys password)
+    (qutebrowser-fake-keys--raw "<Return>")))
+
 (defun qutebrowser--signal-mode-enter (mode)
   (run-hooks 'qutebrowser-mode-enter-hook))
 
