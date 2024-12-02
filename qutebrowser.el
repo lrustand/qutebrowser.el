@@ -212,6 +212,24 @@ more details on how the query is built."
   "Face used to highlight Qutebrowser titles."
   :group 'qutebrowser-faces)
 
+(defvar qutebrowser-mode-enter-hook nil
+  "Hook run after Qutebrowser enters a mode.")
+
+(defvar qutebrowser-mode-leave-hook nil
+  "Hook run after Qutebrowser leaves a mode.")
+
+(defvar qutebrowser-new-window-hook nil
+  "Hook run after a new window Qutebrowser window is created.")
+
+(defvar qutebrowser-config-changed-hook nil
+  "Hook run after Qutebrowser config is changed.")
+
+(defvar qutebrowser-got-search-hook nil
+  "Hook run after a search term is entered.")
+
+(defvar qutebrowser-url-changed-hook nil
+  "Hook run after Qutebrowser changes URL.")
+
 (defun qutebrowser--history ()
   "Get the Qutebrowser history from the sqlite database."
   (let* ((db (sqlite-open qutebrowser-history-database))
@@ -602,6 +620,28 @@ TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
     (qutebrowser-fake-keys--raw "<Tab>")
     (qutebrowser-fake-keys password)
     (qutebrowser-fake-keys--raw "<Return>")))
+
+(defun qutebrowser--signal-mode-enter (mode)
+  (run-hooks 'qutebrowser-mode-enter-hook))
+
+(defun qutebrowser--signal-mode-leave (mode)
+  (run-hooks 'qutebrowser-mode-leave-hook))
+
+(defun qutebrowser--signal-new-window (win-id)
+  (run-hooks 'qutebrowser-new-window-hook))
+
+;; This triggers ~300 times (maybe once per line?)
+(defun qutebrowser--signal-config-changed ()
+  (run-hooks 'qutebrowser-config-changed-hook))
+
+(defun qutebrowser--signal-url-changed (win-id url)
+  (run-hooks 'qutebrowser-url-search-hook))
+
+(defvar qutebrowser-current-search nil)
+
+(defun qutebrowser--signal-got-search (search)
+  (setq qutebrowser-current-search search)
+  (run-hooks 'qutebrowser-got-search-hook))
 
 (provide 'qutebrowser)
 
