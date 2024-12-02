@@ -649,6 +649,27 @@ Creates a temporary file and sources it in Qutebrowser using the
   (setq qutebrowser-current-search search)
   (run-hooks 'qutebrowser-got-search-hook))
 
+(defun qutebrowser--get-process-pid ()
+  "Return a list of PIDs for Qutebrowser processes."
+  (cl-remove-if-not
+   (lambda (pid)
+     (let* ((attrs (process-attributes pid))
+            (cmd (alist-get 'comm attrs)))
+       (string= ".qutebrowser-re" cmd)))
+   (list-system-processes)))
+
+(defun qutebrowser--get-process-attribute (attr)
+  (mapcar (lambda (pid)
+            (alist-get attr (process-attributes pid)))
+          (qutebrowser--get-process-pid)))
+
+(defun qutebrowser--get-process-uptime ()
+  "Return uptime in seconds of Qutebrowser process."
+  (mapcar (lambda (pid)
+            (time-convert (alist-get 'etime (process-attributes pid))
+                          'integer))
+          (qutebrowser--get-process-pid)))
+
 (provide 'qutebrowser)
 
 ;;; qutebrowser.el ends here
