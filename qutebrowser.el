@@ -201,7 +201,7 @@ more details on how the query is built."
   "How to sort the history entries in the completion lists."
   :type '(choice
           (const :tag "Unsorted" nil)
-          (cosnt :tag "Recency" "last_atime DESC")
+          (const :tag "Recency" "last_atime DESC")
           (string :tag "Custom ORDER BY clause"))
   :risky t
   :group 'qutebrowser)
@@ -535,7 +535,7 @@ Creates a temporary file and sources it in Qutebrowser using the
 ;;;###autoload
 (define-globalized-minor-mode global-qutebrowser-exwm-mode
   qutebrowser-exwm-mode
-  #'qutebrowser-exwm-mode-maybe-enable
+  qutebrowser-exwm-mode-maybe-enable
   (if global-qutebrowser-exwm-mode
       (add-hook 'exwm-manage-finish-hook #'qutebrowser-exwm-mode-maybe-enable)
     (remove-hook 'exwm-manage-finish-hook #'qutebrowser-exwm-mode-maybe-enable)))
