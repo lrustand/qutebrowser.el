@@ -19,6 +19,7 @@
 ;; Author: Lars Rustand
 ;; URL: https://github.com/lrustand/qutebrowser.el
 ;; Version: 0
+;; Package-Requires: ((emacs "29.1") (consult "0.34"))
 
 ;;; Commentary:
 
@@ -40,7 +41,8 @@
 (require 'color)
 
 (defgroup qutebrowser nil
-  "Customizing EXWM enhancements for Qutebrowser.")
+  "EXWM enhancements for Qutebrowser."
+  :group 'external)
 
 (defcustom qutebrowser-theme-export-face-mappings
          '((completion.fg . default)
@@ -152,12 +154,14 @@
                  (const :tag "FIFO" qutebrowser-fifo-send)
                  (const :tag "Commandline" qutebrowser-commandline-send)
                  (function :tag "Custom command"))
+  :risky t
   :group 'qutebrowser)
 
 (defcustom qutebrowser-history-database
   "~/.local/share/qutebrowser/history.sqlite"
   "Path to the Qutebrowser history database."
   :type 'file
+  :risky t
   :group 'qutebrowser)
 
 (defcustom qutebrowser-history-exclusion-patterns
@@ -200,6 +204,7 @@ more details on how the query is built."
           (const :tag "Frequency" "COUNT(url) DESC")
           (cosnt :tag "Recency" "atime DESC")
           (string :tag "Custom ORDER BY clause"))
+  :risky t
   :group 'qutebrowser)
 
 (defgroup qutebrowser-faces nil
@@ -283,7 +288,7 @@ website title, to allow searching based on either one."
 
 (defun qutebrowser-launcher--internal (&optional initial target)
   "Internal dispatcher for the user-facing launcher commands.
-INITIAL is the initial input for completion."
+INITIAL is the initial input for completion, and TARGET is where to open."
   (let* ((qutebrowser-default-open-target
           (or target qutebrowser-default-open-target))
          (res (consult--multi '(qutebrowser--exwm-buffer-source
@@ -427,20 +432,16 @@ The following is what I have in my own init.el:
 
 ;; Prevent Prescient history from being clogged up by web pages.
 (with-eval-after-load 'vertico-prescient
-  (defun vertico-prescient--dont-remember-urls (orig-fun &rest args)
-    "Exclude URLs from prescient history."
-    (unless (string-match-p "^https?://" (minibuffer-contents-no-properties))
-      (funcall orig-fun)))
-  (defun vertico-prescient--dont-remember-qutebrowser-buffers (orig-fun &rest args)
-    "Exclude Qutebrowser buffers from prescient history."
-    (let* ((selected-candidate (substring (minibuffer-contents-no-properties) 0 -1))
+  (defun qutebrowser-advice-vertico-prescient (orig-fun &rest args)
+    "Exclude Qutebrowser buffer names and URLs from prescient history."
+    (let* ((selected-candidate
+            (substring (minibuffer-contents-no-properties) 0 -1))
            (selected-buffer (get-buffer selected-candidate)))
-      (unless (qutebrowser-exwm-p selected-buffer)
+      (unless (or (qutebrowser-exwm-p selected-buffer)
+                  (string-match-p "^https?://" selected-candidate))
         (funcall orig-fun))))
   (advice-add 'vertico-prescient--remember-minibuffer-contents :around
-              #'vertico-prescient--dont-remember-qutebrowser-buffers)
-  (advice-add 'vertico-prescient--remember-minibuffer-contents :around
-              #'vertico-prescient--dont-remember-urls))
+              #'qutebrowser-advice-vertico-prescient))
 
 (defvar qutebrowser-ipc-protocol-version 1
   "The protocol version for Qutebrowser IPC.")
@@ -478,15 +479,16 @@ Falls back to sending over commandline if IPC fails."
   "Send COMMANDS to Qutebrowser via commandline."
   (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
 
-(defvar qute-fifo nil
+(defvar qutebrowser-fifo nil
   "Holds the path of the Qutebrowser FIFO when called as a userscript.")
 
 (defun qutebrowser-fifo-send (&rest commands)
   "Send COMMANDS to Qutebrowser via FIFO.
 Expects to be called from Qutebrowser through a userscript that
-let-binds the path to the Qutebrowser FIFO to the variable `qute-fifo'."
+let-binds the path to the Qutebrowser FIFO to the variable
+`qutebrowser-fifo'."
   (dolist (cmd commands)
-    (write-region (concat cmd "\n") nil qute-fifo t)))
+    (write-region (concat cmd "\n") nil qutebrowser-fifo t)))
 
 (defun qutebrowser-send-commands (&rest commands)
   "Send COMMANDS to Qutebrowser via the selected backend."
@@ -494,7 +496,8 @@ let-binds the path to the Qutebrowser FIFO to the variable `qute-fifo'."
 
 (defun qutebrowser-open-url (url &optional target)
   "Open URL in Qutebrowser.
-TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
+TARGET specifies where to open it, or `qutebrowser-default-open-target'
+if nil."
   (let* ((target (or target qutebrowser-default-open-target))
          (flag (qutebrowser--target-to-flag target)))
     (qutebrowser-send-commands (format ":open %s %s" flag url))))
@@ -505,8 +508,11 @@ TARGET specifies where to open it, or `qutebrowser-default-open-target' if nil."
   (qutebrowser-send-commands (concat ":config-source " config-file)))
 
 (defun qutebrowser-execute-python (python-code)
-  "Execute PYTHON-CODE in running Qutebrowser instance."
-  (let ((temp-conf-file (make-temp-file "qutebrowser-temp-config" nil nil python-code)))
+  "Execute PYTHON-CODE in running Qutebrowser instance.
+Creates a temporary file and sources it in Qutebrowser using the
+:config-source command."
+  (let ((temp-conf-file (make-temp-file "qutebrowser-temp-config"
+                                        nil nil python-code)))
     (qutebrowser-config-source temp-conf-file)))
 
 (defun qutebrowser-execute-js (js-code)
