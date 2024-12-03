@@ -197,12 +197,11 @@ more details on how the query is built."
   :type 'integer
   :group 'qutebrowser)
 
-(defcustom qutebrowser-history-order-by "COUNT(url) DESC"
+(defcustom qutebrowser-history-order-by "last_atime DESC"
   "How to sort the history entries in the completion lists."
   :type '(choice
           (const :tag "Unsorted" nil)
-          (const :tag "Frequency" "COUNT(url) DESC")
-          (cosnt :tag "Recency" "atime DESC")
+          (cosnt :tag "Recency" "last_atime DESC")
           (string :tag "Custom ORDER BY clause"))
   :risky t
   :group 'qutebrowser)
@@ -244,9 +243,8 @@ more details on how the query is built."
          (order (when qutebrowser-history-order-by
                   (format "ORDER BY %s" qutebrowser-history-order-by)))
          (query (format "SELECT url,substr(title,0,%d)
-                         FROM History
+                         FROM CompletionHistory
                          %s
-                         GROUP BY url
                          %s"
                         (1- qutebrowser-title-display-length)
                         where
