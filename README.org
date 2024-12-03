@@ -205,9 +205,9 @@ command:
 
 #+begin_src bash
 #!/usr/bin/env bash
-emacsclient -e "(let ((qute-fifo \"$QUTE_FIFO\")
+emacsclient -e "(let ((qutebrowser-fifo \"$QUTE_FIFO\")
                       (qutebrowser-command-backend 'qutebrowser-fifo-send))
-                  $@)"
+                  $@)"; true
 #+end_src
 
 
