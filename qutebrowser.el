@@ -237,9 +237,19 @@ more details on how the query is built."
 (defvar qutebrowser-url-changed-hook nil
   "Hook run after Qutebrowser changes URL.")
 
+(defvar qutebrowser--db-object nil
+  "Contains a reference to the database connection.")
+
+(defun qutebrowser--get-db ()
+  "Return the open databse, or open it."
+  (unless (sqlitep qutebrowser--db-object)
+    (setq qutebrowser--db-object (sqlite-open qutebrowser-history-database)))
+  qutebrowser--db-object)
+
 (defun qutebrowser--history-search (&optional input limit)
-  "Search the sqlite database for INPUT."
-  (let* ((db (sqlite-open qutebrowser-history-database))
+  "Search the sqlite database for INPUT.
+Return up to LIMIT results."
+  (let* ((db (qutebrowser--get-db))
          (words (string-split input))
          (patterns (mapcar (apply-partially 'format qutebrowser-history-matching-pattern)
                     words))
