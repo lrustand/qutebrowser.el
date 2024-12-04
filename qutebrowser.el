@@ -495,7 +495,14 @@ INITIAL sets the initial input in the minibuffer."
                  (t "History"))))
      :sort nil
      :annotate #'qutebrowser-annotate
-     :initial initial
+     ;; Ugly hack to show results immediately. Consult requires at
+     ;; least one character to start displaying results from dynamic
+     ;; sources, so we prepend an invisible space character to the
+     ;; initial input. The space character is simply ignored by our
+     ;; word-by-word searches.
+     :initial (let ((nothing " "))
+                (set-text-properties 0 1 '(invisible t) nothing)
+                (concat nothing initial))
      :require-match nil)))
 
 (defvar qutebrowser--exwm-buffer-source
