@@ -284,6 +284,7 @@ Return up to LIMIT results."
     ('auto "")))
 
 (defun qutebrowser-find-buffer (url)
+  "Find the buffer showing URL."
   (seq-find (lambda (buffer)
               (string= url (get-text-property 0 'url (buffer-name buffer))))
             (qutebrowser-buffer-list)))
@@ -373,12 +374,16 @@ The following is what I have in my own init.el:
     url))
 
 (defun qutebrowser-buffer-url (&optional buffer)
+  "Return the URL of BUFFER or the current buffer."
   (get-text-property 0 'url (buffer-name buffer)))
 
 (defun qutebrowser-buffer-list ()
+  "Return a list of all Qutebrowser buffers."
   (seq-filter #'qutebrowser-exwm-p (buffer-list)))
 
 (defun qutebrowser-buffer-filter (words buffers)
+  "Filter BUFFERS to find those matching WORDS.
+Both buffer names and URLs are used for matching."
   (seq-filter
    (lambda (buffer)
      ;; All search words matching
@@ -414,6 +419,7 @@ Both bookmark name and URLs are used for matching."
             matching-bookmarks)))
 
 (defun qutebrowser-buffer-search (&optional input)
+  "Return a propertized list of Qutebrowser buffers matching INPUT."
   (let* ((words (string-split (or input "")))
          (buffers (qutebrowser-buffer-list))
          (matching-buffers (qutebrowser-buffer-filter words buffers)))
@@ -427,12 +433,21 @@ Both bookmark name and URLs are used for matching."
             matching-buffers)))
 
 (defun qutebrowser-highlight-matches (input str)
+  "Highlight all occurrences of words in INPUT in STR."
   (dolist (word (string-split input))
     (if-let* ((start (string-match word str))
               (end (+ start (length word))))
         (put-text-property start end 'face 'link str))))
 
 (defun qutebrowser-annotate (entry)
+  "Return annotation for ENTRY.
+ENTRY can be a bookmark, a buffer, or a history item.  ENTRY should be a
+string containing a URL, and it should be propertized with at least some
+of 'input, 'url, 'title, 'buffer, 'visited, and/or 'bookmark.
+
+ENTRY will be modified to highlight any words contained in the 'input
+property, and the end of the string will be hidden by setting the
+'invisible property."
   (let ((input (get-text-property 0 'input entry))
         (url (substring-no-properties entry))
         (title (get-text-property 0 'title entry))
@@ -452,7 +467,8 @@ Both bookmark name and URLs are used for matching."
       (concat padding " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
 
 (defun qutebrowser-select-url (&optional initial)
-  "Dynamically select a URL from Qutebrowser history."
+  "Dynamically select a URL from Qutebrowser history.
+INITIAL sets the initial input in the minibuffer."
   (consult--read
    (consult--dynamic-collection
     (lambda (input)
