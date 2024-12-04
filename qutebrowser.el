@@ -219,6 +219,10 @@ more details on how the query is built."
 (defvar qutebrowser-history-matching-pattern
   "(url || title) LIKE '%%%s%%'")
 
+(defvar qutebrowser-bookmark--tofu (consult--tofu-encode 1))
+(defvar qutebrowser-buffer--tofu (consult--tofu-encode 2))
+(defvar qutebrowser-history--tofu (consult--tofu-encode 3))
+
 (defvar qutebrowser-mode-enter-hook nil
   "Hook run after Qutebrowser enters a mode.")
 
@@ -270,7 +274,8 @@ Return up to LIMIT results."
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
-                (propertize url
+                (propertize (concat qutebrowser-history--tofu
+                                    url)
                             'input input
                             'title title)))
             (sqlite-select db query))))
@@ -300,12 +305,15 @@ default target if nil."
          (selected (qutebrowser-select-url initial)))
     (when selected
       (cond
-       ((string-prefix-p "[BUFFER]" selected)
-        (let* ((url (substring selected 8))
+       ((string-prefix-p qutebrowser-buffer--tofu selected)
+        (let* ((url (substring selected 1))
                (buffer (qutebrowser-find-buffer url)))
           (switch-to-buffer buffer)))
-       ((string-prefix-p "[BOOKMARK]" selected)
-        (let ((url (substring selected 10)))
+       ((string-prefix-p qutebrowser-bookmark--tofu selected)
+        (let ((url (substring selected 1)))
+          (qutebrowser-open-url url)))
+       ((string-prefix-p qutebrowser-history--tofu selected)
+        (let ((url (substring selected 1)))
           (qutebrowser-open-url url)))
        (t (qutebrowser-open-url selected))))))
 
@@ -414,7 +422,8 @@ Both bookmark name and URLs are used for matching."
          (matching-bookmarks (qutebrowser-bookmark-filter words bookmarks)))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
-                (propertize (concat "[BOOKMARK] " (qutebrowser--shorten-display-url url))
+                (propertize (concat qutebrowser-bookmark--tofu
+                                    url)
                             'input input
                             'title bookmark
                             'bookmark t)))
@@ -428,7 +437,8 @@ Both bookmark name and URLs are used for matching."
     (mapcar (lambda (buffer)
               (let* ((title (substring-no-properties (buffer-name buffer)))
                      (url (qutebrowser-buffer-url buffer)))
-                (propertize (concat "[BUFFER]" (qutebrowser--shorten-display-url url))
+                (propertize (concat qutebrowser-buffer--tofu
+                                    url)
                             'input input
                             'title title
                             'buffer buffer)))
@@ -478,6 +488,13 @@ INITIAL sets the initial input in the minibuffer."
        (qutebrowser-buffer-search input)
        (qutebrowser-bookmark-search input)
        (qutebrowser--history-search input 100))))
+   :group (lambda (entry transform)
+            (if transform
+                entry
+              (cond
+               ((get-text-property 0 'buffer entry) "Buffer")
+               ((get-text-property 0 'bookmark entry) "Bookmark")
+               (t "History"))))
    :sort nil
    :annotate #'qutebrowser-annotate
    :initial initial
