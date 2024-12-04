@@ -254,7 +254,8 @@ more details on how the query is built."
   "Search the sqlite database for INPUT.
 Return up to LIMIT results."
   (let* ((db (qutebrowser--get-db))
-         (words (string-split input))
+         ;; Safeguarding to avoid nil value
+         (words (or (string-split (or input "")) '("")))
          (inclusion (mapcar (apply-partially 'format qutebrowser-history-matching-pattern)
                             words))
          (exclusion (mapcar (apply-partially 'format " AND url NOT LIKE '%s'")
