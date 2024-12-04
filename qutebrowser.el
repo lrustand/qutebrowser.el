@@ -297,7 +297,7 @@ default target if nil."
   (interactive)
   (let* ((qutebrowser-default-open-target
           (or target qutebrowser-default-open-target))
-         (selected (qutebrowser-select-url)))
+         (selected (qutebrowser-select-url initial)))
     (when selected
       (cond
        ((string-prefix-p "[BUFFER]" selected)
