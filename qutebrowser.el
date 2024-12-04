@@ -388,8 +388,10 @@ Both buffer names and URLs are used for matching."
    (lambda (buffer)
      ;; All search words matching
      (-all-p (lambda (word)
-               (or (string-match-p word (buffer-name buffer))
-                   (string-match-p word (qutebrowser-buffer-url buffer))))
+               (let ((title (or (buffer-name buffer) ""))
+                     (url (or (qutebrowser-buffer-url buffer) "")))
+               (or (string-match-p word title)
+                   (string-match-p word url))))
              words))
    buffers))
 
