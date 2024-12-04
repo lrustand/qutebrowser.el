@@ -481,24 +481,25 @@ property, and the end of the string will be hidden by setting the
 (defun qutebrowser-select-url (&optional initial)
   "Dynamically select a URL from Qutebrowser history.
 INITIAL sets the initial input in the minibuffer."
-  (consult--read
-   (consult--dynamic-collection
-    (lambda (input)
-      (append
-       (qutebrowser-buffer-search input)
-       (qutebrowser-bookmark-search input)
-       (qutebrowser--history-search input 100))))
-   :group (lambda (entry transform)
-            (if transform
-                entry
-              (cond
-               ((get-text-property 0 'buffer entry) "Buffer")
-               ((get-text-property 0 'bookmark entry) "Bookmark")
-               (t "History"))))
-   :sort nil
-   :annotate #'qutebrowser-annotate
-   :initial initial
-   :require-match nil))
+  (let ((consult-async-min-input 0))
+    (consult--read
+     (consult--dynamic-collection
+      (lambda (input)
+        (append
+         (qutebrowser-buffer-search input)
+         (qutebrowser-bookmark-search input)
+         (qutebrowser--history-search input 100))))
+     :group (lambda (entry transform)
+              (if transform
+                  entry
+                (cond
+                 ((get-text-property 0 'buffer entry) "Buffer")
+                 ((get-text-property 0 'bookmark entry) "Bookmark")
+                 (t "History"))))
+     :sort nil
+     :annotate #'qutebrowser-annotate
+     :initial initial
+     :require-match nil)))
 
 (defvar qutebrowser--exwm-buffer-source
   (list :name "Qutebrowser buffers"
