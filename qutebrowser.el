@@ -216,6 +216,9 @@ more details on how the query is built."
   "Face used to highlight Qutebrowser titles."
   :group 'qutebrowser-faces)
 
+(defvar qutebrowser-history-matching-pattern
+  "(url || title) LIKE '%%%s%%'")
+
 (defvar qutebrowser-mode-enter-hook nil
   "Hook run after Qutebrowser enters a mode.")
 
@@ -234,47 +237,30 @@ more details on how the query is built."
 (defvar qutebrowser-url-changed-hook nil
   "Hook run after Qutebrowser changes URL.")
 
-(defun qutebrowser--history ()
-  "Get the Qutebrowser history from the sqlite database."
+(defun qutebrowser--history-search (&optional input limit)
+  "Search the sqlite database for INPUT."
   (let* ((db (sqlite-open qutebrowser-history-database))
-         (where (format "WHERE url NOT LIKE '%s'"
-                        (string-join qutebrowser-history-exclusion-patterns
-                                     "' AND url NOT LIKE '")))
-         (order (when qutebrowser-history-order-by
-                  (format "ORDER BY %s" qutebrowser-history-order-by)))
+         (words (string-split input))
+         (patterns (mapcar (apply-partially 'format qutebrowser-history-matching-pattern)
+                    words))
+         (where (concat "WHERE " (string-join patterns " AND ")))
          (query (format "SELECT url,substr(title,0,%d)
                          FROM CompletionHistory
                          %s
+                         ORDER BY %s
                          %s"
                         (1- qutebrowser-title-display-length)
                         where
-                        order)))
-    (sqlite-select db query)))
-
-(defun qutebrowser--pseudo-annotate (row &optional buffer)
-  "Create pseudo-annotated entries from each ROW.
-This simulates marginalia annotations, but allows the text in the
-annotation to be searchable.  Optionally embeds BUFFER as a text
-property."
-  (let* ((url (nth 0 row))
-         (title (nth 1 row))
-         (display-url (truncate-string-to-width url qutebrowser-url-display-length 0 ?\ ))
-         (display-title (truncate-string-to-width title qutebrowser-title-display-length 0 ?\ )))
-    (format "%s %s"
-            (propertize display-url
-                        'url url
-                        'title title
-                        'buffer buffer)
-            (propertize display-title
-                        'face 'qutebrowser-title-face))))
-
-(defun qutebrowser--history-candidates ()
-  "Lists completion candidates from Qutebrowser history.
-Candidates contain the url, and a pseudo-annotation with the
-website title, to allow searching based on either one."
-  (let* ((history (qutebrowser--history)))
-    (mapcar #'qutebrowser--pseudo-annotate
-            history)))
+                        qutebrowser-history-order-by
+                        (if limit (format "LIMIT %s" limit) ""))))
+    ;; Return list of URLs propertized with input and title
+    (mapcar (lambda (row)
+              (let* ((url (car row))
+                     (title (cadr row)))
+                (propertize url
+                            'input input
+                            'title title)))
+            (sqlite-select db query))))
 
 (defun qutebrowser--target-to-flag (target)
   "Return the :open flag corresponding to TARGET."
@@ -284,22 +270,10 @@ website title, to allow searching based on either one."
     ('private-window "-p")
     ('auto "")))
 
-(defun qutebrowser-launcher--internal (&optional initial target)
-  "Internal dispatcher for the user-facing launcher commands.
-INITIAL is the initial input for completion, and TARGET is where to open."
-  (let* ((qutebrowser-default-open-target
-          (or target qutebrowser-default-open-target))
-         (res (consult--multi '(qutebrowser--exwm-buffer-source
-                                qutebrowser--bookmark-source
-                                qutebrowser--history-source)
-                              :initial initial
-                              :annotate nil
-                              :sort nil))
-         (plist (cdr res))
-         (selected (car res)))
-    ;; If none of the buffer sources handled it
-    (unless (plist-get plist :match)
-      (qutebrowser-open-url selected))))
+(defun qutebrowser-find-buffer (url)
+  (seq-find (lambda (buffer)
+              (string= url (get-text-property 0 'url (buffer-name buffer))))
+            (qutebrowser-buffer-list)))
 
 ;;;###autoload
 (defun qutebrowser-launcher (&optional initial target)
@@ -307,40 +281,36 @@ INITIAL is the initial input for completion, and TARGET is where to open."
 Set initial completion input to INITIAL.  Open the URL in TARGET or the
 default target if nil."
   (interactive)
-  (qutebrowser-launcher--internal initial target))
+  (let* ((qutebrowser-default-open-target
+          (or target qutebrowser-default-open-target))
+         (selected (qutebrowser-select-url)))
+    (when selected
+      (if-let ((url (when (string-prefix-p "[BUFFER]" selected)
+                      (substring selected 8)))
+               (buffer (qutebrowser-find-buffer url)))
+          (switch-to-buffer buffer)
+        (qutebrowser-open-url selected)))))
 
 ;;;###autoload
 (defun qutebrowser-launcher-tab (&optional initial)
   "Select a URL to open in a new tab.
 Set initial completion input to INITIAL."
   (interactive)
-  (qutebrowser-launcher--internal initial 'tab))
+  (qutebrowser-launcher initial 'tab))
 
 ;;;###autoload
 (defun qutebrowser-launcher-window (&optional initial)
   "Select a URL to open in a new window.
 Set initial completion input to INITIAL."
   (interactive)
-  (qutebrowser-launcher--internal initial 'window))
+  (qutebrowser-launcher initial 'window))
 
 ;;;###autoload
 (defun qutebrowser-launcher-private (&optional initial)
   "Select a URL to open in a private window.
 Set initial completion input to INITIAL."
   (interactive)
-  (qutebrowser-launcher--internal initial 'private-window))
-
-
-(defun qutebrowser--format-window-entry (buffer)
-  "Format a `consult--multi' entry for BUFFER.
-Expects the `buffer-name' of BUFFER to be propertized with a url field."
-  (let* ((bufname (buffer-name buffer))
-         (title (substring-no-properties bufname))
-         (url (or (get-text-property 0 'url bufname) "")))
-    (cons
-     (qutebrowser--pseudo-annotate
-      (list url title))
-     buffer)))
+  (qutebrowser-launcher initial 'private-window))
 
 (defun qutebrowser-exwm-p (&optional buffer)
   "Return t if BUFFER is a Qutebrowser EXWM buffer."
@@ -377,19 +347,91 @@ The following is what I have in my own init.el:
           (propertize title 'url url))
       window-title)))
 
+(defun qutebrowser--shorten-display-url (url)
+  "Shorten URL by making the end invisible."
+  (let ((url-length (length url))
+        (max-length qutebrowser-url-display-length))
+    (when (> url-length max-length)
+      (put-text-property max-length url-length 'invisible t url))
+    url))
+
+(defun qutebrowser-buffer-url (&optional buffer)
+  (get-text-property 0 'url (buffer-name buffer)))
+
+(defun qutebrowser-buffer-list ()
+  (seq-filter #'qutebrowser-exwm-p (buffer-list)))
+
+(defun qutebrowser-buffer-filter (words buffers)
+  (seq-filter
+   (lambda (buffer)
+     ;; All search words matching
+     (-all-p (lambda (word)
+               (or (string-match-p word (buffer-name buffer))
+                   (string-match-p word (qutebrowser-buffer-url buffer))))
+             words))
+   buffers))
+
+(defun qutebrowser-buffer-search (&optional input)
+  (let* ((words (string-split (or input "")))
+         (buffers (qutebrowser-buffer-list))
+         (matching-buffers (qutebrowser-buffer-filter words buffers)))
+    (mapcar (lambda (buffer)
+              (let* ((title (substring-no-properties (buffer-name buffer)))
+                     (url (qutebrowser-buffer-url buffer)))
+                (propertize (concat "[BUFFER]" (qutebrowser--shorten-display-url url))
+                            'input input
+                            'title title
+                            'buffer buffer)))
+            matching-buffers)))
+
+(defun qutebrowser-highlight-matches (input str)
+  (dolist (word (string-split input))
+    (if-let* ((start (string-match word str))
+              (end (+ start (length word))))
+        (put-text-property start end 'face 'link str))))
+
+(defun qutebrowser-annotate (entry)
+  (let ((input (get-text-property 0 'input entry))
+        (url (substring-no-properties entry))
+        (title (get-text-property 0 'title entry))
+        (buffer (get-text-property 0 'buffer entry))
+        (visited (get-text-property 0 'visited entry))
+        (bookmark (get-text-property 0 'bookmark entry)))
+    ;; Set main face of annotation (title)
+    (put-text-property 0 (length title) 'face 'completions-annotations title)
+    ;; Highlight all matching words (both in url and title)
+    (when input
+      (qutebrowser-highlight-matches input entry)
+      (qutebrowser-highlight-matches input title))
+    (qutebrowser--shorten-display-url entry)
+    (let* ((pad-length (max 0 (- qutebrowser-url-display-length
+                                 (length url))))
+           (padding (make-string pad-length ?\ )))
+      (concat padding " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
+
+(defun qutebrowser-select-url (&optional initial)
+  "Dynamically select a URL from Qutebrowser history."
+  (consult--read
+   (consult--dynamic-collection
+    (lambda (input)
+      (append
+       (qutebrowser-buffer-search input)
+       (qutebrowser--history-search input 100))))
+   :sort nil
+   :annotate #'qutebrowser-annotate
+   :initial initial
+   :require-match nil))
+
 (defvar qutebrowser--exwm-buffer-source
   (list :name "Qutebrowser buffers"
         :hidden nil
         :narrow ?q
         :history nil
         :category 'other
-        :action #'switch-to-buffer
-        :annotate nil
-        :items
-        (lambda () (mapcar #'qutebrowser--format-window-entry
-                           (consult--buffer-query
-                            :sort 'visibility
-                            :predicate #'qutebrowser-exwm-p))))
+        :action (lambda (entry)
+                  (switch-to-buffer (get-text-property 0 'buffer entry)))
+        :annotate #'qutebrowser-annotate
+        :items #'qutebrowser-buffer-search)
   "`consult-buffer' source for open Qutebrowser windows.")
 
 (defun qutebrowser-bookmark-p (bookmark)
@@ -412,21 +454,6 @@ The following is what I have in my own init.el:
         :action #'qutebrowser-bookmark-jump
         :items #'qutebrowser-bookmarks-list)
   "`consult-buffer' source for Qutebrowser bookmarks.")
-
-
-(defvar qutebrowser--history-source
-  (list :name "Qutebrowser history"
-        :hidden nil
-        :narrow ?h
-        :history nil
-        :category 'buffer
-        :annotate nil
-        :action (lambda (entry)
-                  (let ((url (or (get-text-property 0 'url entry)
-                                 entry)))
-                    (qutebrowser-open-url url)))
-        :items #'qutebrowser--history-candidates)
-  "`consult-buffer' source for Qutebrowser history.")
 
 ;; Prevent Prescient history from being clogged up by web pages.
 (with-eval-after-load 'vertico-prescient
