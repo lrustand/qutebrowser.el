@@ -251,9 +251,12 @@ more details on how the query is built."
 Return up to LIMIT results."
   (let* ((db (qutebrowser--get-db))
          (words (string-split input))
-         (patterns (mapcar (apply-partially 'format qutebrowser-history-matching-pattern)
-                    words))
-         (where (concat "WHERE " (string-join patterns " AND ")))
+         (inclusion (mapcar (apply-partially 'format qutebrowser-history-matching-pattern)
+                            words))
+         (exclusion (mapcar (apply-partially 'format " AND url NOT LIKE '%s'")
+                            qutebrowser-history-exclusion-patterns))
+         (where (concat "WHERE " (string-join inclusion " AND ")
+                        (string-join exclusion)))
          (query (format "SELECT url,substr(title,0,%d)
                          FROM CompletionHistory
                          %s
