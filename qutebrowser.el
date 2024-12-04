@@ -298,11 +298,15 @@ default target if nil."
           (or target qutebrowser-default-open-target))
          (selected (qutebrowser-select-url)))
     (when selected
-      (if-let ((url (when (string-prefix-p "[BUFFER]" selected)
-                      (substring selected 8)))
+      (cond
+       ((string-prefix-p "[BUFFER]" selected)
+        (let* ((url (substring selected 8))
                (buffer (qutebrowser-find-buffer url)))
-          (switch-to-buffer buffer)
-        (qutebrowser-open-url selected)))))
+          (switch-to-buffer buffer)))
+       ((string-prefix-p "[BOOKMARK]" selected)
+        (let ((url (substring selected 10)))
+          (qutebrowser-open-url url)))
+       (t (qutebrowser-open-url selected))))))
 
 ;;;###autoload
 (defun qutebrowser-launcher-tab (&optional initial)
@@ -384,6 +388,31 @@ The following is what I have in my own init.el:
              words))
    buffers))
 
+(defun qutebrowser-bookmark-filter (words bookmarks)
+  "Filter BOOKMARKS to find those matching WORDS.
+Both bookmark name and URLs are used for matching."
+  (seq-filter
+   (lambda (bookmark)
+     ;; All search words matching
+     (-all-p (lambda (word)
+               (or (string-match-p word bookmark)
+                   (string-match-p word (qutebrowser-bookmark-url bookmark))))
+             words))
+   bookmarks))
+
+(defun qutebrowser-bookmark-search (&optional input)
+  "Return a propertized list of Qutebrowser bookmarks matching INPUT."
+  (let* ((words (string-split (or input "")))
+         (bookmarks (qutebrowser-bookmarks-list))
+         (matching-bookmarks (qutebrowser-bookmark-filter words bookmarks)))
+    (mapcar (lambda (bookmark)
+              (let* ((url (qutebrowser-bookmark-url bookmark)))
+                (propertize (concat "[BOOKMARK] " (qutebrowser--shorten-display-url url))
+                            'input input
+                            'title bookmark
+                            'bookmark t)))
+            matching-bookmarks)))
+
 (defun qutebrowser-buffer-search (&optional input)
   (let* ((words (string-split (or input "")))
          (buffers (qutebrowser-buffer-list))
@@ -429,6 +458,7 @@ The following is what I have in my own init.el:
     (lambda (input)
       (append
        (qutebrowser-buffer-search input)
+       (qutebrowser-bookmark-search input)
        (qutebrowser--history-search input 100))))
    :sort nil
    :annotate #'qutebrowser-annotate
@@ -587,9 +617,13 @@ Creates a temporary file and sources it in Qutebrowser using the
     (handler . qutebrowser-bookmark-jump)
     (url . ,(get-text-property 0 'url (buffer-name)))))
 
+(defun qutebrowser-bookmark-url (bookmark)
+  "Return the URL that BOOKMARK is pointing to."
+  (bookmark-prop-get bookmark 'url))
+
 (defun qutebrowser-bookmark-jump (bookmark)
   "Jump to a Qutebrowser BOOKMARK."
-  (let ((url (bookmark-prop-get bookmark 'url)))
+  (let ((url (qutebrowser-bookmark-url bookmark)))
     (qutebrowser-open-url url)))
 
 (defun qutebrowser-theme-export ()
