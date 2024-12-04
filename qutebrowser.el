@@ -275,8 +275,7 @@ Return up to LIMIT results."
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
-                (propertize (concat qutebrowser-history--tofu
-                                    url)
+                (propertize (concat qutebrowser-history--tofu url)
                             'input input
                             'title title)))
             (sqlite-select db query))))
@@ -366,8 +365,7 @@ The following is what I have in my own init.el:
       (exwm-workspace-rename-buffer exwm-title)))
   (add-hook 'exwm-update-title-hook #'exwm-update-title)"
 
-  (let ((mid (string-match " - https?://.*$"
-                           window-title)))
+  (let ((mid (string-match " - https?://.*$" window-title)))
     (if mid
         (let ((title (substring window-title 0 mid))
               (url (substring window-title (+ 3 mid))))
@@ -423,8 +421,7 @@ Both bookmark name and URLs are used for matching."
          (matching-bookmarks (qutebrowser-bookmark-filter words bookmarks)))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
-                (propertize (concat qutebrowser-bookmark--tofu
-                                    url)
+                (propertize (concat qutebrowser-bookmark--tofu url)
                             'input input
                             'title bookmark
                             'bookmark t)))
@@ -438,8 +435,7 @@ Both bookmark name and URLs are used for matching."
     (mapcar (lambda (buffer)
               (let* ((title (substring-no-properties (buffer-name buffer)))
                      (url (qutebrowser-buffer-url buffer)))
-                (propertize (concat qutebrowser-buffer--tofu
-                                    url)
+                (propertize (concat qutebrowser-buffer--tofu url)
                             'input input
                             'title title
                             'buffer buffer)))
