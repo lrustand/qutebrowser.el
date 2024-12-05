@@ -762,24 +762,31 @@ LIMIT can be :password-only, :username-only, or nil."
     (qutebrowser-fake-keys--raw "<Return>")))
 
 (defun qutebrowser--signal-mode-enter (mode)
+  "Called by Qutebrowser when entering a MODE."
   (run-hooks 'qutebrowser-mode-enter-hook))
 
 (defun qutebrowser--signal-mode-leave (mode)
+  "Called by Qutebrowser when leaving a MODE."
   (run-hooks 'qutebrowser-mode-leave-hook))
 
 (defun qutebrowser--signal-new-window (win-id)
+  "Called by Qutebrowser when creating a new window WIN-ID."
   (run-hooks 'qutebrowser-new-window-hook))
 
 ;; This triggers ~300 times (maybe once per line?)
 (defun qutebrowser--signal-config-changed ()
+  "Called by Qutebrowser when any configuration option changes."
   (run-hooks 'qutebrowser-config-changed-hook))
 
 (defun qutebrowser--signal-url-changed (win-id url)
+  "Called by Qutebrowser when the URL changes in WIN-ID."
   (run-hooks 'qutebrowser-url-search-hook))
 
-(defvar qutebrowser-current-search nil)
+(defvar qutebrowser-current-search nil
+  "Contains the current search terms of Qutebrowser.")
 
 (defun qutebrowser--signal-got-search (search)
+  "Called by Qutebrowser when a SEARCH is performed."
   (setq qutebrowser-current-search search)
   (run-hooks 'qutebrowser-got-search-hook))
 
@@ -793,6 +800,7 @@ LIMIT can be :password-only, :username-only, or nil."
    (list-system-processes)))
 
 (defun qutebrowser--get-process-attribute (attr)
+  "Return process attribute ATTR of Qutebrowser process."
   (mapcar (lambda (pid)
             (alist-get attr (process-attributes pid)))
           (qutebrowser--get-process-pid)))
