@@ -500,7 +500,7 @@ INITIAL sets the initial input in the minibuffer."
      ;; sources, so we replace the empty initial input with a space
      ;; character. The space character is simply ignored by our
      ;; word-by-word searches.
-     :initial (or initial " ")
+     :initial initial
      :require-match nil)))
 
 (defvar qutebrowser--exwm-buffer-source
