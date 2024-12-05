@@ -751,6 +751,16 @@ LIMIT can be :password-only, :username-only, or nil."
   "Autofill password matching URL."
   (qutebrowser-pass url :password-only))
 
+(defun qutebrowser-pass-otp (url)
+  ;; TODO: Add interactive
+  "Autofill OTP code matching URL."
+  (let* ((domain (url-domain (url-generic-parse-url url)))
+         (pass-entries (qutebrowser-pass--find-matching domain))
+         (selected (completing-read "Select: " pass-entries))
+         (token (password-store-otp-token selected)))
+    (qutebrowser-fake-keys token)
+    (qutebrowser-fake-keys--raw "<Return>")))
+
 (defun qutebrowser--signal-mode-enter (mode)
   (run-hooks 'qutebrowser-mode-enter-hook))
 
