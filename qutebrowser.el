@@ -724,37 +724,32 @@ Creates a temporary file and sources it in Qutebrowser using the
    (password-store-list)))
 
 ;;;###autoload
-(defun qutebrowser-pass (url)
-  "Autofill username and password matching URL."
+(defun qutebrowser-pass (url &optional limit)
+  "Autofill username and password matching URL.
+LIMIT can be :password-only, :username-only, or nil."
   (let* ((domain (url-domain (url-generic-parse-url url)))
          (pass-entries (qutebrowser-pass--find-matching domain))
          (selected (completing-read "Select: " pass-entries))
          (username (car (last (string-split selected "/"))))
          (password (password-store-get selected)))
-    (qutebrowser-fake-keys username)
-    (qutebrowser-fake-keys--raw "<Tab>")
-    (qutebrowser-fake-keys password)
+    (unless (eq :password-only limit)
+      (qutebrowser-fake-keys username))
+    ;; Only tab when inputting both username and password
+    (unless limit
+      (qutebrowser-fake-keys--raw "<Tab>"))
+    (unless (eq :username-only limit)
+      (qutebrowser-fake-keys password))
     (qutebrowser-fake-keys--raw "<Return>")))
 
 ;;;###autoload
 (defun qutebrowser-pass-username-only (url)
   "Autofill username matching URL."
-  (let* ((domain (url-domain (url-generic-parse-url url)))
-         (pass-entries (qutebrowser-pass--find-matching domain))
-         (selected (completing-read "Select: " pass-entries))
-         (username (car (last (string-split selected "/")))))
-    (qutebrowser-fake-keys username)
-    (qutebrowser-fake-keys--raw "<Return>")))
+  (qutebrowser-pass url :username-only))
 
 ;;;###autoload
 (defun qutebrowser-pass-password-only (url)
   "Autofill password matching URL."
-  (let* ((domain (url-domain (url-generic-parse-url url)))
-         (pass-entries (qutebrowser-pass--find-matching domain))
-         (selected (completing-read "Select: " pass-entries))
-         (password (password-store-get selected)))
-    (qutebrowser-fake-keys password)
-    (qutebrowser-fake-keys--raw "<Return>")))
+  (qutebrowser-pass url :password-only))
 
 (defun qutebrowser--signal-mode-enter (mode)
   (run-hooks 'qutebrowser-mode-enter-hook))
