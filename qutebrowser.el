@@ -777,6 +777,29 @@ LIMIT can be :password-only, :username-only, or nil."
                           'integer))
           (qutebrowser--get-process-pid)))
 
+(defmacro qutebrowser-defcommand (command)
+  "Define a function to run a Qutebrowser command.
+
+COMMAND is a symbol representing the Qutebrowser command to be sent.
+
+This macro generates a function named `qutebrowser-cmd-<COMMAND>`.
+The generated function accepts any number of arguments (&rest args)
+and sends them along with the command to Qutebrowser.
+
+The generated function is interactive and can be called with:
+  (qutebrowser-cmd-<COMMAND> arg1 arg2 ...)
+
+Example:
+  (qutebrowser-defcommand open)
+  This creates a function `qutebrowser-cmd-open`.
+  Calling (qutebrowser-cmd-open \"https://example.com\")
+  will send the command \":open https://example.com\" to Qutebrowser."
+  `(defun ,(intern (format "qutebrowser-cmd-%s" command)) (&rest args)
+     (interactive)
+     (qutebrowser-send-commands
+      (string-join (cons ,(concat ":" (symbol-name command)) args) " "))))
+
+
 (defmacro qutebrowser-defsignal (sig desc &optional arglist &rest body)
   "Define a Qutebrowser signal handler and associated hook.
 
