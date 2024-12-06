@@ -820,6 +820,38 @@ LIMIT can be :password-only, :username-only, or nil."
                           'integer))
           (qutebrowser--get-process-pid)))
 
+(define-minor-mode qutebrowser-config-mode
+  "Minor mode for editing Qutebrowser config files."
+  :lighter nil
+  :global nil
+  :keymap
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'qutebrowser-config-source-file)
+    (define-key map (kbd "C-c C-b") #'qutebrowser-config-source-buffer)
+    (define-key map (kbd "C-c C-r") #'qutebrowser-config-source-region)
+    map))
+
+(defun qutebrowser-config-source-buffer (&optional buffer)
+  "Source the contents of BUFFER."
+  (interactive)
+  (let ((temp (make-temp-file "qutebrowser-temp-config")))
+    (with-current-buffer (or buffer (current-buffer))
+      (write-region (point-min) (point-max) temp nil 'novisit))
+    (qutebrowser-config-source temp)))
+
+(defun qutebrowser-config-source-region ()
+  "Source the current region."
+  (interactive)
+  (let ((temp (make-temp-file "qutebrowser-temp-config")))
+    (write-region (region-beginning) (region-end) temp nil 'novisit)
+    (qutebrowser-config-source temp)))
+
+(defun qutebrowser-config-source-file ()
+  "Source the file associated with the current buffer."
+  (interactive)
+  (qutebrowser-config-source (buffer-file-name)))
+
+
 (provide 'qutebrowser)
 
 ;;; qutebrowser.el ends here
