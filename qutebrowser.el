@@ -573,6 +573,41 @@ Falls back to sending over commandline if IPC fails."
     (error
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
+(defun qutebrowser-rpc-call (data)
+  (if-let ((old-process (get-process "qutebrowser-rpc-client")))
+      (delete-process old-process))
+  (let ((process (make-network-process :name "qutebrowser-rpc-client"
+                                       :family 'local
+                                       :service "/tmp/emacs-ipc"
+                                       :filter #'qutebrowser--parse-rpc-response
+                                       :coding 'utf-8)))
+    (process-send-string process (concat data "\n"))))
+
+(defun qutebrowser--start-signal-listener ()
+  (if-let ((old-process (get-process "qutebrowser-signal-listener")))
+      (delete-process old-process))
+  (make-network-process :name "qutebrowser-signal-listener"
+                        :family 'local
+                        :service "/tmp/emacs-ipc-server"
+                        :server t
+                        :filter #'qutebrowser--receive-signal
+                        :coding 'utf-8))
+
+(defun qutebrowser--receive-signal (proc string)
+  (let* ((data (json-parse-string string
+                                  :object-type 'alist
+                                  :array-type 'list))
+         (sig (alist-get 'signal data))
+         (args (alist-get 'args data))
+         (handler (intern-soft (format "qutebrowser--signal-%s" sig))))
+    (if (functionp handler)
+        (funcall handler args)
+      (message "No signal handler for signal: %s!" sig))))
+
+(defun qutebrowser--parse-rpc-response (proc string)
+  (message "%s" string))
+
+
 (defun qutebrowser-commandline-send (&rest commands)
   "Send COMMANDS to Qutebrowser via commandline."
   (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
