@@ -253,7 +253,7 @@ query is built, see `qutebrowser--history-search'."
   "Contains a reference to the database connection.")
 
 (defun qutebrowser--get-db ()
-  "Return the open databse, or open it."
+  "Return the open database, or open it."
   (unless (sqlitep qutebrowser--db-object)
     (setq qutebrowser--db-object (sqlite-open qutebrowser-history-database)))
   qutebrowser--db-object)
