@@ -248,21 +248,21 @@ Return up to LIMIT results."
   (let* ((db (qutebrowser--get-db))
          ;; Safeguarding to avoid nil value
          (words (or (string-split (or input "")) '("")))
-         (inclusion (mapcar (apply-partially 'format qutebrowser-history-matching-pattern)
-                            words))
-         (exclusion (mapcar (apply-partially 'format " AND url NOT LIKE '%s'")
-                            qutebrowser-history-exclusion-patterns))
-         (where (concat "WHERE " (string-join inclusion " AND ")
-                        (string-join exclusion)))
+         (inclusion (mapconcat (apply-partially 'format qutebrowser-history-matching-pattern)
+                               words " AND "))
+         (exclusion (mapconcat (apply-partially 'format " url LIKE '%s'")
+                               qutebrowser-history-exclusion-patterns " OR "))
+         (limit (if limit (format "LIMIT %s" limit) ""))
          (query (format "SELECT url,substr(title,0,%d)
                          FROM CompletionHistory
-                         %s
+                         WHERE %s AND NOT (%s)
                          ORDER BY %s
                          %s"
                         (1- qutebrowser-title-display-length)
-                        where
+                        inclusion
+                        exclusion
                         qutebrowser-history-order-by
-                        (if limit (format "LIMIT %s" limit) ""))))
+                        limit)))
     ;; Return list of URLs propertized with input and title
     (mapcar (lambda (row)
               (let* ((url (car row))
