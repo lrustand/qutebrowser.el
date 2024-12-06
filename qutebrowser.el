@@ -185,8 +185,8 @@
 
   "URL patterns to exclude from the Qutebrowser history list.
 The patterns are SQlite wildcard patterns, and will be used to build up
-the WHERE clause of the database query.  See `qutebrowser--history' for
-more details on how the query is built."
+the WHERE clause of the database query.  For more details on how the
+query is built, see `qutebrowser--history-search'."
   :type '(repeat string)
   :group 'qutebrowser)
 
