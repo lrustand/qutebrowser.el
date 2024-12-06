@@ -224,6 +224,8 @@ query is built, see `qutebrowser--history-search'."
   "Face used to highlight Qutebrowser titles."
   :group 'qutebrowser-faces)
 
+(defvar qutebrowser-process-name "qutebrowser")
+
 (defvar qutebrowser-history-matching-pattern
   "(url || title) LIKE '%%%s%%'")
 
@@ -804,7 +806,7 @@ LIMIT can be :password-only, :username-only, or nil."
    (lambda (pid)
      (let* ((attrs (process-attributes pid))
             (cmd (alist-get 'comm attrs)))
-       (string= ".qutebrowser-re" cmd)))
+       (string= qutebrowser-process-name cmd)))
    (list-system-processes)))
 
 (defun qutebrowser--get-process-attribute (attr)
