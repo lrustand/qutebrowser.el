@@ -777,6 +777,67 @@ LIMIT can be :password-only, :username-only, or nil."
                           'integer))
           (qutebrowser--get-process-pid)))
 
+(defmacro qutebrowser-defsignal (sig desc &optional arglist &rest body)
+  "Define a Qutebrowser signal handler and associated hook.
+
+SIG is the signal name (a symbol).
+DESC is a brief description of when the signal occurs (a string).
+ARGLIST is an optional list of arguments for the signal handler function.
+BODY is the code to be executed when the signal is received.
+
+This macro defines two things:
+1. A function named `qutebrowser--signal-<SIG>` that handles the signal.
+2. A hook variable named `qutebrowser-<SIG>-hook` for user customizations.
+
+The defined function runs `qutebrowser-<SIG>-hook` after executing BODY.
+
+Examples:
+  (qutebrowser-defsignal \"init\" \"initializing\")
+
+  (qutebrowser-defsignal \"load\" \"loading a page\" (url)
+    (message \"Loading URL: %s\" url))
+
+  (qutebrowser-defsignal \"close\" \"closing\" ()
+    (message \"Qutebrowser is closing\"))"
+
+  (declare (indent defun))
+  (let ((function-name (intern (format "qutebrowser--signal-%s" sig)))
+        (hook-name (intern (format "qutebrowser-%s-hook" sig))))
+    `(progn
+       (defun ,function-name ,(or arglist '(&rest _))
+         ,(format "Called when Qutebrowser %s." desc)
+         ,@body
+         (run-hooks ,hook-name))
+       (defvar ,hook-name nil
+         ,(format "Hook run when Qutebrowser %s." desc)))))
+
+(defvar qutebrowser-keymode "KeyMode.normal")
+
+(qutebrowser-defsignal entered-mode "entering a mode" (mode)
+  (setq-local qutebrowser-keymode mode)
+  (pcase mode
+    ("KeyMode.insert" (evil-insert-state))
+    ("KeyMode.caret" (evil-visual-state))
+    ("KeyMode.hint" (evil-motion-state))
+    ("KeyMode.command" (evil-emacs-state))))
+
+(qutebrowser-defsignal left-mode "leaving a mode" (mode)
+  (evil-normal-state))
+
+(qutebrowser-defsignal new-window "" (win-id))
+
+;; This triggers ~300 times (maybe once per line?)
+(qutebrowser-defsignal config-changed "" ())
+
+(qutebrowser-defsignal url-changed "" (win-id url))
+
+(defvar qutebrowser-current-search nil
+  "Contains the current search terms of Qutebrowser.")
+
+(qutebrowser-defsignal got-search "" (search)
+  (setq qutebrowser-current-search search))
+
+
 (define-minor-mode qutebrowser-config-mode
   "Minor mode for editing Qutebrowser config files."
   :lighter nil
