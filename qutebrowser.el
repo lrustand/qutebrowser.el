@@ -209,6 +209,11 @@ query is built, see `qutebrowser--history-search'."
   :risky t
   :group 'qutebrowser)
 
+(defcustom qutebrowser-dynamic-results 100
+  "The amount of dynamic results to show from history."
+  :type 'integer
+  :group 'qutebrowser)
+
 (defgroup qutebrowser-faces nil
   "Faces used by qutebrowser.el."
   :group 'qutebrowser
@@ -488,7 +493,7 @@ INITIAL sets the initial input in the minibuffer."
         (append
          (qutebrowser-buffer-search input)
          (qutebrowser-bookmark-search input)
-         (qutebrowser--history-search input 100))))
+         (qutebrowser--history-search input qutebrowser-dynamic-results))))
      :group (lambda (entry transform)
               (if transform
                   entry
