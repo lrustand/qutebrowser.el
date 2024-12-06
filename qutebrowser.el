@@ -708,52 +708,62 @@ Creates a temporary file and sources it in Qutebrowser using the
   (let* ((escaped-text (qutebrowser-fake-keys--escape text)))
     (funcall #'qutebrowser-fake-keys--raw (format "\"%s\"" escaped-text))))
 
-(defun qutebrowser-pass--find-matching (pattern)
-  "Return list of password-store entries matching PATTERN."
-  (cl-remove-if-not
-   (lambda (entry)
-     (string-match-p pattern entry))
-   (password-store-list)))
+(defun qutebrowser-pass--select-entry (search)
+  "Select an entry from password store matching SEARCH."
+  (if-let* ((url (url-generic-parse-url search))
+            (search (if (url-host url)
+                        (url-domain url)
+                      (or search "")))
+            (pass-entries (cl-remove-if-not
+                           (lambda (entry)
+                             (string-match-p search entry))
+                           (password-store-list))))
+      (if (= (length pass-entries) 1)
+          (car pass-entries)
+        (completing-read "Select: " pass-entries))
+    (message "No pass entry found for %s" search)))
 
 ;;;###autoload
-(defun qutebrowser-pass (url &optional limit)
-  "Autofill username and password matching URL.
-LIMIT can be :password-only, :username-only, or nil."
-  (let* ((domain (url-domain (url-generic-parse-url url)))
-         (pass-entries (qutebrowser-pass--find-matching domain))
-         (selected (completing-read "Select: " pass-entries))
-         (username (car (last (string-split selected "/"))))
-         (password (password-store-get selected)))
+(defun qutebrowser-pass (&optional search limit)
+  "Autofill username and password from password store.
+SEARCH can be either a URL or a string to search for in password store.
+LIMIT can be :password-only, :username-only, or nil.
+
+If SEARCH is a URL, the domain name is extracted and used to search for
+matching entries.
+
+If multiple entries match SEARCH, `completing-read' is used to select
+one. If there is only one matching entry it is selected automatically."
+  (interactive)
+  (when-let ((selected (qutebrowser-pass--select-entry search)))
     (unless (eq :password-only limit)
-      (qutebrowser-fake-keys username))
+      (let ((username (car (last (string-split selected "/")))))
+        (qutebrowser-fake-keys username)))
     ;; Only tab when inputting both username and password
-    (unless limit
-      (qutebrowser-fake-keys--raw "<Tab>"))
+    (unless limit (qutebrowser-fake-keys--raw "<Tab>"))
     (unless (eq :username-only limit)
-      (qutebrowser-fake-keys password))
-    (qutebrowser-fake-keys--raw "<Return>")))
+      (let ((password (password-store-get selected)))
+        (qutebrowser-fake-keys password)))))
 
 ;;;###autoload
-(defun qutebrowser-pass-username-only (url)
-  "Autofill username matching URL."
-  (qutebrowser-pass url :username-only))
+(defun qutebrowser-pass-username-only (&optional search)
+  "Autofill username matching SEARCH."
+  (interactive)
+  (qutebrowser-pass search :username-only))
 
 ;;;###autoload
-(defun qutebrowser-pass-password-only (url)
-  "Autofill password matching URL."
-  (qutebrowser-pass url :password-only))
+(defun qutebrowser-pass-password-only (&optional search)
+  "Autofill password matching SEARCH."
+  (interactive)
+  (qutebrowser-pass search :password-only))
 
-(defun qutebrowser-pass-otp (url)
-  ;; TODO: Add interactive
-  "Autofill OTP code matching URL."
-  (let* ((domain (url-domain (url-generic-parse-url url)))
-         (pass-entries (qutebrowser-pass--find-matching domain))
-         (selected (completing-read "Select: " pass-entries))
-         (token (password-store-otp-token selected)))
-    (qutebrowser-fake-keys token)
-    (qutebrowser-fake-keys--raw "<Return>")))
-
-
+(defun qutebrowser-pass-otp (&optional search)
+  "Autofill OTP code matching SEARCH."
+  (interactive)
+  (if-let* ((selected (qutebrowser-pass--select-entry search))
+            (token (password-store-otp-token selected)))
+      (qutebrowser-fake-keys token)
+    (message "Failed to get OTP token for %s." search)))
 
 (defun qutebrowser--get-process-pid ()
   "Return a list of PIDs for Qutebrowser processes."
