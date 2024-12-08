@@ -573,6 +573,41 @@ Falls back to sending over commandline if IPC fails."
     (error
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
+(defun qutebrowser-rpc-call (data)
+  (let ((process (get-process "qutebrowser-ipc"))
+        (json-string (json-encode data)))
+    (process-send-string process (concat json-string "\n"))))
+
+(defun qutebrowser-connect-ipc ()
+  (make-network-process
+   :name "qutebrowser-ipc"
+   :family 'local
+   :filter #'qutebrowser--receive-data
+   :service "/tmp/emacs-ipc"
+   :sentinel (lambda (proc event)
+               (when (string= event "connection broken by remote peer\n")
+                 (delete-process proc)
+                 (qutebrowser-connect-ipc)))))
+
+(defun qutebrowser--receive-data (proc string)
+  ;; Wrap received data in [] in case multiple messages are received
+  (let* ((messages (json-read-from-string (format "[%s]" string))))
+    (seq-doseq (message messages)
+      (qutebrowser--receive-message proc message))))
+
+(defun qutebrowser--receive-message (proc data)
+  (let* ((sig (alist-get 'signal data))
+         (response (alist-get 'response data))
+         (eval (alist-get 'eval data)))
+    (cond
+     (sig (let ((handler (intern-soft (format "qutebrowser--signal-%s" sig)))
+                (args (alist-get 'args data)))
+            (if (functionp handler)
+                (funcall handler args)
+              (message "No signal handler for signal: %s!" sig))))
+     (response (qutebrowser-repl-receive-response response))
+     (eval (eval (read eval))))))
+
 (defun qutebrowser-commandline-send (&rest commands)
   "Send COMMANDS to Qutebrowser via commandline."
   (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
@@ -862,7 +897,9 @@ Examples:
 ;; This triggers ~300 times (maybe once per line?)
 (qutebrowser-defsignal config-changed "" ())
 
-(qutebrowser-defsignal url-changed "" (win-id url))
+(qutebrowser-defsignal url-changed "" (args)
+  (let ((win-id (alist-get 'win-id args))
+        (url (alist-get 'url args)))))
 
 (defvar qutebrowser-current-search nil
   "Contains the current search terms of Qutebrowser.")
