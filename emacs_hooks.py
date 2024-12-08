@@ -14,6 +14,24 @@ class EmacsHookManager:
         objreg.register(name = "emacs-hook-manager",
                         obj = self,
                         update = True)
+        # Get current window
+        try:
+            window = objreg.last_visible_window()
+        except:
+            window = None
+
+        # Enable the local hooks on startup
+        if window:
+            hook_manager = objreg.get("emacs-hook-manager", None)
+            if not hook_manager:
+                hook_manager = EmacsHookManager()
+            for window in objreg.window_registry.values():
+                hook_manager.enable_local_hooks(window)
+        else:
+            message.info("No window found, not enabling local hooks.")
+        # Enable new window hook
+        if objects.qapp:
+            objects.qapp.new_window.connect(self.on_new)
 
     def on_url_changed(self, url):
         url = url.toString()
@@ -44,20 +62,6 @@ class EmacsHookManager:
         self.server.send_signal("new-window", str(window.win_id))
         self.enable_local_hooks(window)
 
-### Get current window
-##try:
-##    window = objreg.last_visible_window()
-##except:
-##    window = None
-##
-### Enable the local hooks on startup in the current window
-##if window:
-##    hook_manager = objreg.get("emacs-hook-manager", None)
-##    if not hook_manager:
-##        hook_manager = EmacsHookManager()
-##    hook_manager.enable_local_hooks(window)
-##else:
-##    message.info("No window found, not enabling local hooks.")
 
 # Local Variables:
 # eval: (qutebrowser-config-mode)
