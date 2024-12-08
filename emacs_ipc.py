@@ -40,16 +40,16 @@ class EmacsIPCServer(IPCServer):
         socket.write(QByteArray(response.encode("utf-8")))
         socket.flush()
 
-    def send_signal(self, signal, args=False):
+    def send_signal(self, signal, args=[]):
         data = json.dumps({"signal": signal,
-                           "args": args})
+                           "args": args}) + ","
         socket = self._get_socket()
         if socket and socket.isOpen():
             socket.write(QByteArray(data.encode("utf-8")))
             socket.flush()
 
     def send_cmd(self, cmd, args=[]):
-        data = json.dumps({"eval": cmd})
+        data = json.dumps({"eval": cmd}) + ","
         socket = self._get_socket()
         if socket and socket.isOpen():
             socket.write(QByteArray(data.encode("utf-8")))
