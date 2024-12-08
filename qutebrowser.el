@@ -897,7 +897,9 @@ Examples:
 ;; This triggers ~300 times (maybe once per line?)
 (qutebrowser-defsignal config-changed "" ())
 
-(qutebrowser-defsignal url-changed "" (win-id url))
+(qutebrowser-defsignal url-changed "" (args)
+  (let ((win-id (alist-get 'win-id args))
+        (url (alist-get 'url args)))))
 
 (defvar qutebrowser-current-search nil
   "Contains the current search terms of Qutebrowser.")
