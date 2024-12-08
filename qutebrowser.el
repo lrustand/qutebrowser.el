@@ -582,18 +582,21 @@ Falls back to sending over commandline if IPC fails."
   (make-network-process
    :name "qutebrowser-ipc"
    :family 'local
-   :filter #'qutebrowser--receive-message
+   :filter #'qutebrowser--receive-data
    :service "/tmp/emacs-ipc"
    :sentinel (lambda (proc event)
                (when (string= event "connection broken by remote peer\n")
                  (delete-process proc)
                  (qutebrowser-connect-ipc)))))
 
-(defun qutebrowser--receive-message (proc string)
-  (let* ((data (json-parse-string string
-                                  :object-type 'alist
-                                  :array-type 'list))
-         (sig (alist-get 'signal data))
+(defun qutebrowser--receive-data (proc string)
+  ;; Wrap received data in [] in case multiple messages are received
+  (let* ((messages (json-read-from-string (format "[%s]" string))))
+    (seq-doseq (message messages)
+      (qutebrowser--receive-message proc message))))
+
+(defun qutebrowser--receive-message (proc data)
+  (let* ((sig (alist-get 'signal data))
          (response (alist-get 'response data))
          (eval (alist-get 'eval data)))
     (cond
