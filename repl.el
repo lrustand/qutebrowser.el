@@ -7,7 +7,13 @@
   "Current position in the command history.")
 
 (defun qutebrowser-create-repl-buffer ()
-  (get-buffer-create "*Qutebrowser REPL*"))
+  (if-let ((repl-buffer (get-buffer "*Qutebrowser REPL*")))
+      repl-buffer
+    (with-current-buffer (get-buffer-create "*Qutebrowser REPL*")
+      (qutebrowser-repl-mode)
+      (insert
+       (propertize qutebrowser-repl-prompt 'read-only t 'rear-nonsticky t))
+      (current-buffer))))
 
 (defun qutebrowser-repl-send-input ()
   (interactive)
@@ -51,7 +57,10 @@
   (with-current-buffer (qutebrowser-create-repl-buffer)
     (goto-char (point-max))
     (insert response "\n")
-    (insert qutebrowser-repl-prompt)))
+    (insert qutebrowser-repl-prompt)
+    (let ((inhibit-read-only t))
+      (add-text-properties (point-min) (point-max)
+                           '(read-only t rear-nonsticky t)))))
 
 (define-derived-mode qutebrowser-repl-mode fundamental-mode "Qutebrowser REPL"
   "Major mode for Qutebrowser REPL."
@@ -66,8 +75,4 @@
 
 (defun qutebrowser-start-repl ()
   (interactive)
-  (let ((repl-buffer (qutebrowser-create-repl-buffer)))
-    (with-current-buffer repl-buffer
-      (qutebrowser-repl-mode)
-      (insert qutebrowser-repl-prompt))
-    (switch-to-buffer-other-window repl-buffer)))
+  (switch-to-buffer (qutebrowser-create-repl-buffer)))
