@@ -574,39 +574,36 @@ Falls back to sending over commandline if IPC fails."
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
 (defun qutebrowser-rpc-call (data)
-  (if-let ((old-process (get-process "qutebrowser-rpc-client")))
-      (delete-process old-process))
-  (let ((process (make-network-process :name "qutebrowser-rpc-client"
-                                       :family 'local
-                                       :service "/tmp/emacs-ipc"
-                                       :filter #'qutebrowser--parse-rpc-response
-                                       :coding 'utf-8)))
-    (process-send-string process (concat data "\n"))))
+  (let ((process (get-process "qutebrowser-ipc"))
+        (json-string (json-encode data)))
+    (process-send-string process (concat json-string "\n"))))
 
-(defun qutebrowser--start-signal-listener ()
-  (if-let ((old-process (get-process "qutebrowser-signal-listener")))
-      (delete-process old-process))
-  (make-network-process :name "qutebrowser-signal-listener"
-                        :family 'local
-                        :service "/tmp/emacs-ipc-server"
-                        :server t
-                        :filter #'qutebrowser--receive-signal
-                        :coding 'utf-8))
+(defun qutebrowser-connect-ipc ()
+  (make-network-process
+   :name "qutebrowser-ipc"
+   :family 'local
+   :filter #'qutebrowser--receive-message
+   :service "/tmp/emacs-ipc"
+   :sentinel (lambda (proc event)
+               (when (string= event "connection broken by remote peer\n")
+                 (delete-process proc)
+                 (qutebrowser-connect-ipc)))))
 
-(defun qutebrowser--receive-signal (proc string)
+(defun qutebrowser--receive-message (proc string)
   (let* ((data (json-parse-string string
                                   :object-type 'alist
                                   :array-type 'list))
          (sig (alist-get 'signal data))
-         (args (alist-get 'args data))
-         (handler (intern-soft (format "qutebrowser--signal-%s" sig))))
-    (if (functionp handler)
-        (funcall handler args)
-      (message "No signal handler for signal: %s!" sig))))
-
-(defun qutebrowser--parse-rpc-response (proc string)
-  (message "%s" string))
-
+         (response (alist-get 'response data))
+         (eval (alist-get 'eval data)))
+    (cond
+     (sig (let ((handler (intern-soft (format "qutebrowser--signal-%s" sig)))
+                (args (alist-get 'args data)))
+            (if (functionp handler)
+                (funcall handler args)
+              (message "No signal handler for signal: %s!" sig))))
+     (response (qutebrowser-repl-receive-response response))
+     (eval (eval (read eval))))))
 
 (defun qutebrowser-commandline-send (&rest commands)
   "Send COMMANDS to Qutebrowser via commandline."
