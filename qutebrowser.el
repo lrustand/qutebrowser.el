@@ -579,6 +579,10 @@ Falls back to sending over commandline if IPC fails."
     (process-send-string process (concat json-string "\n"))))
 
 (defun qutebrowser-connect-ipc ()
+  (if-let ((process (get-process "qutebrowser-rpc")))
+      (delete-process process)
+    ;; TODO: Detct when it is necessary to do this
+    (qutebrowser-config-source "~/.config/qutebrowser/emacs_ipc.py"))
   (make-network-process
    :name "qutebrowser-rpc"
    :family 'local
@@ -588,6 +592,9 @@ Falls back to sending over commandline if IPC fails."
                (when (string= event "connection broken by remote peer\n")
                  (delete-process proc)
                  (qutebrowser-connect-ipc)))))
+
+(defun qutebrowser-ipc-connected-p ()
+  (when (get-process "qutebrowser-rpc")))
 
 (defun qutebrowser--receive-data (proc string)
   ;; Wrap received data in [] in case multiple messages are received
@@ -658,9 +665,12 @@ Creates a temporary file and sources it in Qutebrowser using the
   :lighter nil
   :global nil
   (if qutebrowser-exwm-mode
-      (setq-local bookmark-make-record-function
-                  #'qutebrowser-bookmark-make-record)
     (kill-local-variable 'bookmark-make-record-function)))
+      (progn
+        (unless (qutebrowser-ipc-connected-p)
+          (qutebrowser-connect-ipc))
+        (setq-local bookmark-make-record-function
+                    #'qutebrowser-bookmark-make-record))
 
 (defun qutebrowser-exwm-mode-maybe-enable ()
   "Enable `qutebrowser-exwm-mode' if the buffer is a Qutebrowser buffer."
