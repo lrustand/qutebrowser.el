@@ -574,13 +574,13 @@ Falls back to sending over commandline if IPC fails."
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
 (defun qutebrowser-rpc-call (data)
-  (let ((process (get-process "qutebrowser-ipc"))
+  (let ((process (get-process "qutebrowser-rpc"))
         (json-string (json-encode data)))
     (process-send-string process (concat json-string "\n"))))
 
 (defun qutebrowser-connect-ipc ()
   (make-network-process
-   :name "qutebrowser-ipc"
+   :name "qutebrowser-rpc"
    :family 'local
    :filter #'qutebrowser--receive-data
    :service "/tmp/emacs-ipc"
