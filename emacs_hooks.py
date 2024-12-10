@@ -50,13 +50,15 @@ class EmacsHookManager:
     def enable_local_hooks(self, window=None):
         if not window:
             window = objreg.last_visible_window()
-        mode_manager = modeman.instance(window.win_id)
-        tabbed_browser = window.tabbed_browser
-        status = window.status
-        mode_manager.entered.connect(self.on_enter_mode)
-        mode_manager.left.connect(self.on_leave_mode)
-        tabbed_browser.cur_url_changed.connect(self.on_url_changed)
-        status.cmd.got_search.connect(self.on_search)
+        if not hasattr(window, "hooks_initialized"):
+            mode_manager = modeman.instance(window.win_id)
+            tabbed_browser = window.tabbed_browser
+            status = window.status
+            mode_manager.entered.connect(self.on_enter_mode)
+            mode_manager.left.connect(self.on_leave_mode)
+            tabbed_browser.cur_url_changed.connect(self.on_url_changed)
+            status.cmd.got_search.connect(self.on_search)
+            window.hooks_initialized = True
 
     def on_new(self, window):
         self.server.send_signal("new-window", str(window.win_id))
