@@ -7,6 +7,7 @@
   "Current position in the command history.")
 
 (defun qutebrowser-create-repl-buffer ()
+  "Get existing Qutebrowser REPL buffer or create a new one."
   (if-let ((repl-buffer (get-buffer "*Qutebrowser REPL*")))
       repl-buffer
     (with-current-buffer (get-buffer-create "*Qutebrowser REPL*")
@@ -16,6 +17,7 @@
       (current-buffer))))
 
 (defun qutebrowser-repl-send-input ()
+  "Send the current input to Qutebrowser."
   (interactive)
   (let ((input (buffer-substring-no-properties
                 (+ (line-beginning-position)
@@ -27,6 +29,7 @@
     (insert "\n")))
 
 (defun qutebrowser-repl-previous-input ()
+  "Cycle backwards through input history."
   (interactive)
   (when (< qutebrowser-repl-history-position
            (length qutebrowser-repl-history))
@@ -37,6 +40,7 @@
           qutebrowser-repl-history))))
 
 (defun qutebrowser-repl-next-input ()
+  "Cycle forwards through input history."
   (interactive)
   (when (> qutebrowser-repl-history-position 0)
     (setq qutebrowser-repl-history-position
@@ -48,12 +52,14 @@
             qutebrowser-repl-history)))))
 
 (defun qutebrowser-repl-replace-input (new-input)
+  "Replace the current input with NEW-INPUT."
   (delete-region (+ (line-beginning-position)
                     (length qutebrowser-repl-prompt))
                  (point-max))
   (insert new-input))
 
 (defun qutebrowser-repl-receive-response (response)
+  "Receive a response from Qutebrowser and output it in the REPL."
   (with-current-buffer (qutebrowser-create-repl-buffer)
     (goto-char (point-max))
     (insert response "\n")
@@ -67,6 +73,7 @@
   (use-local-map qutebrowser-repl-mode-map))
 
 (defvar qutebrowser-repl-mode-map
+  "Keymap used in Qutebrowser REPL buffers."
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "RET") 'qutebrowser-repl-send-input)
     (define-key map (kbd "<up>") 'qutebrowser-repl-previous-input)
@@ -74,5 +81,6 @@
     map))
 
 (defun qutebrowser-start-repl ()
+  "Start Qutebrowser REPL and switch to the buffer."
   (interactive)
   (switch-to-buffer (qutebrowser-create-repl-buffer)))
