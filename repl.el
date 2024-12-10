@@ -68,10 +68,6 @@
       (add-text-properties (point-min) (point-max)
                            '(read-only t rear-nonsticky t)))))
 
-(define-derived-mode qutebrowser-repl-mode fundamental-mode "Qutebrowser REPL"
-  "Major mode for Qutebrowser REPL."
-  (use-local-map qutebrowser-repl-mode-map))
-
 (defvar qutebrowser-repl-mode-map
   "Keymap used in Qutebrowser REPL buffers."
   (let ((map (make-sparse-keymap)))
@@ -79,6 +75,10 @@
     (define-key map (kbd "<up>") 'qutebrowser-repl-previous-input)
     (define-key map (kbd "<down>") 'qutebrowser-repl-next-input)
     map))
+
+(define-derived-mode qutebrowser-repl-mode fundamental-mode "Qutebrowser REPL"
+  "Major mode for Qutebrowser REPL."
+  (use-local-map qutebrowser-repl-mode-map))
 
 (defun qutebrowser-start-repl ()
   "Start Qutebrowser REPL and switch to the buffer."
