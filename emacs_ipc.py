@@ -58,13 +58,10 @@ class EmacsIPCServer(IPCServer):
 
 # Fails if run during startup, qapp not initialized yet
 if objects.qapp:
-    #objects.qapp.new_window.connect(on_new)
     server = objreg.get("emacs-ipc", None)
     if not server:
         message.info("No IPC server found. Starting one.")
         server = EmacsIPCServer()
-else:
-    message.info("No qapp, no new window hooks.")
 
 
 # Local Variables:
