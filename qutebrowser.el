@@ -578,7 +578,7 @@ Falls back to sending over commandline if IPC fails."
         (json-string (json-encode data)))
     (process-send-string process (concat json-string "\n"))))
 
-(defun qutebrowser-connect-ipc ()
+(defun qutebrowser-connect-rpc ()
   (if-let ((process (get-process "qutebrowser-rpc")))
       (delete-process process)
     ;; TODO: Detct when it is necessary to do this
@@ -591,9 +591,9 @@ Falls back to sending over commandline if IPC fails."
    :sentinel (lambda (proc event)
                (when (string= event "connection broken by remote peer\n")
                  (delete-process proc)
-                 (qutebrowser-connect-ipc)))))
+                 (qutebrowser-connect-rpc)))))
 
-(defun qutebrowser-ipc-connected-p ()
+(defun qutebrowser-rpc-connected-p ()
   (when (get-process "qutebrowser-rpc")))
 
 (defun qutebrowser--receive-data (proc string)
@@ -667,8 +667,8 @@ Creates a temporary file and sources it in Qutebrowser using the
   (if qutebrowser-exwm-mode
     (kill-local-variable 'bookmark-make-record-function)))
       (progn
-        (unless (qutebrowser-ipc-connected-p)
-          (qutebrowser-connect-ipc))
+        (unless (qutebrowser-rpc-connected-p)
+          (qutebrowser-connect-rpc))
         (setq-local bookmark-make-record-function
                     #'qutebrowser-bookmark-make-record))
 
