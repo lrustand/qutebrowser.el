@@ -579,6 +579,7 @@ Falls back to sending over commandline if IPC fails."
     (process-send-string process (concat json-string "\n"))))
 
 (defun qutebrowser-connect-rpc ()
+  "Connect to Qutebrowser RPC."
   (if-let ((process (get-process "qutebrowser-rpc")))
       (delete-process process)
     ;; TODO: Detct when it is necessary to do this
@@ -594,15 +595,18 @@ Falls back to sending over commandline if IPC fails."
                  (qutebrowser-connect-rpc)))))
 
 (defun qutebrowser-rpc-connected-p ()
+  "Check if connecte to the Qutebrowser RPC."
   (when (get-process "qutebrowser-rpc")))
 
 (defun qutebrowser--receive-data (proc string)
+  "Receive data from the Qutebrowser RPC."
   ;; Wrap received data in [] in case multiple messages are received
   (let* ((messages (json-read-from-string (format "[%s]" string))))
     (seq-doseq (message messages)
       (qutebrowser--receive-message proc message))))
 
 (defun qutebrowser--receive-message (proc data)
+  "Receive a single message from RPC."
   (let* ((sig (alist-get 'signal data))
          (response (alist-get 'response data))
          (eval (alist-get 'eval data)))
