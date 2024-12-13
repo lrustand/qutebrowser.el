@@ -4,6 +4,7 @@ from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
 from qutebrowser.utils import objreg
 from qutebrowser.mainwindow.statusbar import bar
+from functools import partial
 
 class EmacsHookManager:
     def __init__(self, server=None):
@@ -33,19 +34,26 @@ class EmacsHookManager:
         if objects.qapp:
             objects.qapp.new_window.connect(self.on_new)
 
-    def on_url_changed(self, url):
+    def on_url_changed(self, window, url):
         url = url.toString()
-        win_id = objreg.last_visible_window().win_id
-        self.server.send_signal("url-changed", {"win-id": win_id, "url": url})
+        window_id = int(window.winId())
+        self.server.send_signal("url-changed", {"win-id": window_id, "url": url})
 
-    def on_search(self, search):
-        self.server.send_signal("got-search", search)
+    def on_link_hovered(self, window, url):
+        window_id = int(window.winId())
+        self.server.send_signal("link-hovered", {"win-id": window_id, "url": url})
 
-    def on_enter_mode(self, mode):
-        self.server.send_signal("entered-mode", str(mode))
+    def on_search(self, window, search):
+        window_id = int(window.winId())
+        self.server.send_signal("got-search", {"win-id": window_id, "search": search})
 
-    def on_leave_mode(self, mode):
-        self.server.send_signal("left-mode", str(mode))
+    def on_enter_mode(self, window, mode):
+        window_id = int(window.winId())
+        self.server.send_signal("entered-mode", {"win-id": window_id, "mode": str(mode)})
+
+    def on_leave_mode(self, window, mode):
+        window_id = int(window.winId())
+        self.server.send_signal("left-mode", {"win-id": window_id, "mode": str(mode)})
 
     def enable_local_hooks(self, window=None):
         if not window:
@@ -54,14 +62,16 @@ class EmacsHookManager:
             mode_manager = modeman.instance(window.win_id)
             tabbed_browser = window.tabbed_browser
             status = window.status
-            mode_manager.entered.connect(self.on_enter_mode)
-            mode_manager.left.connect(self.on_leave_mode)
-            tabbed_browser.cur_url_changed.connect(self.on_url_changed)
-            status.cmd.got_search.connect(self.on_search)
+
+            mode_manager.entered.connect(partial(self.on_enter_mode, window))
+            mode_manager.left.connect(partial(self.on_leave_mode, window))
+            tabbed_browser.cur_url_changed.connect(partial(self.on_url_changed, window))
+            tabbed_browser.cur_link_hovered.connect(partial(self.on_link_hovered, window))
+            status.cmd.got_search.connect(partial(self.on_search, window))
             window.hooks_initialized = True
 
     def on_new(self, window):
-        self.server.send_signal("new-window", str(window.win_id))
+        self.server.send_signal("new-window", int(window.winId()))
         self.enable_local_hooks(window)
 
 

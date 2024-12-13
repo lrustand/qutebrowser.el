@@ -233,20 +233,77 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-buffer--tofu (consult--tofu-encode 2))
 (defvar qutebrowser-history--tofu (consult--tofu-encode 3))
 
-(defvar qutebrowser-on-entered-mode-functions `(qutebrowser-set-evil-state))
-(defvar qutebrowser-on-left-mode-functions '(evil-normal-state))
-(defvar qutebrowser-on-new-window-functions '())
+(defvar qutebrowser-on-entered-mode-functions `(qutebrowser-set-evil-state)
+  "Functions run when receiving a `entered-mode` signal.")
+
+(defvar qutebrowser-on-left-mode-functions '(qutebrowser-exit-evil-state)
+  "Functions run when receiving a `left-mode` signal.")
+
+(defvar qutebrowser-on-new-window-functions '()
+  "Functions run when receiving a `new-window` signal.")
 
 ;; This triggers ~300 times (maybe once per line?)
-(defvar qutebrowser-on-config-changed-functions '())
+(defvar qutebrowser-on-config-changed-functions '()
+  "Functions run when receiving a `config-changed` signal.")
 
-(defvar qutebrowser-on-url-changed-functions '())
+(defvar qutebrowser-on-url-changed-functions
+  '(qutebrowser-update-current-url)
+  "Functions run when receiving a `url-changed` signal.")
 
-(defvar qutebrowser-on-got-search-functions '(qutebrowser-set-search))
+(defvar qutebrowser-on-link-hovered-functions '(qutebrowser-update-hovered-url)
+  "Functions run when receiving a `link-hovered` signal.")
+
+(defvar qutebrowser-on-got-search-functions '(qutebrowser-set-search)
+  "Functions run when receiving a `got-search` signal.")
 
 (defvar qutebrowser--db-object nil
   "Contains a reference to the database connection.")
 
+(defvar qutebrowser-keymode "KeyMode.normal")
+
+(defvar qutebrowser-hovered-url nil
+  "Contains the URL of the link currently hovered in Qutebrowser.")
+
+(defvar qutebrowser-current-url nil
+  "Contains the current URL of Qutebrowser.")
+
+(defvar qutebrowser-current-search nil
+  "Contains the current search terms of Qutebrowser.")
+
+(defun qutebrowser-exit-evil-state (args)
+  (evil-normal-state))
+
+(defun qutebrowser-update-current-url (args)
+  (let* ((win-id (alist-get 'win-id args))
+         (buffer (exwm--id->buffer win-id))
+         (url (alist-get 'url args)))
+    (with-current-buffer buffer
+      (when (string= url "") (setq url nil))
+      (setq-local qutebrowser-current-url url))))
+
+(defun qutebrowser-update-hovered-url (args)
+  (let* ((win-id (alist-get 'win-id args))
+         (buffer (exwm--id->buffer win-id))
+         (url (alist-get 'url args)))
+    (with-current-buffer buffer
+      (when (string= url "") (setq url nil))
+      (setq-local qutebrowser-hovered-url url))))
+
+(defun qutebrowser-set-evil-state (args)
+  (let* ((win-id (alist-get 'win-id args))
+         (buffer (exwm--id->buffer win-id))
+         (mode (alist-get 'mode args)))
+    (with-current-buffer buffer
+      (setq-local qutebrowser-keymode mode)
+      (pcase mode
+        ("KeyMode.insert" (evil-insert-state))
+        ("KeyMode.caret" (evil-visual-state))
+        ("KeyMode.hint" (evil-motion-state))
+        ("KeyMode.command" (evil-emacs-state))))))
+
+(defun qutebrowser-set-search (args)
+  (let* ((search (alist-get 'search args)))
+    (setq qutebrowser-current-search search)))
 (defun qutebrowser--get-db ()
   "Return the open database, or open it."
   (unless (sqlitep qutebrowser--db-object)
@@ -847,23 +904,6 @@ one. If there is only one matching entry it is selected automatically."
             (time-convert (alist-get 'etime (process-attributes pid))
                           'integer))
           (qutebrowser--get-process-pid)))
-
-(defvar qutebrowser-keymode "KeyMode.normal")
-
-(defun qutebrowser-set-evil-state (mode)
-  (setq-local qutebrowser-keymode mode)
-  (pcase mode
-    ("KeyMode.insert" (evil-insert-state))
-    ("KeyMode.caret" (evil-visual-state))
-    ("KeyMode.hint" (evil-motion-state))
-    ("KeyMode.command" (evil-emacs-state))))
-
-
-(defvar qutebrowser-current-search nil
-  "Contains the current search terms of Qutebrowser.")
-
-(defun qutebrowser-set-search (search)
-  (setq qutebrowser-current-search search))
 
 (define-minor-mode qutebrowser-config-mode
   "Minor mode for editing Qutebrowser config files."
