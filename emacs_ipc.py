@@ -35,8 +35,16 @@ class EmacsIPCServer(IPCServer):
                 response = str(e)
             except:
                 response = "Error!"
+            response = json.dumps({"rpc-response": response}) + "\n"
+        if "repl" in json_data:
+            try:
+                response = str(eval(json_data["repl"]))
+            except Exception as e:
+                response = str(e)
+            except:
+                response = "Error!"
+            response = json.dumps({"repl-response": response}) + "\n"
         socket = self._get_socket()
-        response = json.dumps({"response": response}) + "\n"
         socket.write(QByteArray(response.encode("utf-8")))
         socket.flush()
 

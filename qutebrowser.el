@@ -619,14 +619,16 @@ Falls back to sending over commandline if IPC fails."
 (defun qutebrowser--receive-message (proc data)
   "Receive a single message from RPC."
   (let* ((sig (alist-get 'signal data))
-         (response (alist-get 'response data))
+         (repl-response (alist-get 'repl-response data))
+         (rpc-response (alist-get 'rpc-response data))
          (eval (alist-get 'eval data)))
     (cond
      (sig (let ((functions (symbol-value (intern-soft (format "qutebrowser-on-%s-functions" sig))))
                 (args (alist-get 'args data)))
             (dolist (fun functions)
                 (funcall fun args))))
-     (response (qutebrowser-repl-receive-response response))
+     (rpc-response (message rpc-response))
+     (repl-response (qutebrowser-repl-receive-response repl-response))
      (eval (eval (read eval))))))
 
 (defun qutebrowser-commandline-send (&rest commands)
@@ -921,7 +923,7 @@ one. If there is only one matching entry it is selected automatically."
                 (point-max))))
     (push input qutebrowser-repl-history)
     (setq qutebrowser-repl-history-position 0)
-    (qutebrowser-rpc-call `((eval . ,input)))
+    (qutebrowser-rpc-call `((repl . ,input)))
     (insert "\n")))
 
 (defun qutebrowser-repl-previous-input ()
