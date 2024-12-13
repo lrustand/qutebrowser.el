@@ -442,7 +442,10 @@ The following is what I have in my own init.el:
 
 (defun qutebrowser-buffer-url (&optional buffer)
   "Return the URL of BUFFER or the current buffer."
-  (get-text-property 0 'url (buffer-name buffer)))
+  (with-current-buffer (or buffer (current-buffer))
+    (or qutebrowser-current-url
+        ;; Keep backward compatibility for now
+        (get-text-property 0 'url (buffer-name buffer)))))
 
 (defun qutebrowser-buffer-list ()
   "Return a list of all Qutebrowser buffers."
