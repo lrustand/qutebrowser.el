@@ -431,6 +431,16 @@ The following is what I have in my own init.el:
               (url (substring window-title (+ 3 mid))))
           (propertize title 'url url))
       window-title)))
+(defun qutebrowser-get-favicon (&optional buffer)
+  (if (qutebrowser-exwm-p buffer)
+      (let* ((url (qutebrowser-buffer-url buffer))
+             (hostname (url-host (url-generic-parse-url url)))
+             (file (format "/tmp/qutebrowser-favicon-%s.png" hostname)))
+        (unless (file-exists-p file)
+          ;; TODO: Find window corresponding to buffer
+          (qutebrowser-rpc-call `((eval . ,(format "objreg.last_visible_window().windowIcon().pixmap(16,16).save('%s')" file)))))
+        file)
+    nil))
 
 (defun qutebrowser--shorten-display-url (url)
   "Shorten URL by making the end invisible."
