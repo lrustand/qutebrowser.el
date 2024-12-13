@@ -233,6 +233,17 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-buffer--tofu (consult--tofu-encode 2))
 (defvar qutebrowser-history--tofu (consult--tofu-encode 3))
 
+(defvar qutebrowser-on-entered-mode-functions `(qutebrowser-set-evil-state))
+(defvar qutebrowser-on-left-mode-functions '(evil-normal-state))
+(defvar qutebrowser-on-new-window-functions '())
+
+;; This triggers ~300 times (maybe once per line?)
+(defvar qutebrowser-on-config-changed-functions '())
+
+(defvar qutebrowser-on-url-changed-functions '())
+
+(defvar qutebrowser-on-got-search-functions '(qutebrowser-set-search))
+
 (defvar qutebrowser--db-object nil
   "Contains a reference to the database connection.")
 
@@ -611,11 +622,10 @@ Falls back to sending over commandline if IPC fails."
          (response (alist-get 'response data))
          (eval (alist-get 'eval data)))
     (cond
-     (sig (let ((handler (intern-soft (format "qutebrowser--signal-%s" sig)))
+     (sig (let ((functions (symbol-value (intern-soft (format "qutebrowser-on-%s-functions" sig))))
                 (args (alist-get 'args data)))
-            (if (functionp handler)
-                (funcall handler args)
-              (message "No signal handler for signal: %s!" sig))))
+            (dolist (fun functions)
+                (funcall fun args))))
      (response (qutebrowser-repl-receive-response response))
      (eval (eval (read eval))))))
 
@@ -836,66 +846,9 @@ one. If there is only one matching entry it is selected automatically."
                           'integer))
           (qutebrowser--get-process-pid)))
 
-(defmacro qutebrowser-defcommand (command)
-  "Define a function to run a Qutebrowser command.
-
-COMMAND is a symbol representing the Qutebrowser command to be sent.
-
-This macro generates a function named `qutebrowser-cmd-<COMMAND>`.
-The generated function accepts any number of arguments (&rest args)
-and sends them along with the command to Qutebrowser.
-
-The generated function is interactive and can be called with:
-  (qutebrowser-cmd-<COMMAND> arg1 arg2 ...)
-
-Example:
-  (qutebrowser-defcommand open)
-  This creates a function `qutebrowser-cmd-open`.
-  Calling (qutebrowser-cmd-open \"https://example.com\")
-  will send the command \":open https://example.com\" to Qutebrowser."
-  `(defun ,(intern (format "qutebrowser-cmd-%s" command)) (&rest args)
-     (interactive)
-     (qutebrowser-send-commands
-      (string-join (cons ,(concat ":" (symbol-name command)) args) " "))))
-
-
-(defmacro qutebrowser-defsignal (sig desc &optional arglist &rest body)
-  "Define a Qutebrowser signal handler and associated hook.
-
-SIG is the signal name (a symbol).
-DESC is a brief description of when the signal occurs (a string).
-ARGLIST is an optional list of arguments for the signal handler function.
-BODY is the code to be executed when the signal is received.
-
-This macro defines two things:
-1. A function named `qutebrowser--signal-<SIG>` that handles the signal.
-2. A hook variable named `qutebrowser-<SIG>-hook` for user customizations.
-
-The defined function runs `qutebrowser-<SIG>-hook` after executing BODY.
-
-Examples:
-  (qutebrowser-defsignal \"init\" \"initializing\")
-
-  (qutebrowser-defsignal \"load\" \"loading a page\" (url)
-    (message \"Loading URL: %s\" url))
-
-  (qutebrowser-defsignal \"close\" \"closing\" ()
-    (message \"Qutebrowser is closing\"))"
-
-  (declare (indent defun))
-  (let ((function-name (intern (format "qutebrowser--signal-%s" sig)))
-        (hook-name (intern (format "qutebrowser-%s-hook" sig))))
-    `(progn
-       (defun ,function-name ,(or arglist '(&rest _))
-         ,(format "Called when Qutebrowser %s." desc)
-         ,@body
-         (run-hooks ,hook-name))
-       (defvar ,hook-name nil
-         ,(format "Hook run when Qutebrowser %s." desc)))))
-
 (defvar qutebrowser-keymode "KeyMode.normal")
 
-(qutebrowser-defsignal entered-mode "entering a mode" (mode)
+(defun qutebrowser-set-evil-state (mode)
   (setq-local qutebrowser-keymode mode)
   (pcase mode
     ("KeyMode.insert" (evil-insert-state))
@@ -903,24 +856,12 @@ Examples:
     ("KeyMode.hint" (evil-motion-state))
     ("KeyMode.command" (evil-emacs-state))))
 
-(qutebrowser-defsignal left-mode "leaving a mode" (mode)
-  (evil-normal-state))
-
-(qutebrowser-defsignal new-window "" (win-id))
-
-;; This triggers ~300 times (maybe once per line?)
-(qutebrowser-defsignal config-changed "" ())
-
-(qutebrowser-defsignal url-changed "" (args)
-  (let ((win-id (alist-get 'win-id args))
-        (url (alist-get 'url args)))))
 
 (defvar qutebrowser-current-search nil
   "Contains the current search terms of Qutebrowser.")
 
-(qutebrowser-defsignal got-search "" (search)
+(defun qutebrowser-set-search (search)
   (setq qutebrowser-current-search search))
-
 
 (define-minor-mode qutebrowser-config-mode
   "Minor mode for editing Qutebrowser config files."
