@@ -1031,6 +1031,7 @@ one. If there is only one matching entry it is selected automatically."
   "Major mode for Qutebrowser REPL."
   (use-local-map qutebrowser-repl-mode-map))
 
+;;;###autoload
 (defun qutebrowser-start-repl ()
   "Start Qutebrowser REPL and switch to the buffer."
   (interactive)
