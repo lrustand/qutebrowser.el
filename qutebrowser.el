@@ -568,11 +568,6 @@ INITIAL sets the initial input in the minibuffer."
                  (t "History"))))
      :sort nil
      :annotate #'qutebrowser-annotate
-     ;; Ugly hack to show results immediately. Consult requires at
-     ;; least one character to start displaying results from dynamic
-     ;; sources, so we replace the empty initial input with a space
-     ;; character. The space character is simply ignored by our
-     ;; word-by-word searches.
      :initial initial
      :require-match nil)))
 
