@@ -726,47 +726,64 @@ Falls back to sending over commandline if IPC fails."
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
 (defun qutebrowser-rpc-call (data)
-  (let ((process (get-process "qutebrowser-rpc"))
+  "Perform RPC call."
+  ;; TODO: Document RPC protocol
+  (let ((process (qutebrowser-rpc-connect))
         (json-string (json-encode data)))
     (process-send-string process (concat json-string "\n"))))
 
-(defun qutebrowser-connect-rpc ()
-  "Connect to Qutebrowser RPC."
-  (if-let ((process (get-process "qutebrowser-rpc")))
+(defun qutebrowser-rpc--bootstrap-server ()
+  "Bootstrap the RPC server by sourcing the config file."
+  (let ((filename (expand-file-name "emacs_ipc.py"
+                                    qutebrowser-config-directory)))
+    (if (file-regular-p filename)
+        ;; TODO: Detect when it is necessary to do this
+        (qutebrowser-config-source filename)
+      (message "RPC Python backend not found. Did you install it? Tip: run `qutebrowser-rpc-ensure-installed'."))))
+
+(defun qutebrowser-rpc-connect (&optional flush)
+  "Connect to Qutebrowser RPC.
+If FLUSH is non-nil, delete any existing connection before reconnecting."
+  (interactive)
+  (let ((process (get-process "qutebrowser-rpc")))
+    (when (and flush process)
       (delete-process process)
-    ;; TODO: Detct when it is necessary to do this
-    (qutebrowser-config-source "~/.config/qutebrowser/emacs_ipc.py"))
-  (make-network-process
-   :name "qutebrowser-rpc"
-   :family 'local
-   :filter #'qutebrowser--receive-data
-   :service "/tmp/emacs-ipc"
-   :sentinel (lambda (proc event)
-               (when (string= event "connection broken by remote peer\n")
-                 (delete-process proc)
-                 (qutebrowser-connect-rpc)))))
+      (setq process nil))
+    (or process
+        (progn
+          (qutebrowser-rpc--bootstrap-server)
+          (make-network-process
+           :name "qutebrowser-rpc"
+           :family 'local
+           :filter #'qutebrowser-rpc--receive-data
+           :service "/tmp/emacs-ipc"
+           :sentinel (lambda (proc event)
+                       (when (string= event "connection broken by remote peer\n")
+                         (delete-process proc)
+                         (qutebrowser-rpc-connect))))))))
 
 (defun qutebrowser-rpc-connected-p ()
-  "Check if connecte to the Qutebrowser RPC."
-  (when (get-process "qutebrowser-rpc")))
+  "Check if connected to the Qutebrowser RPC."
+  (process-live-p (get-process "qutebrowser-rpc")))
 
-(defun qutebrowser-ensure-rpc-installed ()
+(defun qutebrowser-rpc-ensure-installed ()
   "Ensure that the Python backend files for RPC and hooks are installed.
 To make sure that these files are updated whenever the package is
 updated it is recommended to run this function when loading the package."
   (interactive)
-  (dolist (file '("emacs_ipc.py" "emacs_hooks.py"))
+  (dolist (file '("emacs_ipc.py"
+                  "emacs_hooks.py"))
     (copy-file (expand-file-name file qutebrowser--package-directory)
                (expand-file-name file qutebrowser-config-directory))))
 
-(defun qutebrowser--receive-data (proc string)
+(defun qutebrowser-rpc--receive-data (proc string)
   "Receive data from the Qutebrowser RPC."
   ;; Wrap received data in [] in case multiple messages are received
   (let* ((messages (json-read-from-string (format "[%s]" string))))
     (seq-doseq (message messages)
-      (qutebrowser--receive-message proc message))))
+      (qutebrowser-rpc--receive-message proc message))))
 
-(defun qutebrowser--receive-message (proc data)
+(defun qutebrowser-rpc--receive-message (proc data)
   "Receive a single message from RPC."
   (let* ((sig (alist-get 'signal data))
          (repl-response (alist-get 'repl-response data))
@@ -833,8 +850,7 @@ Creates a temporary file and sources it in Qutebrowser using the
   :keymap qutebrowser-exwm-mode-map
   (if qutebrowser-exwm-mode
       (progn
-        (unless (qutebrowser-rpc-connected-p)
-          (qutebrowser-connect-rpc))
+        (qutebrowser-rpc-connect)
         (setq-local bookmark-make-record-function
                     #'qutebrowser-bookmark-make-record))
     (kill-local-variable 'bookmark-make-record-function)))
