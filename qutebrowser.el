@@ -231,10 +231,12 @@ query is built, see `qutebrowser--history-search'."
   :group 'faces)
 
 
-(defvar qutebrowser-process-name "qutebrowser")
+(defvar qutebrowser-process-name "qutebrowser"
+  "Name of the Qutebrowser process.")
 
 (defvar qutebrowser-history-matching-pattern
-  "(url || title) LIKE '%%%s%%'")
+  "(url || title) LIKE '%%%s%%'"
+  "SQL matching pattern used for each input word.")
 
 (defvar qutebrowser-bookmark--tofu (consult--tofu-encode 1))
 (defvar qutebrowser-buffer--tofu (consult--tofu-encode 2))
@@ -299,9 +301,12 @@ query is built, see `qutebrowser--history-search'."
   "Keymap used in `qutebrowser-repl-mode' buffers.")
 
 (defun qutebrowser-exit-evil-state (args)
+  "Exit evil state and go to normal state."
   (evil-normal-state))
 
 (defun qutebrowser-update-current-url (args)
+  "Update the buffer-local variable `qutebrowser-current-url'.
+ARGS is an alist containing 'win-id and 'url."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (url (alist-get 'url args)))
@@ -310,6 +315,7 @@ query is built, see `qutebrowser--history-search'."
       (setq-local qutebrowser-current-url url))))
 
 (defun qutebrowser-update-hovered-url (args)
+  "Update the currently hovered URL."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (url (alist-get 'url args)))
@@ -318,6 +324,7 @@ query is built, see `qutebrowser--history-search'."
       (setq-local qutebrowser-hovered-url url))))
 
 (defun qutebrowser-set-evil-state (args)
+  "Set evil state to match Qutebrowser keymode."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (mode (alist-get 'mode args)))
@@ -330,6 +337,7 @@ query is built, see `qutebrowser--history-search'."
         ("KeyMode.command" (evil-emacs-state))))))
 
 (defun qutebrowser-set-search (args)
+  "Update the variable `qutebrowser-current-search'."
   (let* ((search (alist-get 'search args)))
     (setq qutebrowser-current-search search)))
 (defun qutebrowser--get-db ()
