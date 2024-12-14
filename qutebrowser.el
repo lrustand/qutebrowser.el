@@ -270,6 +270,27 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-current-search nil
   "Contains the current search terms of Qutebrowser.")
 
+(defvar qutebrowser-exwm-mode-map
+  (let ((map (make-sparse-keymap)))
+    map)
+  "Keymap used in `qutebrowser-exwm-mode' buffers.")
+
+(defvar qutebrowser-config-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") #'qutebrowser-config-source-file)
+    (define-key map (kbd "C-c C-b") #'qutebrowser-config-source-buffer)
+    (define-key map (kbd "C-c C-r") #'qutebrowser-config-source-region)
+    map)
+  "Keymap used in `qutebrowser-config-mode' buffers.")
+
+(defvar qutebrowser-repl-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "RET") 'qutebrowser-repl-send-input)
+    (define-key map (kbd "<up>") 'qutebrowser-repl-previous-input)
+    (define-key map (kbd "<down>") 'qutebrowser-repl-next-input)
+    map)
+  "Keymap used in `qutebrowser-repl-mode' buffers.")
+
 (defun qutebrowser-exit-evil-state (args)
   (evil-normal-state))
 
@@ -745,6 +766,7 @@ Creates a temporary file and sources it in Qutebrowser using the
   "Minor mode for Qutebrowser buffers in EXWM."
   :lighter nil
   :global nil
+  :keymap qutebrowser-exwm-mode-map
   (if qutebrowser-exwm-mode
       (progn
         (unless (qutebrowser-rpc-connected-p)
@@ -917,12 +939,7 @@ one. If there is only one matching entry it is selected automatically."
   "Minor mode for editing Qutebrowser config files."
   :lighter nil
   :global nil
-  :keymap
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "C-c C-c") #'qutebrowser-config-source-file)
-    (define-key map (kbd "C-c C-b") #'qutebrowser-config-source-buffer)
-    (define-key map (kbd "C-c C-r") #'qutebrowser-config-source-region)
-    map))
+  :keymap qutebrowser-config-mode-map)
 
 (defun qutebrowser-config-source-buffer (&optional buffer)
   "Source the contents of BUFFER."
@@ -1013,14 +1030,6 @@ one. If there is only one matching entry it is selected automatically."
     (let ((inhibit-read-only t))
       (add-text-properties (point-min) (point-max)
                            '(read-only t rear-nonsticky t)))))
-
-(defvar qutebrowser-repl-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd "RET") 'qutebrowser-repl-send-input)
-    (define-key map (kbd "<up>") 'qutebrowser-repl-previous-input)
-    (define-key map (kbd "<down>") 'qutebrowser-repl-next-input)
-    map)
-  "Keymap used in Qutebrowser REPL buffers.")
 
 (define-derived-mode qutebrowser-repl-mode fundamental-mode "Qutebrowser REPL"
   "Major mode for Qutebrowser REPL."
