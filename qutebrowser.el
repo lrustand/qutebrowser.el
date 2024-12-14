@@ -42,6 +42,17 @@
 (require 'password-store)
 (require 'cl-lib)
 (require 'dash)
+(require 'evil)
+
+(declare-function doom-modeline-display-text "doom-modeline")
+(declare-function doom-modeline-def-segment "doom-modeline")
+(declare-function doom-modeline-def-modeline "doom-modeline")
+(declare-function password-store-otp-token "password-store")
+(declare-function evil-emacs-state "evil-states")
+(declare-function evil-motion-state "evil-states")
+(declare-function evil-visual-state "evil-states")
+(declare-function evil-insert-state "evil-states")
+(declare-function evil-normal-state "evil-states")
 
 (defgroup qutebrowser nil
   "EXWM enhancements for Qutebrowser."
@@ -459,6 +470,10 @@ The following is what I have in my own init.el:
         file)
     nil))
 
+
+(eval-when-compile
+  (defvar qutebrowser-url nil))
+
 (with-eval-after-load 'doom-modeline
   (defun qutebrowser-doom-set-favicon (&optional buffer)
     "Show favicon in doom modeline."
@@ -645,15 +660,16 @@ INITIAL sets the initial input in the minibuffer."
   "`consult-buffer' source for Qutebrowser bookmarks.")
 
 ;; Prevent Prescient history from being clogged up by web pages.
+(defun qutebrowser-advice-vertico-prescient (orig-fun &rest args)
+  "Exclude Qutebrowser buffer names and URLs from prescient history."
+  (let* ((selected-candidate
+          (substring (minibuffer-contents-no-properties) 0 -1))
+         (selected-buffer (get-buffer selected-candidate)))
+    (unless (or (qutebrowser-exwm-p selected-buffer)
+                (string-match-p "^https?://" selected-candidate))
+      (funcall orig-fun))))
+
 (with-eval-after-load 'vertico-prescient
-  (defun qutebrowser-advice-vertico-prescient (orig-fun &rest args)
-    "Exclude Qutebrowser buffer names and URLs from prescient history."
-    (let* ((selected-candidate
-            (substring (minibuffer-contents-no-properties) 0 -1))
-           (selected-buffer (get-buffer selected-candidate)))
-      (unless (or (qutebrowser-exwm-p selected-buffer)
-                  (string-match-p "^https?://" selected-candidate))
-        (funcall orig-fun))))
   (advice-add 'vertico-prescient--remember-minibuffer-contents :around
               #'qutebrowser-advice-vertico-prescient))
 
