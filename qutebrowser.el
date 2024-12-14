@@ -521,7 +521,7 @@ Both bookmark name and URLs are used for matching."
               (end (+ start (length word))))
         (put-text-property start end 'face 'link str))))
 
-(defun qutebrowser-annotate (entry)
+(defun qutebrowser-annotate (entry &optional pad)
   "Return annotation for ENTRY.
 ENTRY can be a bookmark, a buffer, or a history item.  ENTRY should be a
 string containing a URL, and it should be propertized with at least some
@@ -546,7 +546,7 @@ property, and the end of the string will be hidden by setting the
     (let* ((pad-length (max 0 (- qutebrowser-url-display-length
                                  (length url))))
            (padding (make-string pad-length ?\ )))
-      (concat padding " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
+      (concat (when pad padding) " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
 
 (defun qutebrowser-select-url (&optional initial)
   "Dynamically select a URL from Qutebrowser history.
@@ -567,7 +567,7 @@ INITIAL sets the initial input in the minibuffer."
                  ((get-text-property 0 'bookmark entry) "Bookmark")
                  (t "History"))))
      :sort nil
-     :annotate #'qutebrowser-annotate
+     :annotate (lambda (entry) (qutebrowser-annotate entry t))
      :initial initial
      :require-match nil)))
 
