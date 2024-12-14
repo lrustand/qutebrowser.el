@@ -25,7 +25,7 @@ sending commands and code to Qutebrowser using various backends.
   - [[#installation-with-quelpa][Installation with quelpa]]
 - [[#prerequisites][Prerequisites]]
 - [[#configuration][Configuration]]
-  - [[#required-qutebrowser-configurations][Required Qutebrowser configurations]]
+  - [[#recommended-qutebrowser-settings][Recommended Qutebrowser settings]]
   - [[#required-emacs-configurations][Required Emacs configurations]]
 - [[#usage][Usage]]
   - [[#qutebrowser-exwm-mode][Qutebrowser EXWM mode]]
@@ -34,9 +34,7 @@ sending commands and code to Qutebrowser using various backends.
   - [[#qutebrowser-command-execution][Qutebrowser command execution]]
   - [[#theme-synchronization][Theme synchronization]]
   - [[#password-store][Password store]]
-- [[#recommended-configurations-and-packages][Recommended configurations and packages]]
-- [[#experimental-features][Experimental features]]
-  - [[#mode-hooks][Mode hooks]]
+- [[#recommended-third-party-packages][Recommended third-party packages]]
 :END:
 
 
@@ -45,19 +43,20 @@ sending commands and code to Qutebrowser using various backends.
 The currently implemented features are:
 
 - Remote code/command execution
+- Two-way RPC
+- Hooks for various Qutebrowser events
 - Theme synchronization
 - Bookmarks
 - URL launcher with browsing history completion
 - Password-store autofill
+- REPL for interactively running Python code inside the Qutebrowser process
 
 ** Planned features
 
 I also plan to implement the following features sometime in the near(ish) future:
 
-- Combined EXWM modeline and Qutebrowser statusbar
+- Combined EXWM modeline and Qutebrowser statusbar. (Under development)
 - Setting keybinds for Qutebrowser commands in an Emacs keymap
-- Hooks for various events in Qutebrowser (some initial experimental
-  work already done, see [[#experimental-features][Experimental features]])
 
 ** Ideas
 
@@ -65,11 +64,6 @@ Some ideas for possible future features. These are not currently
 planned for implementation, but I keep them around for future
 use.
 
-- Special mode for editing =config.py= with implementation of
-  =eval-buffer=, =eval-defun=, and =eval-region=, allowing for live
-  reloading of (parts) of the config in a similar way as elisp code.
-- Live Python REPL connected to Qutebrowser. (Not really sure how to
-  accomplish this)
 - Integrated searching, synchronizing the searches of search engines,
   Emacs isearch and similar, and Qutebrowser text searches.
 - Open devtools in an EXWM split.
@@ -85,7 +79,7 @@ use.
   Qutebrowser buffers.
 - Some kind of Greasemonkey script handling. Unsure what type of
   features make sense, and how best to handle things.
-  
+
 * Installation
 :PROPERTIES:
 :CUSTOM_ID: installation
@@ -104,12 +98,12 @@ To install manually, follow these steps:
 #+end_src
 
 2. Add the following to your Emacs configuration:
- 
+
 #+begin_src elisp
   (add-to-list 'load-path "~/.emacs.d/site-lisp/qutebrowser.el")
   (require 'qutebrowser)
 #+end_src
-   
+
 ** Installation with quelpa
 :PROPERTIES:
 :CUSTOM_ID: installation-with-quelpa
@@ -120,7 +114,9 @@ Emacs configuration:
 
 #+begin_src elisp
   (use-package qutebrowser
-    :quelpa (qutebrowser :fetcher github :repo "lrustand/qutebrowser.el"))
+    :quelpa (qutebrowser :fetcher github
+                         :repo "lrustand/qutebrowser.el"
+                         :files (:defaults "*.py")))
 #+end_src
 
 * Prerequisites
@@ -143,21 +139,18 @@ Emacs configuration:
 :CUSTOM_ID: configuration
 :END:
 
-** Required Qutebrowser configurations
+** Recommended Qutebrowser settings
 :PROPERTIES:
 :CUSTOM_ID: required-qutebrowser-configurations
 :END:
 
 To enable /flat web browsing/ and to make the Consult buffer sources
 work, Qutebrowser has to be configured to open tabs as windows. It is
-also recommended to hide the tab bar, since there will be no tabs. The
-Consult sources rely on the window title to get the URL and title of
-the website.
+also recommended to hide the tab bar, since there will be no tabs.
 
 #+begin_src python
 c.tabs.tabs_are_windows = True
 c.tabs.show = 'multiple'
-c.window.title_format = '{audio}{private}{current_title}{title_sep}{current_url}'
 #+end_src
 
 If you're having trouble with existing Qutebrowser windows being
@@ -209,24 +202,6 @@ emacsclient -e "(let ((qutebrowser-fifo \"$QUTE_FIFO\")
                       (qutebrowser-command-backend 'qutebrowser-fifo-send))
                   $@)"; true
 #+end_src
-
-
-The Consult buffer source expects the window titles to be formatted in
-a certain way, and to be propertized with a text property containing
-the URL of the webpage. The Qutebrowser configurations in [[#required-qutebrowser-configurations][Required Qutebrowser configurations]]
-sets up the Qutebrowser side of things. The following snippet takes care
-of the Emacs side.
-
-#+begin_src elisp
-  (defun exwm-update-title ()
-    (if (string-equal "qutebrowser" exwm-class-name)
-        (exwm-workspace-rename-buffer
-         (qutebrowser-propertize-buffer-name exwm-title))
-      (exwm-workspace-rename-buffer exwm-title)))
-  
-  (add-hook 'exwm-update-title-hook #'exwm-update-title)
-#+end_src
-
 
 * Usage
 :PROPERTIES:
@@ -312,62 +287,14 @@ Username and password autofill can be accomplished by using the
 
 #+begin_src python
 config.bind(',p', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass \"{url}\")'")
+config.bind(',P', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass-password-only \"{url}\")'")
+config.bind(',o', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass-otp \"{url}\")'")
 #+end_src
 
-* Recommended configurations and packages
+* Recommended third-party packages
 
 - vertico-posframe-mode
 - engine-mode
-
-* Experimental features
-:PROPERTIES:
-:CUSTOM_ID: experimental-features
-:END:
-
-** Mode hooks
-:PROPERTIES:
-:CUSTOM_ID: mode-hooks
-:END:
-
-It is possible to configure Qutebrowser to run arbitrary Python code
-when entering and leaving modes. This allows us to report to Emacs
-which mode Qutebrowser is in currently. The following =config.py= code
-works, the only hiccups is that the last line fails to run during
-Qutebrowser startup (but works fine if sourced later).
-
-#+begin_src python
-from qutebrowser.api import message
-from qutebrowser.keyinput import modeman
-from qutebrowser.misc import objects
-from qutebrowser.utils import objreg
-
-from subprocess import run
-
-def on_enter_mode(mode):
-    run(["emacsclient", "-e", f'(message "Entering {mode}")'])
-
-def on_leave_mode(mode):
-    run(["emacsclient", "-e", f'(message "Exiting {mode}")'])
-
-def enable_mode_hooks (window):
-    mode_manager = modeman.instance(window.win_id)
-    mode_manager.entered.connect(on_enter_mode)
-    mode_manager.left.connect(on_leave_mode)
-
-# Enable the mode hooks on startup in the current window
-enable_mode_hooks(objreg.last_visible_window())
-
-# Enable the mode hooks for each new window
-def on_new(window):
-    enable_mode_hooks(window)
-
-# Fails if run during startup, qapp not initialized yet
-objects.qapp.new_window.connect(on_new)
-#+end_src
-
-There are many other events that we could possibly hook into, search
-the Qutebrowser source code for =.connect(= to find more Qt signals to
-subscribe to.
 
 
 * Footer                                                           :noexport:
