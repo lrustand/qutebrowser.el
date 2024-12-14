@@ -459,23 +459,24 @@ The following is what I have in my own init.el:
         file)
     nil))
 
-(defun qutebrowser-doom-set-favicon (&optional buffer)
-  "Show favicon in doom modeline."
-  (when-let* ((file (qutebrowser-get-favicon))
-              (image (create-image file nil nil :ascent 'center)))
-    (setq-local doom-modeline--buffer-file-icon (propertize " " 'display image))))
+(with-eval-after-load 'doom-modeline
+  (defun qutebrowser-doom-set-favicon (&optional buffer)
+    "Show favicon in doom modeline."
+    (when-let* ((file (qutebrowser-get-favicon))
+                (image (create-image file nil nil :ascent 'center)))
+      (setq-local doom-modeline--buffer-file-icon (propertize " " 'display image))))
 
-(doom-modeline-def-segment qutebrowser-url
-  "Display the currently visited or hovered URL."
-  (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
-                          (doom-modeline-display-text
-                           (concat " " (if qutebrowser-hovered-url
-                                           (propertize qutebrowser-hovered-url 'face 'failure)
-                                         (propertize qutebrowser-current-url 'face 'success))))))
+  (doom-modeline-def-segment qutebrowser-url
+    "Display the currently visited or hovered URL."
+    (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
+                              (doom-modeline-display-text
+                               (concat " " (if qutebrowser-hovered-url
+                                               (propertize qutebrowser-hovered-url 'face 'failure)
+                                             (propertize qutebrowser-current-url 'face 'success))))))
 
-(doom-modeline-def-modeline 'qutebrowser-doom-modeline
-  '(bar workspace-name window-number modals buffer-info-simple)
-  '(misc-info qutebrowser-url))
+  (doom-modeline-def-modeline 'qutebrowser-doom-modeline
+    '(bar workspace-name window-number modals buffer-info-simple)
+    '(misc-info qutebrowser-url)))
 
 (defun qutebrowser--shorten-display-url (url)
   "Shorten URL by making the end invisible."
