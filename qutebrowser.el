@@ -728,7 +728,7 @@ Falls back to sending over commandline if IPC fails."
 (defun qutebrowser-rpc-call (data)
   "Perform RPC call."
   ;; TODO: Document RPC protocol
-  (let ((process (qutebrowser-rpc-connect))
+  (let ((process (qutebrowser-rpc-get-connection))
         (json-string (json-encode data)))
     (process-send-string process (concat json-string "\n"))))
 
@@ -741,8 +741,20 @@ Falls back to sending over commandline if IPC fails."
         (qutebrowser-config-source filename)
       (message "RPC Python backend not found. Did you install it? Tip: run `qutebrowser-rpc-ensure-installed'."))))
 
-(defun qutebrowser-rpc-connect (&optional flush)
-  "Connect to Qutebrowser RPC.
+(defun qutebrowser-rpc--make-network-process ()
+  "Make a network process connected to the RPC socket."
+  (make-network-process
+   :name "qutebrowser-rpc"
+   :family 'local
+   :filter #'qutebrowser-rpc--receive-data
+   :service "/tmp/emacs-ipc"
+   :sentinel (lambda (proc event)
+               (when (string= event "connection broken by remote peer\n")
+                 (delete-process proc)
+                 (qutebrowser-rpc--make-network-process)))))
+
+(defun qutebrowser-rpc-get-connection (&optional flush)
+  "Return a process connected to the RPC socket.
 If FLUSH is non-nil, delete any existing connection before reconnecting."
   (interactive)
   (let ((process (get-process "qutebrowser-rpc")))
@@ -752,15 +764,7 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
     (or process
         (progn
           (qutebrowser-rpc--bootstrap-server)
-          (make-network-process
-           :name "qutebrowser-rpc"
-           :family 'local
-           :filter #'qutebrowser-rpc--receive-data
-           :service "/tmp/emacs-ipc"
-           :sentinel (lambda (proc event)
-                       (when (string= event "connection broken by remote peer\n")
-                         (delete-process proc)
-                         (qutebrowser-rpc-connect))))))))
+          (qutebrowser-rpc--make-network-process)))))
 
 (defun qutebrowser-rpc-connected-p ()
   "Check if connected to the Qutebrowser RPC."
@@ -850,7 +854,7 @@ Creates a temporary file and sources it in Qutebrowser using the
   :keymap qutebrowser-exwm-mode-map
   (if qutebrowser-exwm-mode
       (progn
-        (qutebrowser-rpc-connect)
+        (qutebrowser-rpc-get-connection)
         (setq-local bookmark-make-record-function
                     #'qutebrowser-bookmark-make-record))
     (kill-local-variable 'bookmark-make-record-function)))
