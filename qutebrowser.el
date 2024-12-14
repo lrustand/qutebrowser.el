@@ -173,7 +173,7 @@
 
 (defcustom qutebrowser-config-directory
   "~/.config/qutebrowser/"
-  "Path to the Qutebrowser config directory"
+  "Path to the Qutebrowser config directory."
   :type 'file
   :risky t
   :group 'qutebrowser)
@@ -310,7 +310,8 @@ query is built, see `qutebrowser--history-search'."
 
 (defconst qutebrowser--package-directory (file-name-directory (or load-file-name
                                                                   buffer-file-name)))
-(defun qutebrowser-exit-evil-state (args)
+
+(defun qutebrowser-exit-evil-state (&optional _)
   "Exit evil state and go to normal state."
   (evil-normal-state))
 
@@ -325,7 +326,8 @@ ARGS is an alist containing 'win-id and 'url."
       (setq-local qutebrowser-current-url url))))
 
 (defun qutebrowser-update-hovered-url (args)
-  "Update the currently hovered URL."
+  "Update the currently hovered URL.
+ARGS is an alist containing 'win-id and 'url."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (url (alist-get 'url args)))
@@ -334,7 +336,8 @@ ARGS is an alist containing 'win-id and 'url."
       (setq-local qutebrowser-hovered-url url))))
 
 (defun qutebrowser-set-evil-state (args)
-  "Set evil state to match Qutebrowser keymode."
+  "Set evil state to match Qutebrowser keymode.
+ARGS is an alist containing 'win-id and 'mode."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (mode (alist-get 'mode args)))
@@ -347,7 +350,8 @@ ARGS is an alist containing 'win-id and 'url."
         ("KeyMode.command" (evil-emacs-state))))))
 
 (defun qutebrowser-set-search (args)
-  "Update the variable `qutebrowser-current-search'."
+  "Update the variable `qutebrowser-current-search'.
+ARGS is an alist containing 'search."
   (let* ((search (alist-get 'search args)))
     (setq qutebrowser-current-search search)))
 (defun qutebrowser--get-db ()
@@ -574,7 +578,10 @@ of 'input, 'url, 'title, 'buffer, 'visited, and/or 'bookmark.
 
 ENTRY will be modified to highlight any words contained in the 'input
 property, and the end of the string will be hidden by setting the
-'invisible property."
+'invisible property.
+
+If PAD is non-nil, add padding to the annotation if entry is shorter
+than `qutebrowser-url-display-length'."
   (let ((input (get-text-property 0 'input entry))
         (url (substring-no-properties entry))
         (title (get-text-property 0 'title entry))
@@ -655,13 +662,14 @@ INITIAL sets the initial input in the minibuffer."
 
 ;; Prevent Prescient history from being clogged up by web pages.
 (defun qutebrowser-advice-vertico-prescient (orig-fun &rest args)
-  "Exclude Qutebrowser buffer names and URLs from prescient history."
+  "Exclude Qutebrowser buffer names and URLs from prescient history.
+The ORIG-FUN takes ARGS."
   (let* ((selected-candidate
           (substring (minibuffer-contents-no-properties) 0 -1))
          (selected-buffer (get-buffer selected-candidate)))
     (unless (or (qutebrowser-exwm-p selected-buffer)
                 (string-match-p "^https?://" selected-candidate))
-      (funcall orig-fun))))
+      (funcall orig-fun args))))
 
 (with-eval-after-load 'vertico-prescient
   (advice-add 'vertico-prescient--remember-minibuffer-contents :around
@@ -700,7 +708,9 @@ Falls back to sending over commandline if IPC fails."
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
 (defun qutebrowser-rpc-call (data)
-  "Perform RPC call."
+  "Perform RPC call.
+DATA should be an alist, and will be JSON-encode before being sent to
+Qutebrowser."
   ;; TODO: Document RPC protocol
   (let ((process (qutebrowser-rpc-get-connection))
         (json-string (json-encode data)))
@@ -754,15 +764,21 @@ updated it is recommended to run this function when loading the package."
     (copy-file (expand-file-name file qutebrowser--package-directory)
                (expand-file-name file qutebrowser-config-directory))))
 
-(defun qutebrowser-rpc--receive-data (proc string)
-  "Receive data from the Qutebrowser RPC."
+(defun qutebrowser-rpc--receive-data (proc data)
+  "Receive data from the Qutebrowser RPC.
+PROC is the network process connected to the RPC.
+DATA is the data received, which can be multiple JSON objects separated
+by comma.  The data is therefore wrapped in square brackets to safely
+parse as valid JSON."
   ;; Wrap received data in [] in case multiple messages are received
-  (let* ((messages (json-read-from-string (format "[%s]" string))))
+  (let* ((messages (json-read-from-string (format "[%s]" data))))
     (seq-doseq (message messages)
       (qutebrowser-rpc--receive-message proc message))))
 
 (defun qutebrowser-rpc--receive-message (proc data)
-  "Receive a single message from RPC."
+  "Receive a single message from RPC.
+PROC is the network process connected to the RPC.
+DATA is the data received."
   (let* ((sig (alist-get 'signal data))
          (repl-response (alist-get 'repl-response data))
          (rpc-response (alist-get 'rpc-response data))
@@ -939,7 +955,7 @@ If SEARCH is a URL, the domain name is extracted and used to search for
 matching entries.
 
 If multiple entries match SEARCH, `completing-read' is used to select
-one. If there is only one matching entry it is selected automatically."
+one.  If there is only one matching entry it is selected automatically."
   (interactive)
   (when-let ((selected (qutebrowser-pass--select-entry search)))
     (unless (eq :password-only limit)
@@ -1080,7 +1096,7 @@ one. If there is only one matching entry it is selected automatically."
   (insert new-input))
 
 (defun qutebrowser-repl-receive-response (response)
-  "Receive a response from Qutebrowser and output it in the REPL."
+  "Receive RESPONSE from Qutebrowser and output it in the REPL."
   (with-current-buffer (qutebrowser-create-repl-buffer)
     (goto-char (point-max))
     (insert response "\n")
