@@ -580,8 +580,12 @@ property, and the end of the string will be hidden by setting the
     (qutebrowser--shorten-display-url entry)
     (let* ((pad-length (max 0 (- qutebrowser-url-display-length
                                  (length url))))
-           (padding (make-string pad-length ?\ )))
-      (concat (when pad padding) " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
+           ;; When used in the dynamic qutebrowser-select-url, we need
+           ;; to pad the annotations for alignment. This is not needed
+           ;; when the annotations are used in non-dynamic buffer
+           ;; sources.
+           (padding (when pad (make-string pad-length ?\ ))))
+      (concat padding " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
 
 (defun qutebrowser-select-url (&optional initial)
   "Dynamically select a URL from Qutebrowser history.
