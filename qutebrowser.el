@@ -746,12 +746,12 @@ Creates a temporary file and sources it in Qutebrowser using the
   :lighter nil
   :global nil
   (if qutebrowser-exwm-mode
-    (kill-local-variable 'bookmark-make-record-function)))
       (progn
         (unless (qutebrowser-rpc-connected-p)
           (qutebrowser-connect-rpc))
         (setq-local bookmark-make-record-function
                     #'qutebrowser-bookmark-make-record))
+    (kill-local-variable 'bookmark-make-record-function)))
 
 (defun qutebrowser-exwm-mode-maybe-enable ()
   "Enable `qutebrowser-exwm-mode' if the buffer is a Qutebrowser buffer."
