@@ -171,6 +171,13 @@
   :risky t
   :group 'qutebrowser)
 
+(defcustom qutebrowser-config-directory
+  "~/.config/qutebrowser/"
+  "Path to the Qutebrowser config directory"
+  :type 'file
+  :risky t
+  :group 'qutebrowser)
+
 (defcustom qutebrowser-history-database
   "~/.local/share/qutebrowser/history.sqlite"
   "Path to the Qutebrowser history database."
@@ -300,6 +307,9 @@ query is built, see `qutebrowser--history-search'."
     map)
   "Keymap used in `qutebrowser-repl-mode' buffers.")
 
+
+(defconst qutebrowser--package-directory (file-name-directory (or load-file-name
+                                                                  buffer-file-name)))
 (defun qutebrowser-exit-evil-state (args)
   "Exit evil state and go to normal state."
   (evil-normal-state))
@@ -739,6 +749,15 @@ Falls back to sending over commandline if IPC fails."
 (defun qutebrowser-rpc-connected-p ()
   "Check if connecte to the Qutebrowser RPC."
   (when (get-process "qutebrowser-rpc")))
+
+(defun qutebrowser-ensure-rpc-installed ()
+  "Ensure that the Python backend files for RPC and hooks are installed.
+To make sure that these files are updated whenever the package is
+updated it is recommended to run this function when loading the package."
+  (interactive)
+  (dolist (file '("emacs_ipc.py" "emacs_hooks.py"))
+    (copy-file (expand-file-name file qutebrowser--package-directory)
+               (expand-file-name file qutebrowser-config-directory))))
 
 (defun qutebrowser--receive-data (proc string)
   "Receive data from the Qutebrowser RPC."
