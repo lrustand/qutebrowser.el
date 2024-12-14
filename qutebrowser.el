@@ -471,8 +471,10 @@ The following is what I have in my own init.el:
     nil))
 
 
-(eval-when-compile
-  (defvar qutebrowser-url nil))
+;; FIXME: This is a workaround because use-package doesn't understand
+;; that the modeline segment name is not a variable, so we make a
+;; dummy variable to avoid error.
+(defvar qutebrowser-url nil)
 
 (with-eval-after-load 'doom-modeline
   (defun qutebrowser-doom-set-favicon (&optional buffer)
