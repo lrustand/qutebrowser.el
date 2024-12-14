@@ -219,10 +219,6 @@ query is built, see `qutebrowser--history-search'."
   :group 'qutebrowser
   :group 'faces)
 
-(defface qutebrowser-title-face
-  '((t :inherit font-lock-keyword-face))
-  "Face used to highlight Qutebrowser titles."
-  :group 'qutebrowser-faces)
 
 (defvar qutebrowser-process-name "qutebrowser")
 
