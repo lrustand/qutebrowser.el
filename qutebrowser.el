@@ -895,9 +895,10 @@ Creates a temporary file and sources it in Qutebrowser using the
 
 (defun qutebrowser-theme-export-and-apply (&rest _)
   "Export and apply theme to running Qutebrowser instance."
+  (interactive)
   (qutebrowser-theme-export)
-  ;; TODO only if qutebrowser is running
-  (qutebrowser-config-source "~/.config/qutebrowser/emacs_theme.py"))
+  (when (qutebrowser-is-running-p)
+    (qutebrowser-config-source "~/.config/qutebrowser/emacs_theme.py")))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-theme-export-mode
@@ -1008,6 +1009,11 @@ one.  If there is only one matching entry it is selected automatically."
             (time-convert (alist-get 'etime (process-attributes pid))
                           'integer))
           (qutebrowser--get-process-pid)))
+
+(defun qutebrowser-is-running-p ()
+  "Return non-nil if Qutebrowser is running."
+  (or (qutebrowser-rpc-connected-p)
+      (qutebrowser--get-process-pid)))
 
 (define-minor-mode qutebrowser-config-mode
   "Minor mode for editing Qutebrowser config files."
