@@ -351,7 +351,7 @@ Return up to LIMIT results."
 (defun qutebrowser-find-buffer (url)
   "Find the buffer showing URL."
   (seq-find (lambda (buffer)
-              (string= url (get-text-property 0 'url (buffer-name buffer))))
+              (string= url (qutebrowser-buffer-url buffer)))
             (qutebrowser-buffer-list)))
 
 ;;;###autoload
