@@ -198,10 +198,16 @@ command:
 
 #+begin_src bash
 #!/usr/bin/env bash
-emacsclient -e "(let ((qutebrowser-fifo \"$QUTE_FIFO\")
-                      (qutebrowser-command-backend 'qutebrowser-fifo-send))
-                  $@)"; true
+emacsclient -e \
+  "(let ((qutebrowser-fifo \"$QUTE_FIFO\")
+         (qutebrowser-command-backend 'qutebrowser-fifo-send))
+     (condition-case nil
+         $@
+       (t \"\")))" ; true
 #+end_src
+
+Because of a bug in emacsclient that causes a delay if a command
+returns a failure, we also wrap the command in a =condition-case=.
 
 * Usage
 :PROPERTIES:
