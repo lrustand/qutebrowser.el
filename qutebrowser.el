@@ -269,7 +269,7 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-on-link-hovered-functions '(qutebrowser-update-hovered-url)
   "Functions run when receiving a `link-hovered` signal.")
 
-(defvar qutebrowser-on-icon-changed-functions '(qutebrowser-update-icon)
+(defvar qutebrowser-on-icon-changed-functions '(qutebrowser-update-favicon)
   "Functions run when receiving a `icon-changed` signal.")
 
 (defvar qutebrowser-on-got-search-functions '(qutebrowser-set-search)
@@ -286,8 +286,8 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-current-url nil
   "Contains the current URL of Qutebrowser.")
 
-(defvar qutebrowser-icon nil
-  "Contains the icon for each Qutebrowser buffer.")
+(defvar qutebrowser-favicon nil
+  "Contains the favicon for each Qutebrowser buffer.")
 
 (defvar qutebrowser-current-search nil
   "Contains the current search terms of Qutebrowser.")
@@ -349,10 +349,10 @@ ARGS is an alist containing 'win-id and 'icon-file."
          (icon-file (alist-get 'icon-file args))
          (image (create-image icon-file nil nil :ascent 'center)))
     (when (file-regular-p icon-file)
-      (let ((old-icon-file (when qutebrowser-icon
+      (let ((old-icon-file (when qutebrowser-favicon
                              (image-property qutebrowser-icon :file))))
         (with-current-buffer buffer
-          (setq-local qutebrowser-icon image))
+          (setq-local qutebrowser-favicon image))
           ;;(qutebrowser-doom-set-favicon buffer))
         (when old-icon-file
           (delete-file old-icon-file))))))
@@ -484,7 +484,7 @@ Set initial completion input to INITIAL."
 (with-eval-after-load 'doom-modeline
   (defun qutebrowser-doom-set-favicon (&optional buffer)
     "Show favicon in doom modeline."
-    (when-let* ((image qutebrowser-icon))
+    (when-let* ((image qutebrowser-favicon))
       (with-current-buffer (or buffer (current-buffer))
         (setq-local doom-modeline--buffer-file-icon
                     (propertize ""
