@@ -709,7 +709,7 @@ The ORIG-FUN takes ARGS."
          (selected-buffer (get-buffer selected-candidate)))
     (unless (or (qutebrowser-exwm-p selected-buffer)
                 (string-match-p "^https?://" selected-candidate))
-      (funcall orig-fun args))))
+      (apply orig-fun args))))
 
 (with-eval-after-load 'vertico-prescient
   (advice-add 'vertico-prescient--remember-minibuffer-contents :around
