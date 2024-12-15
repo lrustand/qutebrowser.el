@@ -13,7 +13,7 @@ import json
 
 
 class EmacsIPCServer(IPCServer):
-   """IPC server for Emacs."""
+    """IPC server for Emacs."""
     def __init__(self, hook_manager=None):
         super().__init__("/tmp/emacs-ipc")
         objreg.register(name = "emacs-ipc",
