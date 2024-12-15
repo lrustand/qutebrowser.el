@@ -284,18 +284,18 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser--db-object nil
   "Contains a reference to the database connection.")
 
-(defvar-local qutebrowser-keymode "KeyMode.normal")
+(defvar-local qutebrowser-exwm-keymode "KeyMode.normal")
 
-(defvar-local qutebrowser-hovered-url nil
+(defvar-local qutebrowser-exwm-hovered-url nil
   "Contains the URL of the link currently hovered in Qutebrowser.")
 
-(defvar-local qutebrowser-current-url nil
+(defvar-local qutebrowser-exwm-current-url nil
   "Contains the current URL of Qutebrowser.")
 
-(defvar-local qutebrowser-favicon nil
+(defvar-local qutebrowser-exwm-favicon nil
   "Contains the favicon for each Qutebrowser buffer.")
 
-(defvar-local qutebrowser-current-search nil
+(defvar-local qutebrowser-exwm-current-search nil
   "Contains the current search terms of Qutebrowser.")
 
 (defvar qutebrowser-exwm-mode-map
@@ -333,14 +333,14 @@ ARGS is an alist containing `win-id'."
       (evil-normal-state))))
 
 (defun qutebrowser-update-current-url (args)
-  "Update the buffer-local variable `qutebrowser-current-url'.
+  "Update the buffer-local variable `qutebrowser-exwm-current-url'.
 ARGS is an alist containing `win-id' and `url'."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (url (alist-get 'url args)))
     (with-current-buffer buffer
       (when (string= url "") (setq url nil))
-      (setq-local qutebrowser-current-url url))))
+      (setq-local qutebrowser-exwm-current-url url))))
 
 ;; TODO: follow one naming pattern for these functions (update != set)
 ;; TODO: Standardize the data format for these functions
@@ -352,7 +352,7 @@ ARGS is an alist containing `win-id' and `url'."
          (hover (alist-get 'hover args)))
     (with-current-buffer buffer
       (when (string= hover "") (setq hover nil))
-      (setq-local qutebrowser-hovered-url hover))))
+      (setq-local qutebrowser-exwm-hovered-url hover))))
 
 (defun qutebrowser-update-favicon (args)
   "Update the favicon.
@@ -365,8 +365,8 @@ ARGS is an alist containing `win-id' and `icon-file'."
                (> (nth 7 (file-attributes icon-file)) 0))
       (with-current-buffer buffer
         (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
-          (let ((old-icon-file (image-property qutebrowser-favicon :file)))
-            (setq-local qutebrowser-favicon image)
+          (let ((old-icon-file (image-property qutebrowser-exwm-favicon :file)))
+            (setq-local qutebrowser-exwm-favicon image)
             ;;(qutebrowser-doom-set-favicon buffer)
             (when old-icon-file
               (delete-file old-icon-file)))))
@@ -375,7 +375,7 @@ ARGS is an alist containing `win-id' and `icon-file'."
 
 (defun qutebrowser-delete-favicon-tempfile ()
   "Deletes the tempfile associated with the favicon of current buffer."
-  (when-let ((icon-file (image-property qutebrowser-favicon :file)))
+  (when-let ((icon-file (image-property qutebrowser-exwm-favicon :file)))
     (delete-file icon-file)))
 
 (add-hook 'kill-buffer-hook #'qutebrowser-delete-favicon-tempfile)
@@ -387,7 +387,7 @@ ARGS is an alist containing `win-id' and `mode'."
          (buffer (exwm--id->buffer win-id))
          (mode (alist-get 'mode args)))
     (with-current-buffer buffer
-      (setq-local qutebrowser-keymode mode)
+      (setq-local qutebrowser-exwm-keymode mode)
       (pcase mode
         ("KeyMode.insert" (evil-insert-state))
         ("KeyMode.caret" (evil-visual-state))
@@ -396,13 +396,13 @@ ARGS is an alist containing `win-id' and `mode'."
         ("KeyMode.normal" (evil-normal-state))))))
 
 (defun qutebrowser-update-search (args)
-  "Update the variable `qutebrowser-current-search'.
+  "Update the variable `qutebrowser-exwm-current-search'.
 ARGS is an alist containing `win-id' and `search'."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (search (alist-get 'search args)))
     (with-current-buffer buffer
-      (setq-local qutebrowser-current-search search))))
+      (setq-local qutebrowser-exwm-current-search search))))
 
 ;;;; History database functions
 
@@ -467,7 +467,7 @@ Return up to LIMIT results."
 (defun qutebrowser-exwm-buffer-url (&optional buffer)
   "Return the URL of BUFFER or the current buffer."
   (with-current-buffer (or buffer (current-buffer))
-    (or qutebrowser-current-url
+    (or qutebrowser-exwm-current-url
         ;; Keep backward compatibility for now
         (get-text-property 0 'url (buffer-name buffer)))))
 
@@ -531,7 +531,7 @@ Set initial completion input to INITIAL."
 (with-eval-after-load 'doom-modeline
   (defun qutebrowser-doom-set-favicon (&optional buffer)
     "Show favicon in doom modeline."
-    (when-let* ((image qutebrowser-favicon))
+    (when-let* ((image qutebrowser-exwm-favicon))
       (with-current-buffer (or buffer (current-buffer))
         (setq-local doom-modeline--buffer-file-icon
                     (propertize ""
@@ -542,9 +542,9 @@ Set initial completion input to INITIAL."
     "Display the currently visited or hovered URL."
     (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
                               (doom-modeline-display-text
-                               (concat " " (if qutebrowser-hovered-url
-                                               (propertize qutebrowser-hovered-url 'face 'link-visited)
-                                             (propertize (or qutebrowser-current-url "") 'face 'success))))))
+                               (concat " " (if qutebrowser-exwm-hovered-url
+                                               (propertize qutebrowser-exwm-hovered-url 'face 'link-visited)
+                                             (propertize (or qutebrowser-exwm-current-url "") 'face 'success))))))
 
   (doom-modeline-def-modeline 'qutebrowser-doom-modeline
     '(bar workspace-name window-number modals buffer-info-simple)
