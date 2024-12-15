@@ -530,7 +530,7 @@ Set initial completion input to INITIAL."
                               (doom-modeline-display-text
                                (concat " " (if qutebrowser-hovered-url
                                                (propertize qutebrowser-hovered-url 'face 'link-visited)
-                                             (propertize qutebrowser-current-url 'face 'success))))))
+                                             (propertize (or qutebrowser-current-url "") 'face 'success))))))
 
   (doom-modeline-def-modeline 'qutebrowser-doom-modeline
     '(bar workspace-name window-number modals buffer-info-simple)
