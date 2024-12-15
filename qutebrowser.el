@@ -1083,6 +1083,7 @@ one.  If there is only one matching entry it is selected automatically."
 
 ;;;; Config mode
 
+;;;###autoload
 (define-minor-mode qutebrowser-config-mode
   "Minor mode for editing Qutebrowser config files."
   :lighter nil
