@@ -599,7 +599,7 @@ ENTRY will be modified to highlight any words contained in the `input'
 property, and the end of the string will be hidden by setting the
 `invisible' property.
 
-If PAD is non-nil, add padding to the annotation if entry is shorter
+If PAD is non-nil, add padding to the annotation if ENTRY is shorter
 than `qutebrowser-url-display-length'."
   (let ((input (get-text-property 0 'input entry))
         (url (substring-no-properties entry))
