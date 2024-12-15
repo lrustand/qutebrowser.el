@@ -14,7 +14,11 @@ import os
 
 
 class EmacsHookManager:
-    """Manager for Emacs hooks."""
+    """Manager for Emacs hooks.
+
+    Subscribes to a set of Qt signals exposed by Qutebrowser and
+    forwards them to Emacs.
+    """
     def __init__(self, server=None):
         self.server = objreg.get("emacs-ipc", server)
         if not server:
@@ -55,13 +59,17 @@ class EmacsHookManager:
 
         Args:
             window: The window that the link was hovered in.
-            url: The URL of the link that was hovered.
+            url: The URL of the link that was hovered. If the event
+                 was an unhovering, the URL is ''.
         """
         window_id = int(window.winId())
         self.server.send_signal("link-hovered", {"win-id": window_id, "url": url})
 
     def on_icon_changed(self, tab):
         """Called when the favicon changes.
+
+        Saves the new favicon to a tempfile and sends the filename and
+        window ID to Emacs.
 
         Args:
             tab: The tab that the favicon changed in.
@@ -135,6 +143,8 @@ class EmacsHookManager:
 
     def on_new_window(self, window):
         """Called when a new window is created.
+
+        Responsible for setting up all window local hooks in new windows.
 
         Args:
             window: The window that was created.
