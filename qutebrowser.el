@@ -280,15 +280,15 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser--db-object nil
   "Contains a reference to the database connection.")
 
-(defvar qutebrowser-keymode "KeyMode.normal")
+(defvar-local qutebrowser-keymode "KeyMode.normal")
 
-(defvar qutebrowser-hovered-url nil
+(defvar-local qutebrowser-hovered-url nil
   "Contains the URL of the link currently hovered in Qutebrowser.")
 
-(defvar qutebrowser-current-url nil
+(defvar-local qutebrowser-current-url nil
   "Contains the current URL of Qutebrowser.")
 
-(defvar qutebrowser-favicon nil
+(defvar-local qutebrowser-favicon nil
   "Contains the favicon for each Qutebrowser buffer.")
 
 (defvar qutebrowser-current-search nil
