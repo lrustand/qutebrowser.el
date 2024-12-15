@@ -1075,8 +1075,9 @@ one.  If there is only one matching entry it is selected automatically."
 
 (defun qutebrowser-is-running-p ()
   "Return non-nil if Qutebrowser is running."
-  (or (qutebrowser-rpc-connected-p)
-      (qutebrowser--get-process-pid)))
+  (when (or (qutebrowser-rpc-connected-p)
+            (qutebrowser--get-process-pid))
+    t))
 
 ;;;; Config mode
 
