@@ -248,7 +248,7 @@ query is built, see `qutebrowser--history-search'."
   "SQL matching pattern used for each input word.")
 
 (defvar qutebrowser-bookmark--tofu (consult--tofu-encode 1))
-(defvar qutebrowser-buffer--tofu (consult--tofu-encode 2))
+(defvar qutebrowser-exwm-buffer--tofu (consult--tofu-encode 2))
 (defvar qutebrowser-history--tofu (consult--tofu-encode 3))
 
 (defvar qutebrowser-on-entered-mode-functions `(qutebrowser-set-evil-state)
@@ -441,8 +441,8 @@ Return up to LIMIT results."
 (defun qutebrowser-find-buffer (url)
   "Find the buffer showing URL."
   (seq-find (lambda (buffer)
-              (string= url (qutebrowser-buffer-url buffer)))
-            (qutebrowser-buffer-list)))
+              (string= url (qutebrowser-exwm-buffer-url buffer)))
+            (qutebrowser-exwm-buffer-list)))
 
 (defun qutebrowser-exwm-p (&optional buffer)
   "Return t if BUFFER is a Qutebrowser EXWM buffer."
@@ -450,14 +450,14 @@ Return up to LIMIT results."
     (string-equal "qutebrowser"
                   exwm-class-name)))
 
-(defun qutebrowser-buffer-url (&optional buffer)
+(defun qutebrowser-exwm-buffer-url (&optional buffer)
   "Return the URL of BUFFER or the current buffer."
   (with-current-buffer (or buffer (current-buffer))
     (or qutebrowser-current-url
         ;; Keep backward compatibility for now
         (get-text-property 0 'url (buffer-name buffer)))))
 
-(defun qutebrowser-buffer-list ()
+(defun qutebrowser-exwm-buffer-list ()
   "Return a list of all Qutebrowser buffers."
   (seq-filter #'qutebrowser-exwm-p (buffer-list)))
 
@@ -474,7 +474,7 @@ default target if nil."
          (selected (qutebrowser-select-url initial)))
     (when selected
       (cond
-       ((string-prefix-p qutebrowser-buffer--tofu selected)
+       ((string-prefix-p qutebrowser-exwm-buffer--tofu selected)
         (let* ((url (substring selected 1))
                (buffer (qutebrowser-find-buffer url)))
           (switch-to-buffer buffer)))
@@ -546,7 +546,7 @@ Set initial completion input to INITIAL."
       (put-text-property max-length url-length 'invisible t url))
     url))
 
-(defun qutebrowser-buffer-filter (words buffers)
+(defun qutebrowser-exwm-buffer-filter (words buffers)
   "Filter BUFFERS to find those matching WORDS.
 Both buffer names and URLs are used for matching."
   (seq-filter
@@ -554,7 +554,7 @@ Both buffer names and URLs are used for matching."
      ;; All search words matching
      (-all-p (lambda (word)
                (let ((title (or (buffer-name buffer) ""))
-                     (url (or (qutebrowser-buffer-url buffer) "")))
+                     (url (or (qutebrowser-exwm-buffer-url buffer) "")))
                (or (string-match-p word title)
                    (string-match-p word url))))
              words))
@@ -585,15 +585,15 @@ Both bookmark name and URLs are used for matching."
                             'bookmark t)))
             matching-bookmarks)))
 
-(defun qutebrowser-buffer-search (&optional input)
+(defun qutebrowser-exwm-buffer-search (&optional input)
   "Return a propertized list of Qutebrowser buffers matching INPUT."
   (let* ((words (string-split (or input "")))
-         (buffers (qutebrowser-buffer-list))
-         (matching-buffers (qutebrowser-buffer-filter words buffers)))
+         (buffers (qutebrowser-exwm-buffer-list))
+         (matching-buffers (qutebrowser-exwm-buffer-filter words buffers)))
     (mapcar (lambda (buffer)
               (let* ((title (substring-no-properties (buffer-name buffer)))
-                     (url (qutebrowser-buffer-url buffer)))
-                (propertize (concat qutebrowser-buffer--tofu url)
+                     (url (qutebrowser-exwm-buffer-url buffer)))
+                (propertize (concat qutebrowser-exwm-buffer--tofu url)
                             'input input
                             'title title
                             'buffer buffer)))
@@ -648,7 +648,7 @@ INITIAL sets the initial input in the minibuffer."
      (consult--dynamic-collection
       (lambda (input)
         (append
-         (qutebrowser-buffer-search input)
+         (qutebrowser-exwm-buffer-search input)
          (qutebrowser-bookmark-search input)
          (qutebrowser--history-search input qutebrowser-dynamic-results))))
      :group (lambda (entry transform)
@@ -674,7 +674,7 @@ INITIAL sets the initial input in the minibuffer."
         :action (lambda (entry)
                   (switch-to-buffer (get-text-property 0 'buffer entry)))
         :annotate #'qutebrowser-annotate
-        :items #'qutebrowser-buffer-search)
+        :items #'qutebrowser-exwm-buffer-search)
   "`consult-buffer' source for open Qutebrowser windows.")
 
 (defun qutebrowser-bookmark-p (bookmark)
