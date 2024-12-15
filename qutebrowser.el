@@ -42,11 +42,15 @@
 (require 'cl-lib)
 (require 'dash)
 (require 'evil)
+(require 'url-parse)
 
 (declare-function doom-modeline-display-text "doom-modeline")
 (declare-function doom-modeline-def-segment "doom-modeline")
 (declare-function doom-modeline-def-modeline "doom-modeline")
+(declare-function doom-modeline-set-modeline "doom-modeline")
 (declare-function password-store-otp-token "password-store")
+(declare-function password-store-get "password-store")
+(declare-function password-store-list "password-store")
 (declare-function evil-emacs-state "evil-states")
 (declare-function evil-motion-state "evil-states")
 (declare-function evil-visual-state "evil-states")
@@ -326,7 +330,7 @@ query is built, see `qutebrowser--history-search'."
 
 (defun qutebrowser-update-current-url (args)
   "Update the buffer-local variable `qutebrowser-current-url'.
-ARGS is an alist containing 'win-id and 'url."
+ARGS is an alist containing `win-id' and `url'."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (url (alist-get 'url args)))
@@ -336,7 +340,7 @@ ARGS is an alist containing 'win-id and 'url."
 
 (defun qutebrowser-update-hovered-url (args)
   "Update the currently hovered URL.
-ARGS is an alist containing 'win-id and 'url."
+ARGS is an alist containing `win-id' and `url'."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (url (alist-get 'url args)))
@@ -346,7 +350,7 @@ ARGS is an alist containing 'win-id and 'url."
 
 (defun qutebrowser-update-favicon (args)
   "Update the favicon.
-ARGS is an alist containing 'win-id and 'icon-file."
+ARGS is an alist containing `win-id' and `icon-file'."
   (when-let* ((win-id (alist-get 'win-id args))
               (buffer (exwm--id->buffer win-id))
               (icon-file (alist-get 'icon-file args)))
@@ -372,7 +376,7 @@ ARGS is an alist containing 'win-id and 'icon-file."
 
 (defun qutebrowser-set-evil-state (args)
   "Set evil state to match Qutebrowser keymode.
-ARGS is an alist containing 'win-id and 'mode."
+ARGS is an alist containing `win-id' and `mode'."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
          (mode (alist-get 'mode args)))
@@ -386,7 +390,7 @@ ARGS is an alist containing 'win-id and 'mode."
 
 (defun qutebrowser-set-search (args)
   "Update the variable `qutebrowser-current-search'.
-ARGS is an alist containing 'search."
+ARGS is an alist containing `search'."
   (let* ((search (alist-get 'search args)))
     (setq qutebrowser-current-search search)))
 
@@ -610,20 +614,17 @@ Both bookmark name and URLs are used for matching."
   "Return annotation for ENTRY.
 ENTRY can be a bookmark, a buffer, or a history item.  ENTRY should be a
 string containing a URL, and it should be propertized with at least some
-of 'input, 'url, 'title, 'buffer, 'visited, and/or 'bookmark.
+of `input', `url', and/or `title'.
 
-ENTRY will be modified to highlight any words contained in the 'input
+ENTRY will be modified to highlight any words contained in the `input'
 property, and the end of the string will be hidden by setting the
-'invisible property.
+`invisible' property.
 
 If PAD is non-nil, add padding to the annotation if entry is shorter
 than `qutebrowser-url-display-length'."
   (let ((input (get-text-property 0 'input entry))
         (url (substring-no-properties entry))
-        (title (get-text-property 0 'title entry))
-        (buffer (get-text-property 0 'buffer entry))
-        (visited (get-text-property 0 'visited entry))
-        (bookmark (get-text-property 0 'bookmark entry)))
+        (title (get-text-property 0 'title entry)))
     ;; Set main face of annotation (title)
     (put-text-property 0 (length title) 'face 'completions-annotations title)
     ;; Highlight all matching words (both in url and title)
@@ -819,7 +820,7 @@ parse as valid JSON."
     (seq-doseq (message messages)
       (qutebrowser-rpc--receive-message proc message))))
 
-(defun qutebrowser-rpc--receive-message (proc data)
+(defun qutebrowser-rpc--receive-message (_ data)
   "Receive a single message from RPC.
 PROC is the network process connected to the RPC.
 DATA is the data received."
@@ -985,6 +986,8 @@ Creates a temporary file and sources it in Qutebrowser using the
   (let* ((escaped-text (qutebrowser-fake-keys--escape text)))
     (funcall #'qutebrowser-fake-keys--raw (format "\"%s\"" escaped-text))))
 
+;;;; Password store
+
 (defun qutebrowser-pass--select-entry (search)
   "Select an entry from password store matching SEARCH."
   (if-let* ((url (url-generic-parse-url search))
@@ -999,8 +1002,6 @@ Creates a temporary file and sources it in Qutebrowser using the
           (car pass-entries)
         (completing-read "Select: " pass-entries))
     (message "No pass entry found for %s" search)))
-
-;;;; Password store
 
 ;;;###autoload
 (defun qutebrowser-pass (&optional search limit)
@@ -1036,6 +1037,7 @@ one.  If there is only one matching entry it is selected automatically."
   (interactive)
   (qutebrowser-pass search :password-only))
 
+;;;###autoload
 (defun qutebrowser-pass-otp (&optional search)
   "Autofill OTP code matching SEARCH."
   (interactive)
