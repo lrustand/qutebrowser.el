@@ -58,18 +58,22 @@ class EmacsIPCServer(IPCServer):
         socket.write(QByteArray(response.encode("utf-8")))
         socket.flush()
 
-    def send_signal(self, signal, args=[]):
-        """Send a signal to Emacs.
+    def send_data(self, data):
+        """Send data to Emacs.
+
+        The data is JSON-encoded before sending over the socket to
+        Emacs. A comma is appended to the end of the JSON string in
+        case multiple JSON messages are received at once.
 
         Args:
-            signal: The name of the signal to be sent.
-            args: The arguments to pass to the signal handler in Emacs.
+            data: The data to send. This should be a dictionary, which
+                  Emacs will receive as an alist.
+
         """
-        data = json.dumps({"signal": signal,
-                           "args": args}) + ","
+        json_data = json.dumps(data) + ","
         socket = self._get_socket()
         if socket and socket.isOpen():
-            socket.write(QByteArray(data.encode("utf-8")))
+            socket.write(QByteArray(json_data.encode("utf-8")))
             socket.flush()
 
     def send_cmd(self, cmd):
@@ -78,11 +82,7 @@ class EmacsIPCServer(IPCServer):
         Args:
             cmd: The command(s) to be executed in Emacs.
         """
-        data = json.dumps({"eval": cmd}) + ","
-        socket = self._get_socket()
-        if socket and socket.isOpen():
-            socket.write(QByteArray(data.encode("utf-8")))
-            socket.flush()
+        self.send_data({"eval": cmd})
 
 
 # Fails if run during startup, qapp not initialized yet

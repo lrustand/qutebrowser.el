@@ -52,7 +52,7 @@ class EmacsHookManager:
         """
         url = url.toString()
         window_id = int(window.winId())
-        self.server.send_signal("url-changed", {"win-id": window_id, "url": url})
+        self.send_signal("url-changed", {"win-id": window_id, "url": url})
 
     def on_link_hovered(self, window, url):
         """Called when a link is hover or unhovered.
@@ -63,7 +63,7 @@ class EmacsHookManager:
                  was an unhovering, the URL is ''.
         """
         window_id = int(window.winId())
-        self.server.send_signal("link-hovered", {"win-id": window_id, "url": url})
+        self.send_signal("link-hovered", {"win-id": window_id, "url": url})
 
     def on_icon_changed(self, tab):
         """Called when the favicon changes.
@@ -79,7 +79,7 @@ class EmacsHookManager:
         fd, path = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
         os.close(fd)
         window.windowIcon().pixmap(16,16).save(path)
-        self.server.send_signal("icon-changed", {"win-id": window_id, "icon-file": path})
+        self.send_signal("icon-changed", {"win-id": window_id, "icon-file": path})
 
     def on_search(self, window, search):
         """Called when a search is performed.
@@ -89,7 +89,7 @@ class EmacsHookManager:
             search: The entered search term.
         """
         window_id = int(window.winId())
-        self.server.send_signal("got-search", {"win-id": window_id, "search": search})
+        self.send_signal("got-search", {"win-id": window_id, "search": search})
 
     def on_enter_mode(self, window, mode):
         """Called when a mode is entered.
@@ -99,7 +99,7 @@ class EmacsHookManager:
             mode: The mode that was entered.
         """
         window_id = int(window.winId())
-        self.server.send_signal("entered-mode", {"win-id": window_id, "mode": str(mode)})
+        self.send_signal("entered-mode", {"win-id": window_id, "mode": str(mode)})
 
     def on_leave_mode(self, window, mode):
         """Called when a mode is left.
@@ -109,7 +109,7 @@ class EmacsHookManager:
             mode: The mode that was left.
         """
         window_id = int(window.winId())
-        self.server.send_signal("left-mode", {"win-id": window_id, "mode": str(mode)})
+        self.send_signal("left-mode", {"win-id": window_id, "mode": str(mode)})
 
     def enable_tab_hooks(self, tab, _):
         """Enable tab local hooks.
@@ -149,8 +149,17 @@ class EmacsHookManager:
         Args:
             window: The window that was created.
         """
-        self.server.send_signal("new-window", int(window.winId()))
+        self.send_signal("new-window", int(window.winId()))
         self.enable_window_hooks(window)
+
+    def send_signal(self, signal, args={}):
+        """Send a signal to Emacs.
+
+        Args:
+            signal: The name of the signal to be sent.
+            args: The arguments to pass to the signal handler in Emacs.
+        """
+        self.server.send_data({"signal": signal, "args": args})
 
 
 # Local Variables:
