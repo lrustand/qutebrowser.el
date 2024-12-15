@@ -39,7 +39,6 @@
 (require 'exwm)
 (require 'json)
 (require 'color)
-(require 'password-store)
 (require 'cl-lib)
 (require 'dash)
 (require 'evil)
