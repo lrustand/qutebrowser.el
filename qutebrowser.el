@@ -347,7 +347,7 @@ ARGS is an alist containing 'win-id and 'icon-file."
   (when-let* ((win-id (alist-get 'win-id args))
               (buffer (exwm--id->buffer win-id))
               (icon-file (alist-get 'icon-file args)))
-    (when (and (file-regular-p icon-file)
+    (if (and (file-regular-p icon-file)
                ;; Not empty
                (> (nth 7 (file-attributes icon-file)) 0))
       (with-current-buffer buffer
@@ -356,7 +356,9 @@ ARGS is an alist containing 'win-id and 'icon-file."
             (setq-local qutebrowser-favicon image)
             ;;(qutebrowser-doom-set-favicon buffer)
             (when old-icon-file
-              (delete-file old-icon-file))))))))
+              (delete-file old-icon-file)))))
+      ;; Delete invalid/empty icon files
+      (delete-file icon-file))))
 
 (defun qutebrowser-delete-favicon-tempfile ()
   "Deletes the tempfile associated with the favicon of current buffer."
