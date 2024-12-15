@@ -438,7 +438,7 @@ Return up to LIMIT results."
     ('private-window "-p")
     ('auto "")))
 
-(defun qutebrowser-find-buffer (url)
+(defun qutebrowser-exwm-find-buffer (url)
   "Find the buffer showing URL."
   (seq-find (lambda (buffer)
               (string= url (qutebrowser-exwm-buffer-url buffer)))
@@ -476,7 +476,7 @@ default target if nil."
       (cond
        ((string-prefix-p qutebrowser-exwm-buffer--tofu selected)
         (let* ((url (substring selected 1))
-               (buffer (qutebrowser-find-buffer url)))
+               (buffer (qutebrowser-exwm-find-buffer url)))
           (switch-to-buffer buffer)))
        ((string-prefix-p qutebrowser-bookmark--tofu selected)
         (let ((url (substring selected 1)))
