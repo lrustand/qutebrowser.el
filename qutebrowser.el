@@ -341,21 +341,21 @@ ARGS is an alist containing 'win-id and 'url."
       (when (string= url "") (setq url nil))
       (setq-local qutebrowser-hovered-url url))))
 
-(defun qutebrowser-update-icon (args)
+(defun qutebrowser-update-favicon (args)
   "Update the favicon.
 ARGS is an alist containing 'win-id and 'icon-file."
-  (let* ((win-id (alist-get 'win-id args))
-         (buffer (exwm--id->buffer win-id))
-         (icon-file (alist-get 'icon-file args))
-         (image (create-image icon-file nil nil :ascent 'center)))
+  (when-let* ((win-id (alist-get 'win-id args))
+              (buffer (exwm--id->buffer win-id))
+              (icon-file (alist-get 'icon-file args)))
     (when (file-regular-p icon-file)
-      (let ((old-icon-file (when qutebrowser-favicon
-                             (image-property qutebrowser-icon :file))))
-        (with-current-buffer buffer
-          (setq-local qutebrowser-favicon image))
-          ;;(qutebrowser-doom-set-favicon buffer))
-        (when old-icon-file
-          (delete-file old-icon-file))))))
+      (with-current-buffer buffer
+        (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
+          (let ((old-icon-file (image-property qutebrowser-favicon :file)))
+            (message "SETTING ICON")
+            (setq-local qutebrowser-favicon image)
+            ;;(qutebrowser-doom-set-favicon buffer)
+            (when old-icon-file
+              (delete-file old-icon-file))))))))
 
 (defun qutebrowser-set-evil-state (args)
   "Set evil state to match Qutebrowser keymode.
