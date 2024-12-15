@@ -44,18 +44,18 @@
 (require 'evil)
 (require 'url-parse)
 
-(declare-function doom-modeline-display-text "doom-modeline")
-(declare-function doom-modeline-def-segment "doom-modeline")
-(declare-function doom-modeline-def-modeline "doom-modeline")
-(declare-function doom-modeline-set-modeline "doom-modeline")
-(declare-function password-store-otp-token "password-store")
-(declare-function password-store-get "password-store")
-(declare-function password-store-list "password-store")
-(declare-function evil-emacs-state "evil-states")
-(declare-function evil-motion-state "evil-states")
-(declare-function evil-visual-state "evil-states")
-(declare-function evil-insert-state "evil-states")
-(declare-function evil-normal-state "evil-states")
+(declare-function doom-modeline-display-text "ext:doom-modeline")
+(declare-function doom-modeline-def-segment "ext:doom-modeline")
+(declare-function doom-modeline-def-modeline "ext:doom-modeline")
+(declare-function doom-modeline-set-modeline "ext:doom-modeline")
+(declare-function password-store-otp-token "ext:password-store")
+(declare-function password-store-get "ext:password-store")
+(declare-function password-store-list "ext:password-store")
+(declare-function evil-emacs-state "ext:evil-states")
+(declare-function evil-motion-state "ext:evil-states")
+(declare-function evil-visual-state "ext:evil-states")
+(declare-function evil-insert-state "ext:evil-states")
+(declare-function evil-normal-state "ext:evil-states")
 
 ;;;; Customizable variables
 
@@ -521,28 +521,27 @@ Set initial completion input to INITIAL."
 ;; dummy variable to avoid error.
 (defvar qutebrowser-url nil)
 
-(eval-after-load 'doom-modeline
-  '(progn
-     (defun qutebrowser-doom-set-favicon (&optional buffer)
-       "Show favicon in doom modeline."
-       (when-let* ((image qutebrowser-favicon))
-         (with-current-buffer (or buffer (current-buffer))
-           (setq-local doom-modeline--buffer-file-icon
-                       (propertize ""
-                                   'display image
-                                   'face '(:inherit doom-modeline))))))
+(with-eval-after-load 'doom-modeline
+  (defun qutebrowser-doom-set-favicon (&optional buffer)
+    "Show favicon in doom modeline."
+    (when-let* ((image qutebrowser-favicon))
+      (with-current-buffer (or buffer (current-buffer))
+        (setq-local doom-modeline--buffer-file-icon
+                    (propertize ""
+                                'display image
+                                'face '(:inherit doom-modeline))))))
 
-     (doom-modeline-def-segment qutebrowser-url
-       "Display the currently visited or hovered URL."
-       (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
-                                 (doom-modeline-display-text
-                                  (concat " " (if qutebrowser-hovered-url
-                                                  (propertize qutebrowser-hovered-url 'face 'link-visited)
-                                                (propertize (or qutebrowser-current-url "") 'face 'success))))))
+  (doom-modeline-def-segment qutebrowser-url
+    "Display the currently visited or hovered URL."
+    (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
+                              (doom-modeline-display-text
+                               (concat " " (if qutebrowser-hovered-url
+                                               (propertize qutebrowser-hovered-url 'face 'link-visited)
+                                             (propertize (or qutebrowser-current-url "") 'face 'success))))))
 
-     (doom-modeline-def-modeline 'qutebrowser-doom-modeline
-       '(bar workspace-name window-number modals buffer-info-simple)
-       '(misc-info qutebrowser-url))))
+  (doom-modeline-def-modeline 'qutebrowser-doom-modeline
+    '(bar workspace-name window-number modals buffer-info-simple)
+    '(misc-info qutebrowser-url)))
 
 ;;;; Dynamic consult source
 
