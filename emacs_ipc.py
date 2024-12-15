@@ -69,7 +69,11 @@ class EmacsIPCServer(IPCServer):
                 tabbed_browser = window.tabbed_browser
                 mode_manager = modeman.instance(window.win_id)
                 win_id = int(window.winId())
-                url = tabbed_browser.current_url().toString()
+                try:
+                    # This can fail if the url is empty
+                    url = tabbed_browser.current_url().toString()
+                except:
+                    url = None
                 title = window.windowTitle()
                 fd, icon_file = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
                 os.close(fd)
