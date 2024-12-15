@@ -373,6 +373,30 @@ query is built, see `qutebrowser--history-search'."
   (with-current-buffer buffer
     (setq-local qutebrowser-exwm-current-search search)))
 
+(defun qutebrowser-exwm-update-window-info (window-info &optional accept-nil)
+  (let* ((win-id (alist-get 'win-id window-info))
+         (buffer (exwm--id->buffer win-id))
+         (url (alist-get 'url window-info))
+         (icon-file (alist-get 'icon-file window-info))
+         (hover (alist-get 'hover window-info))
+         (search (alist-get 'search window-info))
+         (mode (alist-get 'mode window-info)))
+
+    (when (or mode accept-nil)
+      (qutebrowser-exwm-update-evil-state buffer mode))
+
+    (when (or icon-file accept-nil)
+      (qutebrowser-exwm-update-favicon buffer icon-file))
+
+    (when (or search accept-nil)
+      (qutebrowser-exwm-update-search buffer search))
+
+    (when (or hover accept-nil)
+      (qutebrowser-exwm-update-hovered-url buffer hover))
+
+    (when (or url accept-nil)
+      (qutebrowser-exwm-update-current-url buffer url))))
+
 ;;;; History database functions
 
 (defun qutebrowser--get-db ()
@@ -443,6 +467,41 @@ Return up to LIMIT results."
 (defun qutebrowser-exwm-buffer-list ()
   "Return a list of all Qutebrowser buffers."
   (seq-filter #'qutebrowser-exwm-p (buffer-list)))
+
+(defun qutebrowser--shorten-display-url (url)
+  "Shorten URL by making the end invisible."
+  (let ((url-length (length url))
+        (max-length qutebrowser-url-display-length))
+    (when (> url-length max-length)
+      (put-text-property max-length url-length 'invisible t url))
+    url))
+
+;;;; Bookmark functions
+
+(defun qutebrowser-bookmark-make-record ()
+  "Make a bookmark record for Qutebrowser buffers."
+  `(,(buffer-name)
+    (handler . qutebrowser-bookmark-jump)
+    (url . ,(get-text-property 0 'url (buffer-name)))))
+
+(defun qutebrowser-bookmark-url (bookmark)
+  "Return the URL that BOOKMARK is pointing to."
+  (bookmark-prop-get bookmark 'url))
+
+(defun qutebrowser-bookmark-jump (bookmark)
+  "Jump to a Qutebrowser BOOKMARK."
+  (let ((url (qutebrowser-bookmark-url bookmark)))
+    (qutebrowser-open-url url)))
+
+(defun qutebrowser-bookmark-p (bookmark)
+  "Return t if BOOKMARK is a Qutebrowser bookmark."
+  (eq 'qutebrowser-bookmark-jump
+      (bookmark-get-handler bookmark)))
+
+(defun qutebrowser-bookmarks-list ()
+  "Return a list of Qutebrowser bookmarks."
+  (seq-filter #'qutebrowser-bookmark-p
+              (bookmark-all-names)))
 
 ;;;; Launcher functions
 
@@ -524,14 +583,6 @@ Set initial completion input to INITIAL."
     '(misc-info qutebrowser-url)))
 
 ;;;; Dynamic consult source
-
-(defun qutebrowser--shorten-display-url (url)
-  "Shorten URL by making the end invisible."
-  (let ((url-length (length url))
-        (max-length qutebrowser-url-display-length))
-    (when (> url-length max-length)
-      (put-text-property max-length url-length 'invisible t url))
-    url))
 
 (defun qutebrowser-exwm-buffer-filter (words buffers)
   "Filter BUFFERS to find those matching WORDS.
@@ -662,16 +713,6 @@ INITIAL sets the initial input in the minibuffer."
         :items #'qutebrowser-exwm-buffer-search)
   "`consult-buffer' source for open Qutebrowser windows.")
 
-(defun qutebrowser-bookmark-p (bookmark)
-  "Return t if BOOKMARK is a Qutebrowser bookmark."
-  (eq 'qutebrowser-bookmark-jump
-      (bookmark-get-handler bookmark)))
-
-(defun qutebrowser-bookmarks-list ()
-  "Return a list of Qutebrowser bookmarks."
-  (seq-filter #'qutebrowser-bookmark-p
-              (bookmark-all-names)))
-
 (defvar qutebrowser--bookmark-source
   (list :name "Qutebrowser bookmarks"
         :hidden nil
@@ -699,40 +740,6 @@ The ORIG-FUN takes ARGS."
 (with-eval-after-load 'vertico-prescient
   (advice-add 'vertico-prescient--remember-minibuffer-contents :around
               #'qutebrowser-advice-vertico-prescient))
-
-;;;; IPC functions
-
-(defvar qutebrowser-ipc-protocol-version 1
-  "The protocol version for Qutebrowser IPC.")
-
-(defun qutebrowser-ipc-socket-path ()
-  "Return the path to Qutebrowser's IPC socket."
-  (expand-file-name
-   (format "qutebrowser/ipc-%s" (md5 (user-login-name)))
-   (or (getenv "XDG_RUNTIME_DIR")
-       (format "/run/user/%d" (user-real-uid)))))
-
-(defun qutebrowser-ipc-send (&rest commands)
-  "Send COMMANDS to Qutebrowser via IPC.
-Falls back to sending over commandline if IPC fails."
-  (condition-case err
-      (let* ((socket-path (qutebrowser-ipc-socket-path))
-             (data (json-encode `(("args" . ,commands)
-                                  ("target_arg" . nil)
-                                  ("protocol_version" . ,qutebrowser-ipc-protocol-version))))
-             (process (make-network-process :name "qutebrowser-ipc"
-                                            :family 'local
-                                            :service socket-path
-                                            :coding 'utf-8)))
-        (process-send-string process (concat data "\n"))
-        (delete-process process))
-    (file-error
-     (progn
-       (message "Error connecting to Qutebrowser IPC socket: %s" (error-message-string err))
-       (message "Starting new Qutebrowser instance.")
-       (apply #'qutebrowser-commandline-send commands)))
-    (error
-     (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
 ;;;; RPC functions
 
@@ -833,32 +840,40 @@ DATA is the data received."
      (repl-response (qutebrowser-repl-receive-response repl-response))
      (eval (eval (read eval))))))
 
-(defun qutebrowser-exwm-update-window-info (window-info &optional accept-nil)
-  (let* ((win-id (alist-get 'win-id window-info))
-         (buffer (exwm--id->buffer win-id))
-         (url (alist-get 'url window-info))
-         (icon-file (alist-get 'icon-file window-info))
-         (hover (alist-get 'hover window-info))
-         (search (alist-get 'search window-info))
-         (mode (alist-get 'mode window-info)))
-
-    (when (or mode accept-nil)
-      (qutebrowser-exwm-update-evil-state buffer mode))
-
-    (when (or icon-file accept-nil)
-      (qutebrowser-exwm-update-favicon buffer icon-file))
-
-    (when (or search accept-nil)
-      (qutebrowser-exwm-update-search buffer search))
-
-    (when (or hover accept-nil)
-      (qutebrowser-exwm-update-hovered-url buffer hover))
-
-    (when (or url accept-nil)
-      (qutebrowser-exwm-update-current-url buffer url))))
-
 
 ;;;; Command sending functions
+
+(defvar qutebrowser-ipc-protocol-version 1
+  "The protocol version for Qutebrowser IPC.")
+
+(defun qutebrowser-ipc-socket-path ()
+  "Return the path to Qutebrowser's IPC socket."
+  (expand-file-name
+   (format "qutebrowser/ipc-%s" (md5 (user-login-name)))
+   (or (getenv "XDG_RUNTIME_DIR")
+       (format "/run/user/%d" (user-real-uid)))))
+
+(defun qutebrowser-ipc-send (&rest commands)
+  "Send COMMANDS to Qutebrowser via IPC.
+Falls back to sending over commandline if IPC fails."
+  (condition-case err
+      (let* ((socket-path (qutebrowser-ipc-socket-path))
+             (data (json-encode `(("args" . ,commands)
+                                  ("target_arg" . nil)
+                                  ("protocol_version" . ,qutebrowser-ipc-protocol-version))))
+             (process (make-network-process :name "qutebrowser-ipc"
+                                            :family 'local
+                                            :service socket-path
+                                            :coding 'utf-8)))
+        (process-send-string process (concat data "\n"))
+        (delete-process process))
+    (file-error
+     (progn
+       (message "Error connecting to Qutebrowser IPC socket: %s" (error-message-string err))
+       (message "Starting new Qutebrowser instance.")
+       (apply #'qutebrowser-commandline-send commands)))
+    (error
+     (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
 
 (defun qutebrowser-commandline-send (&rest commands)
   "Send COMMANDS to Qutebrowser via commandline."
@@ -897,6 +912,28 @@ If START-IF-NOT-RUNNING is non-nil, start Qutebrowser if it is not running."
   (when (or (qutebrowser-is-running-p)
             start-if-not-running)
     (qutebrowser-send-commands (concat ":config-source " config-file))))
+
+(defun qutebrowser-fake-keys--escape (text)
+  "Escape any special characters from TEXT to be sent to :fake-keys."
+  (apply #'concat
+   (mapcar (lambda (chr)
+             (pcase chr
+               (?< "<less>")
+               (?> "<greater>")
+               (?\" "\\\"")
+               (?\' "'")
+               (?\\ "\\\\")
+               (_ (char-to-string chr))))
+           text)))
+
+(defun qutebrowser-fake-keys--raw (raw-keys)
+  "Send RAW-KEYS without escaping special characters."
+  (qutebrowser-send-commands (format ":fake-key %s" raw-keys)))
+
+(defun qutebrowser-fake-keys (text)
+  "Send TEXT as input to Qutebrowser."
+  (let* ((escaped-text (qutebrowser-fake-keys--escape text)))
+    (funcall #'qutebrowser-fake-keys--raw (format "\"%s\"" escaped-text))))
 
 (defun qutebrowser-execute-python (python-code)
   "Execute PYTHON-CODE in running Qutebrowser instance.
@@ -938,21 +975,7 @@ Creates a temporary file and sources it in Qutebrowser using the
       (add-hook 'exwm-manage-finish-hook #'qutebrowser-exwm-mode-maybe-enable)
     (remove-hook 'exwm-manage-finish-hook #'qutebrowser-exwm-mode-maybe-enable)))
 
-
-(defun qutebrowser-bookmark-make-record ()
-  "Make a bookmark record for Qutebrowser buffers."
-  `(,(buffer-name)
-    (handler . qutebrowser-bookmark-jump)
-    (url . ,(get-text-property 0 'url (buffer-name)))))
-
-(defun qutebrowser-bookmark-url (bookmark)
-  "Return the URL that BOOKMARK is pointing to."
-  (bookmark-prop-get bookmark 'url))
-
-(defun qutebrowser-bookmark-jump (bookmark)
-  "Jump to a Qutebrowser BOOKMARK."
-  (let ((url (qutebrowser-bookmark-url bookmark)))
-    (qutebrowser-open-url url)))
+;;;; Theme export mode
 
 (defun qutebrowser-theme-export ()
   "Export selected Emacs faces to Qutebrowser theme format."
@@ -986,29 +1009,6 @@ Creates a temporary file and sources it in Qutebrowser using the
       (advice-add 'enable-theme :after #'qutebrowser-theme-export-and-apply)
     (advice-remove 'enable-theme #'qutebrowser-theme-export-and-apply)))
 
-(defun qutebrowser-fake-keys--escape (text)
-  "Escape any special characters from TEXT to be sent to :fake-keys."
-  (apply #'concat
-   (mapcar (lambda (chr)
-             (pcase chr
-               (?< "<less>")
-               (?> "<greater>")
-               (?\" "\\\"")
-               (?\' "'")
-               (?\\ "\\\\")
-               (_ (char-to-string chr))))
-           text)))
-
-;;;; Fake keys
-
-(defun qutebrowser-fake-keys--raw (raw-keys)
-  "Send RAW-KEYS without escaping special characters."
-  (qutebrowser-send-commands (format ":fake-key %s" raw-keys)))
-
-(defun qutebrowser-fake-keys (text)
-  "Send TEXT as input to Qutebrowser."
-  (let* ((escaped-text (qutebrowser-fake-keys--escape text)))
-    (funcall #'qutebrowser-fake-keys--raw (format "\"%s\"" escaped-text))))
 
 ;;;; Password store
 
