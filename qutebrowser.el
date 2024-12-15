@@ -351,7 +351,6 @@ ARGS is an alist containing 'win-id and 'icon-file."
       (with-current-buffer buffer
         (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
           (let ((old-icon-file (image-property qutebrowser-favicon :file)))
-            (message "SETTING ICON")
             (setq-local qutebrowser-favicon image)
             ;;(qutebrowser-doom-set-favicon buffer)
             (when old-icon-file
