@@ -937,7 +937,8 @@ Creates a temporary file and sources it in Qutebrowser using the
 (defun qutebrowser-theme-export ()
   "Export selected Emacs faces to Qutebrowser theme format."
   (interactive)
-  (with-temp-file "~/.config/qutebrowser/emacs_theme.py"
+  (with-temp-file (expand-file-name "emacs_theme.py"
+                                    qutebrowser-config-directory)
     (insert "# Qutebrowser theme exported from Emacs\n\n")
     (dolist (mapping qutebrowser-theme-export-face-mappings)
       (let* ((qute-face (symbol-name (car mapping)))
@@ -954,7 +955,8 @@ Creates a temporary file and sources it in Qutebrowser using the
   (interactive)
   (qutebrowser-theme-export)
   (when (qutebrowser-is-running-p)
-    (qutebrowser-config-source "~/.config/qutebrowser/emacs_theme.py")))
+    (qutebrowser-config-source (expand-file-name "emacs_theme.py"
+                                                 qutebrowser-config-directory))))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-theme-export-mode
