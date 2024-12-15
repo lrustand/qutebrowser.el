@@ -63,7 +63,7 @@ class EmacsHookManager:
                  was an unhovering, the URL is ''.
         """
         window_id = int(window.winId())
-        self.send_signal("link-hovered", {"win-id": window_id, "url": url})
+        self.send_signal("link-hovered", {"win-id": window_id, "hover": url})
 
     def on_icon_changed(self, tab):
         """Called when the favicon changes.

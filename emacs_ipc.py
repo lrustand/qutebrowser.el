@@ -10,6 +10,8 @@ from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
 from qutebrowser.utils import objreg
 import json
+from tempfile import mkstemp
+import os
 
 
 class EmacsIPCServer(IPCServer):
@@ -46,6 +48,8 @@ class EmacsIPCServer(IPCServer):
             except:
                 response = "Error!"
             self.send_data({"rpc-response": response})
+        if "request" in json_data:
+            self.handle_request(json_data["request"], json_data.get("args", {}))
         if "repl" in json_data:
             try:
                 response = str(eval(json_data["repl"]))
@@ -54,6 +58,33 @@ class EmacsIPCServer(IPCServer):
             except:
                 response = "Error!"
             self.send_data({"repl-response": response})
+
+    def handle_request(self, request, args={}):
+        """Handle a request for data.
+
+        Currently implemented endpoint is 'window-info', that returns
+        a dictionary containing all information about a window.
+        """
+        if request == "window-info":
+            for window in objreg.window_registry.values():
+                tabbed_browser = window.tabbed_browser
+                mode_manager = modeman.instance(window.win_id)
+                win_id = int(window.winId())
+                url = tabbed_browser.current_url().toString()
+                title = window.windowTitle()
+                fd, icon_file = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
+                os.close(fd)
+                tabbed_browser.windowIcon().pixmap(16,16).save(icon_file)
+                search = tabbed_browser.search_text
+                hover = None # FIXME
+                mode = str(mode_manager.mode)
+                self.send_data({"window-info": {"win-id": win_id,
+                                                "url": url,
+                                                "title": title,
+                                                "icon-file": icon_file,
+                                                "search": search,
+                                                "hover": hover,
+                                                "mode": mode}})
 
     def send_data(self, data):
         """Send data to Emacs.

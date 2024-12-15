@@ -324,9 +324,13 @@ query is built, see `qutebrowser--history-search'."
                                                                   buffer-file-name)))
 ;;;; Hook functions
 
-(defun qutebrowser-exit-evil-state (&optional _)
-  "Exit evil state and go to normal state."
-  (evil-normal-state))
+(defun qutebrowser-exit-evil-state (args)
+  "Exit evil state and go to normal state.
+ARGS is an alist containing `win-id'."
+  (let* ((win-id (alist-get 'win-id args))
+         (buffer (exwm--id->buffer win-id)))
+    (with-current-buffer buffer
+      (evil-normal-state))))
 
 (defun qutebrowser-update-current-url (args)
   "Update the buffer-local variable `qutebrowser-current-url'.
@@ -338,15 +342,17 @@ ARGS is an alist containing `win-id' and `url'."
       (when (string= url "") (setq url nil))
       (setq-local qutebrowser-current-url url))))
 
+;; TODO: follow one naming pattern for these functions (update != set)
+;; TODO: Standardize the data format for these functions
 (defun qutebrowser-update-hovered-url (args)
   "Update the currently hovered URL.
 ARGS is an alist containing `win-id' and `url'."
   (let* ((win-id (alist-get 'win-id args))
          (buffer (exwm--id->buffer win-id))
-         (url (alist-get 'url args)))
+         (hover (alist-get 'hover args)))
     (with-current-buffer buffer
-      (when (string= url "") (setq url nil))
-      (setq-local qutebrowser-hovered-url url))))
+      (when (string= hover "") (setq hover nil))
+      (setq-local qutebrowser-hovered-url hover))))
 
 (defun qutebrowser-update-favicon (args)
   "Update the favicon.
@@ -386,7 +392,8 @@ ARGS is an alist containing `win-id' and `mode'."
         ("KeyMode.insert" (evil-insert-state))
         ("KeyMode.caret" (evil-visual-state))
         ("KeyMode.hint" (evil-motion-state))
-        ("KeyMode.command" (evil-emacs-state))))))
+        ("KeyMode.command" (evil-emacs-state))
+        ("KeyMode.normal" (evil-normal-state))))))
 
 (defun qutebrowser-set-search (args)
   "Update the variable `qutebrowser-current-search'.
@@ -796,7 +803,9 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
     (or process
         (progn
           (qutebrowser-rpc--bootstrap-server)
-          (qutebrowser-rpc--make-network-process)))))
+          (let ((process (qutebrowser-rpc--make-network-process)))
+            (qutebrowser-rpc-request-window-info)
+            process)))))
 
 (defun qutebrowser-rpc-connected-p ()
   "Check if connected to the Qutebrowser RPC."
@@ -811,6 +820,12 @@ updated it is recommended to run this function when loading the package."
                   "emacs_hooks.py"))
     (copy-file (expand-file-name file qutebrowser--package-directory)
                (expand-file-name file qutebrowser-config-directory))))
+
+(defun qutebrowser-rpc-request-window-info ()
+  "Request window-info from Qutebrowser.
+Useful for initializing window information when first connecting to an
+instance with existing windows."
+  (qutebrowser-rpc-call '((request . window-info))))
 
 (defun qutebrowser-rpc--receive-data (proc data)
   "Receive data from the Qutebrowser RPC.
@@ -830,15 +845,23 @@ DATA is the data received."
   (let* ((sig (alist-get 'signal data))
          (repl-response (alist-get 'repl-response data))
          (rpc-response (alist-get 'rpc-response data))
+         (window-info (alist-get 'window-info data))
          (eval (alist-get 'eval data)))
     (cond
      (sig (let ((functions (symbol-value (intern-soft (format "qutebrowser-on-%s-functions" sig))))
                 (args (alist-get 'args data)))
             (dolist (fun functions)
                 (funcall fun args))))
+     (window-info (qutebrowser-rpc--receive-window-info window-info))
      (rpc-response (message rpc-response))
      (repl-response (qutebrowser-repl-receive-response repl-response))
      (eval (eval (read eval))))))
+
+(defun qutebrowser-rpc--receive-window-info (window-info)
+  (qutebrowser-update-favicon window-info)
+  (qutebrowser-set-search window-info)
+  (qutebrowser-update-current-url window-info)
+  (qutebrowser-set-evil-state window-info))
 
 
 ;;;; Command sending functions
