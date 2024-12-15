@@ -521,27 +521,28 @@ Set initial completion input to INITIAL."
 ;; dummy variable to avoid error.
 (defvar qutebrowser-url nil)
 
-(with-eval-after-load 'doom-modeline
-  (defun qutebrowser-doom-set-favicon (&optional buffer)
-    "Show favicon in doom modeline."
-    (when-let* ((image qutebrowser-favicon))
-      (with-current-buffer (or buffer (current-buffer))
-        (setq-local doom-modeline--buffer-file-icon
-                    (propertize ""
-                                'display image
-                                'face '(:inherit doom-modeline))))))
+(eval-after-load 'doom-modeline
+  '(progn
+     (defun qutebrowser-doom-set-favicon (&optional buffer)
+       "Show favicon in doom modeline."
+       (when-let* ((image qutebrowser-favicon))
+         (with-current-buffer (or buffer (current-buffer))
+           (setq-local doom-modeline--buffer-file-icon
+                       (propertize ""
+                                   'display image
+                                   'face '(:inherit doom-modeline))))))
 
-  (doom-modeline-def-segment qutebrowser-url
-    "Display the currently visited or hovered URL."
-    (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
-                              (doom-modeline-display-text
-                               (concat " " (if qutebrowser-hovered-url
-                                               (propertize qutebrowser-hovered-url 'face 'link-visited)
-                                             (propertize (or qutebrowser-current-url "") 'face 'success))))))
+     (doom-modeline-def-segment qutebrowser-url
+       "Display the currently visited or hovered URL."
+       (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
+                                 (doom-modeline-display-text
+                                  (concat " " (if qutebrowser-hovered-url
+                                                  (propertize qutebrowser-hovered-url 'face 'link-visited)
+                                                (propertize (or qutebrowser-current-url "") 'face 'success))))))
 
-  (doom-modeline-def-modeline 'qutebrowser-doom-modeline
-    '(bar workspace-name window-number modals buffer-info-simple)
-    '(misc-info qutebrowser-url)))
+     (doom-modeline-def-modeline 'qutebrowser-doom-modeline
+       '(bar workspace-name window-number modals buffer-info-simple)
+       '(misc-info qutebrowser-url))))
 
 ;;;; Dynamic consult source
 
