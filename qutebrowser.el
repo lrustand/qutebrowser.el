@@ -45,17 +45,17 @@
 (require 'url-parse)
 
 (declare-function doom-modeline-display-text "ext:doom-modeline")
-(declare-function doom-modeline-def-segment "ext:doom-modeline")
-(declare-function doom-modeline-def-modeline "ext:doom-modeline")
+(declare-function doom-modeline-def-segment "ext:doom-modeline" t t)
+(declare-function doom-modeline-def-modeline "ext:doom-modeline" t t)
 (declare-function doom-modeline-set-modeline "ext:doom-modeline")
 (declare-function password-store-otp-token "ext:password-store")
 (declare-function password-store-get "ext:password-store")
 (declare-function password-store-list "ext:password-store")
-(declare-function evil-emacs-state "ext:evil-states")
-(declare-function evil-motion-state "ext:evil-states")
-(declare-function evil-visual-state "ext:evil-states")
-(declare-function evil-insert-state "ext:evil-states")
-(declare-function evil-normal-state "ext:evil-states")
+(declare-function evil-emacs-state "ext:evil-states" t t)
+(declare-function evil-motion-state "ext:evil-states" t t)
+(declare-function evil-visual-state "ext:evil-states" t t)
+(declare-function evil-insert-state "ext:evil-states" t t)
+(declare-function evil-normal-state "ext:evil-states" t t)
 
 ;;;; Customizable variables
 
