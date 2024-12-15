@@ -45,7 +45,7 @@ class EmacsIPCServer(IPCServer):
                 response = str(e)
             except:
                 response = "Error!"
-            response = json.dumps({"rpc-response": response}) + "\n"
+            self.send_data({"rpc-response": response})
         if "repl" in json_data:
             try:
                 response = str(eval(json_data["repl"]))
@@ -53,10 +53,7 @@ class EmacsIPCServer(IPCServer):
                 response = str(e)
             except:
                 response = "Error!"
-            response = json.dumps({"repl-response": response}) + "\n"
-        socket = self._get_socket()
-        socket.write(QByteArray(response.encode("utf-8")))
-        socket.flush()
+            self.send_data({"repl-response": response})
 
     def send_data(self, data):
         """Send data to Emacs.
