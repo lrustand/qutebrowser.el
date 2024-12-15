@@ -347,7 +347,9 @@ ARGS is an alist containing 'win-id and 'icon-file."
   (when-let* ((win-id (alist-get 'win-id args))
               (buffer (exwm--id->buffer win-id))
               (icon-file (alist-get 'icon-file args)))
-    (when (file-regular-p icon-file)
+    (when (and (file-regular-p icon-file)
+               ;; Not empty
+               (> (nth 7 (file-attributes icon-file)) 0))
       (with-current-buffer buffer
         (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
           (let ((old-icon-file (image-property qutebrowser-favicon :file)))
