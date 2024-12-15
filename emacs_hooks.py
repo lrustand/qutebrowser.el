@@ -17,6 +17,7 @@ class EmacsHookManager:
     Subscribes to a set of Qt signals exposed by Qutebrowser and
     forwards them to Emacs.
     """
+    # TODO: Delete old favicon tempfiles on init
     def __init__(self, server=None):
         self.server = objreg.get("emacs-ipc", server)
         if not server:

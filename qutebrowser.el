@@ -456,6 +456,10 @@ default target if nil."
           (or target qutebrowser-default-open-target))
          (selected (qutebrowser-select-url initial)))
     (when selected
+      ;; FIXME: This way of dispatching is a temporary workaround
+      ;; because consult currently doesn't support mixing dynamic and
+      ;; static sources, so we can't set up individual consult sources
+      ;; with :action functions.
       (cond
        ((string-prefix-p qutebrowser-exwm-buffer--tofu selected)
         (let* ((url (substring selected 1))
@@ -620,6 +624,7 @@ than `qutebrowser-url-display-length'."
            (padding (when pad (make-string pad-length ?\ ))))
       (concat padding " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
 
+;; TODO: Duplicate URL buffers seem to only show once
 (defun qutebrowser-select-url (&optional initial)
   "Dynamically select a URL from Qutebrowser history.
 INITIAL sets the initial input in the minibuffer."
@@ -821,6 +826,7 @@ DATA is the data received."
                 (args (alist-get 'args data)))
             (dolist (fun functions)
               (funcall fun args))
+            ;; TODO: Decide on ordering of this in relation to hooks
             (qutebrowser-exwm-update-window-info args)))
      (window-info (qutebrowser-exwm-update-window-info window-info t))
      (rpc-response (message rpc-response))
