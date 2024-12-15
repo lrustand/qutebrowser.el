@@ -23,18 +23,18 @@ class EmacsHookManager:
         except:
             window = None
 
-        # Enable the local hooks on startup
+        # Enable the window hooks on startup
         if window:
             hook_manager = objreg.get("emacs-hook-manager", None)
             if not hook_manager:
                 hook_manager = EmacsHookManager()
             for window in objreg.window_registry.values():
-                hook_manager.enable_local_hooks(window)
+                hook_manager.enable_window_hooks(window)
         else:
-            message.info("No window found, not enabling local hooks.")
+            message.info("No window found, not enabling window hooks.")
         # Enable new window hook
         if objects.qapp:
-            objects.qapp.new_window.connect(self.on_new)
+            objects.qapp.new_window.connect(self.on_new_window)
 
     def on_url_changed(self, window, url):
         url = url.toString()
@@ -68,7 +68,7 @@ class EmacsHookManager:
     def enable_tab_hooks(self, tab, idx):
         tab.icon_changed.connect(partial(self.on_icon_changed, tab))
 
-    def enable_local_hooks(self, window=None):
+    def enable_window_hooks(self, window=None):
         if not window:
             window = objreg.last_visible_window()
         if not hasattr(window, "hooks_initialized"):
@@ -84,9 +84,9 @@ class EmacsHookManager:
             status.cmd.got_search.connect(partial(self.on_search, window))
             window.hooks_initialized = True
 
-    def on_new(self, window):
+    def on_new_window(self, window):
         self.server.send_signal("new-window", int(window.winId()))
-        self.enable_local_hooks(window)
+        self.enable_window_hooks(window)
 
 
 # Local Variables:
