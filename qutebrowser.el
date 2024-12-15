@@ -255,10 +255,10 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-exwm-buffer--tofu (consult--tofu-encode 2))
 (defvar qutebrowser-history--tofu (consult--tofu-encode 3))
 
-(defvar qutebrowser-on-entered-mode-functions '(qutebrowser-update-evil-state)
+(defvar qutebrowser-on-entered-mode-functions '()
   "Functions run when receiving a `entered-mode` signal.")
 
-(defvar qutebrowser-on-left-mode-functions '(qutebrowser-exit-evil-state)
+(defvar qutebrowser-on-left-mode-functions '()
   "Functions run when receiving a `left-mode` signal.")
 
 (defvar qutebrowser-on-new-window-functions '()
@@ -268,17 +268,16 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-on-config-changed-functions '()
   "Functions run when receiving a `config-changed` signal.")
 
-(defvar qutebrowser-on-url-changed-functions
-  '(qutebrowser-update-current-url)
+(defvar qutebrowser-on-url-changed-functions '()
   "Functions run when receiving a `url-changed` signal.")
 
-(defvar qutebrowser-on-link-hovered-functions '(qutebrowser-update-hovered-url)
+(defvar qutebrowser-on-link-hovered-functions '()
   "Functions run when receiving a `link-hovered` signal.")
 
-(defvar qutebrowser-on-icon-changed-functions '(qutebrowser-update-favicon)
+(defvar qutebrowser-on-icon-changed-functions '()
   "Functions run when receiving a `icon-changed` signal.")
 
-(defvar qutebrowser-on-got-search-functions '(qutebrowser-update-search)
+(defvar qutebrowser-on-got-search-functions '()
   "Functions run when receiving a `got-search` signal.")
 
 (defvar qutebrowser--db-object nil
@@ -324,45 +323,23 @@ query is built, see `qutebrowser--history-search'."
                                                                   buffer-file-name)))
 ;;;; Hook functions
 
-(defun qutebrowser-exit-evil-state (args)
-  "Exit evil state and go to normal state.
-ARGS is an alist containing `win-id'."
-  (let* ((win-id (alist-get 'win-id args))
-         (buffer (exwm--id->buffer win-id)))
-    (with-current-buffer buffer
-      (evil-normal-state))))
+(defun qutebrowser-update-current-url (buffer url)
+  "Update the buffer-local variable `qutebrowser-exwm-current-url'."
+  (with-current-buffer buffer
+    (setq-local qutebrowser-exwm-current-url (unless (string-empty-p url)
+                                               url))))
 
-(defun qutebrowser-update-current-url (args)
-  "Update the buffer-local variable `qutebrowser-exwm-current-url'.
-ARGS is an alist containing `win-id' and `url'."
-  (let* ((win-id (alist-get 'win-id args))
-         (buffer (exwm--id->buffer win-id))
-         (url (alist-get 'url args)))
-    (with-current-buffer buffer
-      (when (string= url "") (setq url nil))
-      (setq-local qutebrowser-exwm-current-url url))))
+(defun qutebrowser-update-hovered-url (buffer hover)
+  "Update the currently hovered URL."
+  (with-current-buffer buffer
+    (when (string= hover "") (setq hover nil))
+    (setq-local qutebrowser-exwm-hovered-url hover)))
 
-;; TODO: follow one naming pattern for these functions (update != set)
-;; TODO: Standardize the data format for these functions
-(defun qutebrowser-update-hovered-url (args)
-  "Update the currently hovered URL.
-ARGS is an alist containing `win-id' and `url'."
-  (let* ((win-id (alist-get 'win-id args))
-         (buffer (exwm--id->buffer win-id))
-         (hover (alist-get 'hover args)))
-    (with-current-buffer buffer
-      (when (string= hover "") (setq hover nil))
-      (setq-local qutebrowser-exwm-hovered-url hover))))
-
-(defun qutebrowser-update-favicon (args)
-  "Update the favicon.
-ARGS is an alist containing `win-id' and `icon-file'."
-  (when-let* ((win-id (alist-get 'win-id args))
-              (buffer (exwm--id->buffer win-id))
-              (icon-file (alist-get 'icon-file args)))
-    (if (and (file-regular-p icon-file)
-               ;; Not empty
-               (> (nth 7 (file-attributes icon-file)) 0))
+(defun qutebrowser-update-favicon (buffer icon-file)
+  "Update the favicon."
+  (if (and (file-regular-p icon-file)
+           ;; Not empty
+           (> (nth 7 (file-attributes icon-file)) 0))
       (with-current-buffer buffer
         (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
           (let ((old-icon-file (image-property qutebrowser-exwm-favicon :file)))
@@ -370,8 +347,8 @@ ARGS is an alist containing `win-id' and `icon-file'."
             ;;(qutebrowser-doom-set-favicon buffer)
             (when old-icon-file
               (delete-file old-icon-file)))))
-      ;; Delete invalid/empty icon files
-      (delete-file icon-file))))
+    ;; Delete invalid/empty icon files
+    (delete-file icon-file)))
 
 (defun qutebrowser-delete-favicon-tempfile ()
   "Deletes the tempfile associated with the favicon of current buffer."
@@ -380,29 +357,21 @@ ARGS is an alist containing `win-id' and `icon-file'."
 
 (add-hook 'kill-buffer-hook #'qutebrowser-delete-favicon-tempfile)
 
-(defun qutebrowser-update-evil-state (args)
-  "Set evil state to match Qutebrowser keymode.
-ARGS is an alist containing `win-id' and `mode'."
-  (let* ((win-id (alist-get 'win-id args))
-         (buffer (exwm--id->buffer win-id))
-         (mode (alist-get 'mode args)))
-    (with-current-buffer buffer
-      (setq-local qutebrowser-exwm-keymode mode)
-      (pcase mode
-        ("KeyMode.insert" (evil-insert-state))
-        ("KeyMode.caret" (evil-visual-state))
-        ("KeyMode.hint" (evil-motion-state))
-        ("KeyMode.command" (evil-emacs-state))
-        ("KeyMode.normal" (evil-normal-state))))))
+(defun qutebrowser-update-evil-state (buffer mode)
+  "Set evil state to match Qutebrowser keymode."
+  (with-current-buffer buffer
+    (setq-local qutebrowser-exwm-keymode mode)
+    (pcase mode
+      ("KeyMode.insert" (evil-insert-state))
+      ("KeyMode.caret" (evil-visual-state))
+      ("KeyMode.hint" (evil-motion-state))
+      ("KeyMode.command" (evil-emacs-state))
+      ("KeyMode.normal" (evil-normal-state)))))
 
-(defun qutebrowser-update-search (args)
-  "Update the variable `qutebrowser-exwm-current-search'.
-ARGS is an alist containing `win-id' and `search'."
-  (let* ((win-id (alist-get 'win-id args))
-         (buffer (exwm--id->buffer win-id))
-         (search (alist-get 'search args)))
-    (with-current-buffer buffer
-      (setq-local qutebrowser-exwm-current-search search))))
+(defun qutebrowser-update-search (buffer search)
+  "Update the variable `qutebrowser-exwm-current-search'."
+  (with-current-buffer buffer
+    (setq-local qutebrowser-exwm-current-search search)))
 
 ;;;; History database functions
 
@@ -851,17 +820,36 @@ DATA is the data received."
      (sig (let ((functions (symbol-value (intern-soft (format "qutebrowser-on-%s-functions" sig))))
                 (args (alist-get 'args data)))
             (dolist (fun functions)
-                (funcall fun args))))
-     (window-info (qutebrowser-rpc--receive-window-info window-info))
+              (funcall fun args))
+            (qutebrowser-update-window-info args)))
+     (window-info (qutebrowser-update-window-info window-info t))
      (rpc-response (message rpc-response))
      (repl-response (qutebrowser-repl-receive-response repl-response))
      (eval (eval (read eval))))))
 
-(defun qutebrowser-rpc--receive-window-info (window-info)
-  (qutebrowser-update-favicon window-info)
-  (qutebrowser-update-search window-info)
-  (qutebrowser-update-current-url window-info)
-  (qutebrowser-update-evil-state window-info))
+(defun qutebrowser-update-window-info (window-info &optional accept-nil)
+  (let* ((win-id (alist-get 'win-id window-info))
+         (buffer (exwm--id->buffer win-id))
+         (url (alist-get 'url window-info))
+         (icon-file (alist-get 'icon-file window-info))
+         (hover (alist-get 'hover window-info))
+         (search (alist-get 'search window-info))
+         (mode (alist-get 'mode window-info)))
+
+    (when (or mode accept-nil)
+      (qutebrowser-update-evil-state buffer mode))
+
+    (when (or icon-file accept-nil)
+      (qutebrowser-update-favicon buffer icon-file))
+
+    (when (or search accept-nil)
+      (qutebrowser-update-search buffer search))
+
+    (when (or hover accept-nil)
+      (qutebrowser-update-hovered-url buffer hover))
+
+    (when (or url accept-nil)
+      (qutebrowser-update-current-url buffer url))))
 
 
 ;;;; Command sending functions

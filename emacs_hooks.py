@@ -107,7 +107,9 @@ class EmacsHookManager:
             mode: The mode that was left.
         """
         window_id = int(window.winId())
-        self.send_signal("left-mode", {"win-id": window_id, "mode": str(mode)})
+        self.send_signal("left-mode", {"win-id": window_id,
+                                       "left-mode": str(mode),
+                                       "mode": "KeyMode.normal"})
 
     def enable_tab_hooks(self, tab, _):
         """Enable tab local hooks.
@@ -147,7 +149,7 @@ class EmacsHookManager:
         Args:
             window: The window that was created.
         """
-        self.send_signal("new-window", int(window.winId()))
+        self.send_signal("new-window", {"win-id": int(window.winId())})
         self.enable_window_hooks(window)
 
     def send_signal(self, signal, args={}):
