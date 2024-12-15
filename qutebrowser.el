@@ -884,10 +884,13 @@ if nil."
          (flag (qutebrowser--target-to-flag target)))
     (qutebrowser-send-commands (format ":open %s %s" flag url))))
 
-(defun qutebrowser-config-source (&optional config-file)
-  "Source CONFIG-FILE in running Qutebrowser instance."
+(defun qutebrowser-config-source (&optional config-file start-if-not-running)
+  "Source CONFIG-FILE in running Qutebrowser instance.
+If START-IF-NOT-RUNNING is non-nil, start Qutebrowser if it is not running."
   (interactive)
-  (qutebrowser-send-commands (concat ":config-source " config-file)))
+  (when (or (qutebrowser-is-running-p)
+            start-if-not-running)
+    (qutebrowser-send-commands (concat ":config-source " config-file))))
 
 (defun qutebrowser-execute-python (python-code)
   "Execute PYTHON-CODE in running Qutebrowser instance.
@@ -965,9 +968,8 @@ Creates a temporary file and sources it in Qutebrowser using the
   "Export and apply theme to running Qutebrowser instance."
   (interactive)
   (qutebrowser-theme-export)
-  (when (qutebrowser-is-running-p)
-    (qutebrowser-config-source (expand-file-name "emacs_theme.py"
-                                                 qutebrowser-config-directory))))
+  (qutebrowser-config-source (expand-file-name "emacs_theme.py"
+                                               qutebrowser-config-directory)))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-theme-export-mode
