@@ -3,11 +3,9 @@
 """Manager for Emacs hooks."""
 
 from qutebrowser.api import message
-from qutebrowser.config import config as conf
 from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
 from qutebrowser.utils import objreg
-from qutebrowser.mainwindow.statusbar import bar
 from functools import partial
 from tempfile import mkstemp
 import os

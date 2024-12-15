@@ -2,9 +2,8 @@
 
 """IPC server for Emacs."""
 
-from PyQt6.QtNetwork import QLocalSocket
-from PyQt6.QtCore import Qt, QTextStream, QByteArray, pyqtSlot
-from qutebrowser.api import message, cmdutils
+from PyQt6.QtCore import QByteArray, pyqtSlot
+from qutebrowser.api import message
 from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
