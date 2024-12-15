@@ -357,6 +357,13 @@ ARGS is an alist containing 'win-id and 'icon-file."
             (when old-icon-file
               (delete-file old-icon-file))))))))
 
+(defun qutebrowser-delete-favicon-tempfile ()
+  "Deletes the tempfile associated with the favicon of current buffer."
+  (when-let ((icon-file (image-property qutebrowser-favicon :file)))
+    (delete-file icon-file)))
+
+(add-hook 'kill-buffer-hook #'qutebrowser-delete-favicon-tempfile)
+
 (defun qutebrowser-set-evil-state (args)
   "Set evil state to match Qutebrowser keymode.
 ARGS is an alist containing 'win-id and 'mode."
