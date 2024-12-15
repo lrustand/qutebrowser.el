@@ -14,11 +14,11 @@ class EmacsIPCServer(IPCServer):
         objreg.register(name = "emacs-ipc",
                         obj = self,
                         update = True)
-        self.listen()
         self.hook_manager = objreg.get("emacs-hook-manager", hook_manager)
         if not self.hook_manager:
             from emacs_hooks import EmacsHookManager
             self.hook_manager = EmacsHookManager(self)
+        self.listen()
 
     @pyqtSlot()
     def on_timeout(self):
