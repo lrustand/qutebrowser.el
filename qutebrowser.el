@@ -255,7 +255,7 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-exwm-buffer--tofu (consult--tofu-encode 2))
 (defvar qutebrowser-history--tofu (consult--tofu-encode 3))
 
-(defvar qutebrowser-on-entered-mode-functions `(qutebrowser-set-evil-state)
+(defvar qutebrowser-on-entered-mode-functions '(qutebrowser-update-evil-state)
   "Functions run when receiving a `entered-mode` signal.")
 
 (defvar qutebrowser-on-left-mode-functions '(qutebrowser-exit-evil-state)
@@ -278,7 +278,7 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-on-icon-changed-functions '(qutebrowser-update-favicon)
   "Functions run when receiving a `icon-changed` signal.")
 
-(defvar qutebrowser-on-got-search-functions '(qutebrowser-set-search)
+(defvar qutebrowser-on-got-search-functions '(qutebrowser-update-search)
   "Functions run when receiving a `got-search` signal.")
 
 (defvar qutebrowser--db-object nil
@@ -380,7 +380,7 @@ ARGS is an alist containing `win-id' and `icon-file'."
 
 (add-hook 'kill-buffer-hook #'qutebrowser-delete-favicon-tempfile)
 
-(defun qutebrowser-set-evil-state (args)
+(defun qutebrowser-update-evil-state (args)
   "Set evil state to match Qutebrowser keymode.
 ARGS is an alist containing `win-id' and `mode'."
   (let* ((win-id (alist-get 'win-id args))
@@ -395,7 +395,7 @@ ARGS is an alist containing `win-id' and `mode'."
         ("KeyMode.command" (evil-emacs-state))
         ("KeyMode.normal" (evil-normal-state))))))
 
-(defun qutebrowser-set-search (args)
+(defun qutebrowser-update-search (args)
   "Update the variable `qutebrowser-current-search'.
 ARGS is an alist containing `win-id' and `search'."
   (let* ((win-id (alist-get 'win-id args))
@@ -859,9 +859,9 @@ DATA is the data received."
 
 (defun qutebrowser-rpc--receive-window-info (window-info)
   (qutebrowser-update-favicon window-info)
-  (qutebrowser-set-search window-info)
+  (qutebrowser-update-search window-info)
   (qutebrowser-update-current-url window-info)
-  (qutebrowser-set-evil-state window-info))
+  (qutebrowser-update-evil-state window-info))
 
 
 ;;;; Command sending functions
