@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""Manager for Emacs hooks."""
+
 from qutebrowser.api import message
 from qutebrowser.config import config as conf
 from qutebrowser.keyinput import modeman
@@ -8,7 +12,9 @@ from functools import partial
 from tempfile import mkstemp
 import os
 
+
 class EmacsHookManager:
+    """Manager for Emacs hooks."""
     def __init__(self, server=None):
         self.server = objreg.get("emacs-ipc", server)
         if not server:
@@ -34,15 +40,32 @@ class EmacsHookManager:
             objects.qapp.new_window.connect(self.on_new_window)
 
     def on_url_changed(self, window, url):
+        """Called when the URL changed.
+
+        Args:
+            window: The window that the change happened in.
+            url: The new URL.
+        """
         url = url.toString()
         window_id = int(window.winId())
         self.server.send_signal("url-changed", {"win-id": window_id, "url": url})
 
     def on_link_hovered(self, window, url):
+        """Called when a link is hover or unhovered.
+
+        Args:
+            window: The window that the link was hovered in.
+            url: The URL of the link that was hovered.
+        """
         window_id = int(window.winId())
         self.server.send_signal("link-hovered", {"win-id": window_id, "url": url})
 
     def on_icon_changed(self, tab):
+        """Called when the favicon changes.
+
+        Args:
+            tab: The tab that the favicon changed in.
+        """
         window = tab.window()
         window_id = int(window.winId())
         fd, path = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
@@ -51,21 +74,50 @@ class EmacsHookManager:
         self.server.send_signal("icon-changed", {"win-id": window_id, "icon-file": path})
 
     def on_search(self, window, search):
+        """Called when a search is performed.
+
+        Args:
+            window: The window that search was performed in.
+            search: The entered search term.
+        """
         window_id = int(window.winId())
         self.server.send_signal("got-search", {"win-id": window_id, "search": search})
 
     def on_enter_mode(self, window, mode):
+        """Called when a mode is entered.
+
+        Args:
+            window: The window that entered a mode.
+            mode: The mode that was entered.
+        """
         window_id = int(window.winId())
         self.server.send_signal("entered-mode", {"win-id": window_id, "mode": str(mode)})
 
     def on_leave_mode(self, window, mode):
+        """Called when a mode is left.
+
+        Args:
+            window: The window that left a mode.
+            mode: The mode that was left.
+        """
         window_id = int(window.winId())
         self.server.send_signal("left-mode", {"win-id": window_id, "mode": str(mode)})
 
-    def enable_tab_hooks(self, tab, idx):
+    def enable_tab_hooks(self, tab, _):
+        """Enable tab local hooks.
+
+        Args:
+            tab: The tab to enable hooks for.
+        """
         tab.icon_changed.connect(partial(self.on_icon_changed, tab))
 
     def enable_window_hooks(self, window=None):
+        """Enable window local hooks.
+
+        Args:
+            window: The window to enable hooks for.
+                    If unspecified, use the last visible window.
+        """
         if not window:
             window = objreg.last_visible_window()
         if not hasattr(window, "hooks_initialized"):
@@ -82,6 +134,11 @@ class EmacsHookManager:
             window.hooks_initialized = True
 
     def on_new_window(self, window):
+        """Called when a new window is created.
+
+        Args:
+            window: The window that was created.
+        """
         self.server.send_signal("new-window", int(window.winId()))
         self.enable_window_hooks(window)
 

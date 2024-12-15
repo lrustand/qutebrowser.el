@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+"""IPC server for Emacs."""
+
 from PyQt6.QtNetwork import QLocalSocket
 from PyQt6.QtCore import Qt, QTextStream, QByteArray, pyqtSlot
 from qutebrowser.api import message, cmdutils
@@ -9,6 +13,7 @@ import json
 
 
 class EmacsIPCServer(IPCServer):
+   """IPC server for Emacs."""
     def __init__(self, hook_manager=None):
         super().__init__("/tmp/emacs-ipc")
         objreg.register(name = "emacs-ipc",
@@ -27,6 +32,11 @@ class EmacsIPCServer(IPCServer):
         return
 
     def _handle_data(self, data):
+        """Handle data received from Emacs.
+
+        Args:
+            data: The data received from Emacs.
+        """
         json_data = json.loads(data.decode("utf-8"))
         if "eval" in json_data:
             try:
@@ -49,6 +59,12 @@ class EmacsIPCServer(IPCServer):
         socket.flush()
 
     def send_signal(self, signal, args=[]):
+        """Send a signal to Emacs.
+
+        Args:
+            signal: The name of the signal to be sent.
+            args: The arguments to pass to the signal handler in Emacs.
+        """
         data = json.dumps({"signal": signal,
                            "args": args}) + ","
         socket = self._get_socket()
@@ -56,7 +72,12 @@ class EmacsIPCServer(IPCServer):
             socket.write(QByteArray(data.encode("utf-8")))
             socket.flush()
 
-    def send_cmd(self, cmd, args=[]):
+    def send_cmd(self, cmd):
+        """Send a command to be evaluated in Emacs.
+
+        Args:
+            cmd: The command(s) to be executed in Emacs.
+        """
         data = json.dumps({"eval": cmd}) + ","
         socket = self._get_socket()
         if socket and socket.isOpen():
