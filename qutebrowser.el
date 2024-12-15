@@ -477,7 +477,11 @@ Set initial completion input to INITIAL."
     "Show favicon in doom modeline."
     (when-let* ((file (qutebrowser-get-favicon))
                 (image (create-image file nil nil :ascent 'center)))
-      (setq-local doom-modeline--buffer-file-icon (propertize " " 'display image))))
+      (with-current-buffer (or buffer (current-buffer))
+        (setq-local doom-modeline--buffer-file-icon
+                    (propertize ""
+                                'display image
+                                'face '(:inherit (doom-modeline nil)))))))
 
   (doom-modeline-def-segment qutebrowser-url
     "Display the currently visited or hovered URL."
