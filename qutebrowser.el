@@ -522,7 +522,7 @@ Set initial completion input to INITIAL."
         (setq-local doom-modeline--buffer-file-icon
                     (propertize ""
                                 'display image
-                                'face '(:inherit (doom-modeline nil)))))))
+                                'face '(:inherit doom-modeline))))))
 
   (doom-modeline-def-segment qutebrowser-url
     "Display the currently visited or hovered URL."
