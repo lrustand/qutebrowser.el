@@ -54,6 +54,8 @@
 (declare-function evil-insert-state "evil-states")
 (declare-function evil-normal-state "evil-states")
 
+;;;; Customizable variables
+
 (defgroup qutebrowser nil
   "EXWM enhancements for Qutebrowser."
   :group 'external)
@@ -237,6 +239,7 @@ query is built, see `qutebrowser--history-search'."
   :group 'qutebrowser
   :group 'faces)
 
+;;;; Variables
 
 (defvar qutebrowser-process-name "qutebrowser"
   "Name of the Qutebrowser process.")
@@ -316,6 +319,7 @@ query is built, see `qutebrowser--history-search'."
 
 (defconst qutebrowser--package-directory (file-name-directory (or load-file-name
                                                                   buffer-file-name)))
+;;;; Hook functions
 
 (defun qutebrowser-exit-evil-state (&optional _)
   "Exit evil state and go to normal state."
@@ -386,6 +390,9 @@ ARGS is an alist containing 'win-id and 'mode."
 ARGS is an alist containing 'search."
   (let* ((search (alist-get 'search args)))
     (setq qutebrowser-current-search search)))
+
+;;;; History database functions
+
 (defun qutebrowser--get-db ()
   "Return the open database, or open it."
   (unless (sqlitep qutebrowser--db-object)
@@ -422,6 +429,8 @@ Return up to LIMIT results."
                             'title title)))
             (sqlite-select db query))))
 
+;;;; Utility functions
+
 (defun qutebrowser--target-to-flag (target)
   "Return the :open flag corresponding to TARGET."
   (pcase target
@@ -435,6 +444,25 @@ Return up to LIMIT results."
   (seq-find (lambda (buffer)
               (string= url (qutebrowser-buffer-url buffer)))
             (qutebrowser-buffer-list)))
+
+(defun qutebrowser-exwm-p (&optional buffer)
+  "Return t if BUFFER is a Qutebrowser EXWM buffer."
+  (with-current-buffer (or buffer (current-buffer))
+    (string-equal "qutebrowser"
+                  exwm-class-name)))
+
+(defun qutebrowser-buffer-url (&optional buffer)
+  "Return the URL of BUFFER or the current buffer."
+  (with-current-buffer (or buffer (current-buffer))
+    (or qutebrowser-current-url
+        ;; Keep backward compatibility for now
+        (get-text-property 0 'url (buffer-name buffer)))))
+
+(defun qutebrowser-buffer-list ()
+  "Return a list of all Qutebrowser buffers."
+  (seq-filter #'qutebrowser-exwm-p (buffer-list)))
+
+;;;; Launcher functions
 
 ;;;###autoload
 (defun qutebrowser-launcher (&optional initial target)
@@ -480,11 +508,7 @@ Set initial completion input to INITIAL."
   (interactive)
   (qutebrowser-launcher initial 'private-window))
 
-(defun qutebrowser-exwm-p (&optional buffer)
-  "Return t if BUFFER is a Qutebrowser EXWM buffer."
-  (with-current-buffer (or buffer (current-buffer))
-    (string-equal "qutebrowser"
-                  exwm-class-name)))
+;;;; Doom modeline
 
 ;; FIXME: This is a workaround because use-package doesn't understand
 ;; that the modeline segment name is not a variable, so we make a
@@ -513,6 +537,8 @@ Set initial completion input to INITIAL."
     '(bar workspace-name window-number modals buffer-info-simple)
     '(misc-info qutebrowser-url)))
 
+;;;; Dynamic consult source
+
 (defun qutebrowser--shorten-display-url (url)
   "Shorten URL by making the end invisible."
   (let ((url-length (length url))
@@ -520,17 +546,6 @@ Set initial completion input to INITIAL."
     (when (> url-length max-length)
       (put-text-property max-length url-length 'invisible t url))
     url))
-
-(defun qutebrowser-buffer-url (&optional buffer)
-  "Return the URL of BUFFER or the current buffer."
-  (with-current-buffer (or buffer (current-buffer))
-    (or qutebrowser-current-url
-        ;; Keep backward compatibility for now
-        (get-text-property 0 'url (buffer-name buffer)))))
-
-(defun qutebrowser-buffer-list ()
-  "Return a list of all Qutebrowser buffers."
-  (seq-filter #'qutebrowser-exwm-p (buffer-list)))
 
 (defun qutebrowser-buffer-filter (words buffers)
   "Filter BUFFERS to find those matching WORDS.
@@ -649,6 +664,8 @@ INITIAL sets the initial input in the minibuffer."
      :initial initial
      :require-match nil)))
 
+;;;; Static consult buffer sources
+
 (defvar qutebrowser--exwm-buffer-source
   (list :name "Qutebrowser buffers"
         :hidden nil
@@ -682,6 +699,8 @@ INITIAL sets the initial input in the minibuffer."
         :items #'qutebrowser-bookmarks-list)
   "`consult-buffer' source for Qutebrowser bookmarks.")
 
+;;;; Advice
+
 ;; Prevent Prescient history from being clogged up by web pages.
 (defun qutebrowser-advice-vertico-prescient (orig-fun &rest args)
   "Exclude Qutebrowser buffer names and URLs from prescient history.
@@ -696,6 +715,8 @@ The ORIG-FUN takes ARGS."
 (with-eval-after-load 'vertico-prescient
   (advice-add 'vertico-prescient--remember-minibuffer-contents :around
               #'qutebrowser-advice-vertico-prescient))
+
+;;;; IPC functions
 
 (defvar qutebrowser-ipc-protocol-version 1
   "The protocol version for Qutebrowser IPC.")
@@ -728,6 +749,8 @@ Falls back to sending over commandline if IPC fails."
        (apply #'qutebrowser-commandline-send commands)))
     (error
      (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
+
+;;;; RPC functions
 
 (defun qutebrowser-rpc-call (data)
   "Perform RPC call.
@@ -814,6 +837,9 @@ DATA is the data received."
      (repl-response (qutebrowser-repl-receive-response repl-response))
      (eval (eval (read eval))))))
 
+
+;;;; Command sending functions
+
 (defun qutebrowser-commandline-send (&rest commands)
   "Send COMMANDS to Qutebrowser via commandline."
   (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
@@ -832,6 +858,9 @@ let-binds the path to the Qutebrowser FIFO to the variable
 (defun qutebrowser-send-commands (&rest commands)
   "Send COMMANDS to Qutebrowser via the selected backend."
   (apply qutebrowser-command-backend commands))
+
+
+;;;; Qutebrowser command wrappers
 
 (defun qutebrowser-open-url (url &optional target)
   "Open URL in Qutebrowser.
@@ -857,6 +886,8 @@ Creates a temporary file and sources it in Qutebrowser using the
 (defun qutebrowser-execute-js (js-code)
   "Execute JS-CODE in running Qutebrowser instance."
   (qutebrowser-send-commands (format ":jseval -w main %s" js-code)))
+
+;;;; Modes
 
 ;;;###autoload
 (define-minor-mode qutebrowser-exwm-mode
@@ -944,6 +975,8 @@ Creates a temporary file and sources it in Qutebrowser using the
                (_ (char-to-string chr))))
            text)))
 
+;;;; Fake keys
+
 (defun qutebrowser-fake-keys--raw (raw-keys)
   "Send RAW-KEYS without escaping special characters."
   (qutebrowser-send-commands (format ":fake-key %s" raw-keys)))
@@ -967,6 +1000,8 @@ Creates a temporary file and sources it in Qutebrowser using the
           (car pass-entries)
         (completing-read "Select: " pass-entries))
     (message "No pass entry found for %s" search)))
+
+;;;; Password store
 
 ;;;###autoload
 (defun qutebrowser-pass (&optional search limit)
@@ -1010,6 +1045,8 @@ one.  If there is only one matching entry it is selected automatically."
       (qutebrowser-fake-keys token)
     (message "Failed to get OTP token for %s." search)))
 
+;;;; Process utilities
+
 (defun qutebrowser--get-process-pid ()
   "Return a list of PIDs for Qutebrowser processes."
   (cl-remove-if-not
@@ -1037,6 +1074,8 @@ one.  If there is only one matching entry it is selected automatically."
   (or (qutebrowser-rpc-connected-p)
       (qutebrowser--get-process-pid)))
 
+;;;; Config mode
+
 (define-minor-mode qutebrowser-config-mode
   "Minor mode for editing Qutebrowser config files."
   :lighter nil
@@ -1062,6 +1101,8 @@ one.  If there is only one matching entry it is selected automatically."
   "Source the file associated with the current buffer."
   (interactive)
   (qutebrowser-config-source (buffer-file-name)))
+
+;;;; REPL
 
 (defvar qutebrowser-repl-prompt ">>> ")
 
@@ -1142,6 +1183,8 @@ one.  If there is only one matching entry it is selected automatically."
   "Start Qutebrowser REPL and switch to the buffer."
   (interactive)
   (switch-to-buffer (qutebrowser-create-repl-buffer)))
+
+;;;; Footer
 
 (provide 'qutebrowser)
 
