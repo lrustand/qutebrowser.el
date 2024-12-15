@@ -295,7 +295,7 @@ query is built, see `qutebrowser--history-search'."
 (defvar-local qutebrowser-favicon nil
   "Contains the favicon for each Qutebrowser buffer.")
 
-(defvar qutebrowser-current-search nil
+(defvar-local qutebrowser-current-search nil
   "Contains the current search terms of Qutebrowser.")
 
 (defvar qutebrowser-exwm-mode-map
@@ -390,9 +390,12 @@ ARGS is an alist containing `win-id' and `mode'."
 
 (defun qutebrowser-set-search (args)
   "Update the variable `qutebrowser-current-search'.
-ARGS is an alist containing `search'."
-  (let* ((search (alist-get 'search args)))
-    (setq qutebrowser-current-search search)))
+ARGS is an alist containing `win-id' and `search'."
+  (let* ((win-id (alist-get 'win-id args))
+         (buffer (exwm--id->buffer win-id))
+         (search (alist-get 'search args)))
+    (with-current-buffer buffer
+      (setq-local qutebrowser-current-search search))))
 
 ;;;; History database functions
 
