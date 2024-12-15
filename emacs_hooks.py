@@ -17,19 +17,16 @@ class EmacsHookManager:
         objreg.register(name = "emacs-hook-manager",
                         obj = self,
                         update = True)
-        # Get current window
+        # Get the window list
         try:
-            window = objreg.last_visible_window()
+            window_registry = objreg.window_registry
         except:
-            window = None
+            window_registry = {}
 
         # Enable the window hooks on startup
-        if window:
-            hook_manager = objreg.get("emacs-hook-manager", None)
-            if not hook_manager:
-                hook_manager = EmacsHookManager()
+        if len(window_registry) > 0:
             for window in objreg.window_registry.values():
-                hook_manager.enable_window_hooks(window)
+                self.enable_window_hooks(window)
         else:
             message.info("No window found, not enabling window hooks.")
         # Enable new window hook
