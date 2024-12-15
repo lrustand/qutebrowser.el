@@ -502,7 +502,7 @@ Set initial completion input to INITIAL."
     (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
                               (doom-modeline-display-text
                                (concat " " (if qutebrowser-hovered-url
-                                               (propertize qutebrowser-hovered-url 'face 'failure)
+                                               (propertize qutebrowser-hovered-url 'face 'link-visited)
                                              (propertize qutebrowser-current-url 'face 'success))))))
 
   (doom-modeline-def-modeline 'qutebrowser-doom-modeline
