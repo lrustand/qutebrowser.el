@@ -269,6 +269,9 @@ query is built, see `qutebrowser--history-search'."
 (defvar qutebrowser-on-link-hovered-functions '(qutebrowser-update-hovered-url)
   "Functions run when receiving a `link-hovered` signal.")
 
+(defvar qutebrowser-on-icon-changed-functions '(qutebrowser-update-icon)
+  "Functions run when receiving a `icon-changed` signal.")
+
 (defvar qutebrowser-on-got-search-functions '(qutebrowser-set-search)
   "Functions run when receiving a `got-search` signal.")
 
@@ -282,6 +285,9 @@ query is built, see `qutebrowser--history-search'."
 
 (defvar qutebrowser-current-url nil
   "Contains the current URL of Qutebrowser.")
+
+(defvar qutebrowser-icon nil
+  "Contains the icon for each Qutebrowser buffer.")
 
 (defvar qutebrowser-current-search nil
   "Contains the current search terms of Qutebrowser.")
@@ -334,6 +340,22 @@ ARGS is an alist containing 'win-id and 'url."
     (with-current-buffer buffer
       (when (string= url "") (setq url nil))
       (setq-local qutebrowser-hovered-url url))))
+
+(defun qutebrowser-update-icon (args)
+  "Update the favicon.
+ARGS is an alist containing 'win-id and 'icon-file."
+  (let* ((win-id (alist-get 'win-id args))
+         (buffer (exwm--id->buffer win-id))
+         (icon-file (alist-get 'icon-file args))
+         (image (create-image icon-file nil nil :ascent 'center)))
+    (when (file-regular-p icon-file)
+      (let ((old-icon-file (when qutebrowser-icon
+                             (image-property qutebrowser-icon :file))))
+        (with-current-buffer buffer
+          (setq-local qutebrowser-icon image))
+          ;;(qutebrowser-doom-set-favicon buffer))
+        (when old-icon-file
+          (delete-file old-icon-file))))))
 
 (defun qutebrowser-set-evil-state (args)
   "Set evil state to match Qutebrowser keymode.
@@ -454,19 +476,6 @@ Set initial completion input to INITIAL."
     (string-equal "qutebrowser"
                   exwm-class-name)))
 
-(defun qutebrowser-get-favicon (&optional buffer)
-  "Get favicon of BUFFER."
-  (if (qutebrowser-exwm-p buffer)
-      (let* ((url (qutebrowser-buffer-url buffer))
-             (hostname (url-host (url-generic-parse-url url)))
-             (file (format "/tmp/qutebrowser-favicon-%s.png" hostname)))
-        (unless (file-exists-p file)
-          ;; TODO: Find window corresponding to buffer
-          (qutebrowser-rpc-call `((eval . ,(format "objreg.last_visible_window().windowIcon().pixmap(16,16).save('%s')" file)))))
-        file)
-    nil))
-
-
 ;; FIXME: This is a workaround because use-package doesn't understand
 ;; that the modeline segment name is not a variable, so we make a
 ;; dummy variable to avoid error.
@@ -475,8 +484,7 @@ Set initial completion input to INITIAL."
 (with-eval-after-load 'doom-modeline
   (defun qutebrowser-doom-set-favicon (&optional buffer)
     "Show favicon in doom modeline."
-    (when-let* ((file (qutebrowser-get-favicon))
-                (image (create-image file nil nil :ascent 'center)))
+    (when-let* ((image qutebrowser-icon))
       (with-current-buffer (or buffer (current-buffer))
         (setq-local doom-modeline--buffer-file-icon
                     (propertize ""

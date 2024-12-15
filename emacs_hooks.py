@@ -5,6 +5,8 @@ from qutebrowser.misc import objects
 from qutebrowser.utils import objreg
 from qutebrowser.mainwindow.statusbar import bar
 from functools import partial
+from tempfile import mkstemp
+import os
 
 class EmacsHookManager:
     def __init__(self, server=None):
@@ -43,6 +45,14 @@ class EmacsHookManager:
         window_id = int(window.winId())
         self.server.send_signal("link-hovered", {"win-id": window_id, "url": url})
 
+    def on_icon_changed(self, tab):
+        window = tab.window()
+        window_id = int(window.winId())
+        fd, path = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
+        os.close(fd)
+        window.windowIcon().pixmap(16,16).save(path)
+        self.server.send_signal("icon-changed", {"win-id": window_id, "icon-file": path})
+
     def on_search(self, window, search):
         window_id = int(window.winId())
         self.server.send_signal("got-search", {"win-id": window_id, "search": search})
@@ -54,6 +64,9 @@ class EmacsHookManager:
     def on_leave_mode(self, window, mode):
         window_id = int(window.winId())
         self.server.send_signal("left-mode", {"win-id": window_id, "mode": str(mode)})
+
+    def enable_tab_hooks(self, tab, idx):
+        tab.icon_changed.connect(partial(self.on_icon_changed, tab))
 
     def enable_local_hooks(self, window=None):
         if not window:
@@ -67,6 +80,7 @@ class EmacsHookManager:
             mode_manager.left.connect(partial(self.on_leave_mode, window))
             tabbed_browser.cur_url_changed.connect(partial(self.on_url_changed, window))
             tabbed_browser.cur_link_hovered.connect(partial(self.on_link_hovered, window))
+            tabbed_browser.new_tab.connect(self.enable_tab_hooks)
             status.cmd.got_search.connect(partial(self.on_search, window))
             window.hooks_initialized = True
 
