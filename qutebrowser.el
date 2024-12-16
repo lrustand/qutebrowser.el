@@ -506,49 +506,6 @@ Return up to LIMIT results."
   (seq-filter #'qutebrowser-bookmark-p
               (bookmark-all-names)))
 
-;;;; Launcher functions
-
-;;;###autoload
-(defun qutebrowser-launcher (&optional initial target)
-  "Select a URL to open in Qutebrowser.
-Set initial completion input to INITIAL.  Open the URL in TARGET or the
-default target if nil."
-  (interactive)
-  (when-let* ((qutebrowser-default-open-target
-               (or target qutebrowser-default-open-target))
-              (selected (qutebrowser-select-url initial)))
-    ;; FIXME: This way of dispatching is a temporary workaround
-    ;; because consult currently doesn't support mixing dynamic and
-    ;; static sources, so we can't set up individual consult sources
-    ;; with :action functions.
-    (let ((source-id (consult--tofu-get selected))
-          (url (qutebrowser--strip-tofus selected)))
-    (if (eq ?b source-id)
-        (let ((buffer (qutebrowser-exwm-find-buffer url)))
-         (switch-to-buffer buffer))
-      (qutebrowser-open-url url)))))
-
-;;;###autoload
-(defun qutebrowser-launcher-tab (&optional initial)
-  "Select a URL to open in a new tab.
-Set initial completion input to INITIAL."
-  (interactive)
-  (qutebrowser-launcher initial 'tab))
-
-;;;###autoload
-(defun qutebrowser-launcher-window (&optional initial)
-  "Select a URL to open in a new window.
-Set initial completion input to INITIAL."
-  (interactive)
-  (qutebrowser-launcher initial 'window))
-
-;;;###autoload
-(defun qutebrowser-launcher-private (&optional initial)
-  "Select a URL to open in a private window.
-Set initial completion input to INITIAL."
-  (interactive)
-  (qutebrowser-launcher initial 'private-window))
-
 ;;;; Doom modeline
 
 ;; FIXME: This is a workaround because use-package doesn't understand
@@ -719,6 +676,49 @@ INITIAL sets the initial input in the minibuffer."
         :action #'qutebrowser-bookmark-jump
         :items #'qutebrowser-bookmarks-list)
   "`consult-buffer' source for Qutebrowser bookmarks.")
+
+;;;; Launcher functions
+
+;;;###autoload
+(defun qutebrowser-launcher (&optional initial target)
+  "Select a URL to open in Qutebrowser.
+Set initial completion input to INITIAL.  Open the URL in TARGET or the
+default target if nil."
+  (interactive)
+  (when-let* ((qutebrowser-default-open-target
+               (or target qutebrowser-default-open-target))
+              (selected (qutebrowser-select-url initial)))
+    ;; FIXME: This way of dispatching is a temporary workaround
+    ;; because consult currently doesn't support mixing dynamic and
+    ;; static sources, so we can't set up individual consult sources
+    ;; with :action functions.
+    (let ((source-id (consult--tofu-get selected))
+          (url (qutebrowser--strip-tofus selected)))
+    (if (eq ?b source-id)
+        (let ((buffer (qutebrowser-exwm-find-buffer url)))
+         (switch-to-buffer buffer))
+      (qutebrowser-open-url url)))))
+
+;;;###autoload
+(defun qutebrowser-launcher-tab (&optional initial)
+  "Select a URL to open in a new tab.
+Set initial completion input to INITIAL."
+  (interactive)
+  (qutebrowser-launcher initial 'tab))
+
+;;;###autoload
+(defun qutebrowser-launcher-window (&optional initial)
+  "Select a URL to open in a new window.
+Set initial completion input to INITIAL."
+  (interactive)
+  (qutebrowser-launcher initial 'window))
+
+;;;###autoload
+(defun qutebrowser-launcher-private (&optional initial)
+  "Select a URL to open in a private window.
+Set initial completion input to INITIAL."
+  (interactive)
+  (qutebrowser-launcher initial 'private-window))
 
 ;;;; Advice
 
