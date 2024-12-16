@@ -46,6 +46,30 @@
   '(bar workspace-name window-number modals buffer-info-simple)
   '(misc-info qutebrowser-url))
 
+;;;###autoload
+(define-minor-mode qutebrowser-doom-modeline-mode
+  "Minor mode combining Qutebrowser statusbar and Doom modeline."
+  :lighter nil
+  :global nil
+  (if qutebrowser-doom-modeline-mode
+      (progn
+        ;;(qutebrowser-rpc-get-connection)
+        (doom-modeline-set-modeline 'qutebrowser-doom-modeline))
+    (doom-modeline-set-modeline 'main)))
+
+(defun qutebrowser-doom-modeline-mode-maybe-enable ()
+  "Enable `qutebrowser-doom-modeline-mode' if the buffer is a Qutebrowser buffer."
+  (when (qutebrowser-exwm-p)
+    (qutebrowser-doom-modeline-mode 1)))
+
+;;;###autoload
+(define-globalized-minor-mode global-qutebrowser-doom-modeline-mode
+  qutebrowser-doom-modeline-mode
+  qutebrowser-doom-modeline-mode-maybe-enable
+  (if global-qutebrowser-doom-modeline-mode
+      (add-hook 'exwm-manage-finish-hook #'qutebrowser-doom-modeline-mode-maybe-enable)
+    (remove-hook 'exwm-manage-finish-hook #'qutebrowser-doom-modeline-mode-maybe-enable)))
+
 
 (provide 'qutebrowser-doom-modeline)
 
