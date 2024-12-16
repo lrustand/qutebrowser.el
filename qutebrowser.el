@@ -485,7 +485,7 @@ Return up to LIMIT results."
   "Make a bookmark record for Qutebrowser buffers."
   `(,(buffer-name)
     (handler . qutebrowser-bookmark-jump)
-    (url . ,(get-text-property 0 'url (buffer-name)))))
+    (url . ,(qutebrowser-exwm-buffer-url))))
 
 (defun qutebrowser-bookmark-url (bookmark)
   "Return the URL that BOOKMARK is pointing to."
