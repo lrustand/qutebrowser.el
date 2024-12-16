@@ -251,10 +251,6 @@ query is built, see `qutebrowser--history-search'."
   "(url || title) LIKE '%%%s%%'"
   "SQL matching pattern used for each input word.")
 
-(defvar qutebrowser-bookmark--tofu (consult--tofu-encode 1))
-(defvar qutebrowser-exwm-buffer--tofu (consult--tofu-encode 2))
-(defvar qutebrowser-history--tofu (consult--tofu-encode 3))
-
 (defvar qutebrowser-on-entered-mode-functions '()
   "Functions run when receiving a `entered-mode` signal.")
 
@@ -430,7 +426,7 @@ Return up to LIMIT results."
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
-                (propertize (concat qutebrowser-history--tofu url)
+                (propertize (consult--tofu-append url ?h)
                             'input input
                             'title title)))
             (sqlite-select db query))))
@@ -476,6 +472,13 @@ Return up to LIMIT results."
       (put-text-property max-length url-length 'invisible t url))
     url))
 
+(defun qutebrowser--strip-tofus (str)
+  (let* ((end (length str)))
+    (while (and (> end 0) (consult--tofu-p (aref str (1- end))))
+      (cl-decf end))
+    (substring str 0 end)))
+
+
 ;;;; Bookmark functions
 
 (defun qutebrowser-bookmark-make-record ()
@@ -511,26 +514,19 @@ Return up to LIMIT results."
 Set initial completion input to INITIAL.  Open the URL in TARGET or the
 default target if nil."
   (interactive)
-  (let* ((qutebrowser-default-open-target
-          (or target qutebrowser-default-open-target))
-         (selected (qutebrowser-select-url initial)))
-    (when selected
-      ;; FIXME: This way of dispatching is a temporary workaround
-      ;; because consult currently doesn't support mixing dynamic and
-      ;; static sources, so we can't set up individual consult sources
-      ;; with :action functions.
-      (cond
-       ((string-prefix-p qutebrowser-exwm-buffer--tofu selected)
-        (let* ((url (substring selected 1))
-               (buffer (qutebrowser-exwm-find-buffer url)))
-          (switch-to-buffer buffer)))
-       ((string-prefix-p qutebrowser-bookmark--tofu selected)
-        (let ((url (substring selected 1)))
-          (qutebrowser-open-url url)))
-       ((string-prefix-p qutebrowser-history--tofu selected)
-        (let ((url (substring selected 1)))
-          (qutebrowser-open-url url)))
-       (t (qutebrowser-open-url selected))))))
+  (when-let* ((qutebrowser-default-open-target
+               (or target qutebrowser-default-open-target))
+              (selected (qutebrowser-select-url initial)))
+    ;; FIXME: This way of dispatching is a temporary workaround
+    ;; because consult currently doesn't support mixing dynamic and
+    ;; static sources, so we can't set up individual consult sources
+    ;; with :action functions.
+    (let ((source-id (consult--tofu-get selected))
+          (url (qutebrowser--strip-tofus selected)))
+    (if (eq ?b source-id)
+        (let ((buffer (qutebrowser-exwm-find-buffer url)))
+         (switch-to-buffer buffer))
+      (qutebrowser-open-url url)))))
 
 ;;;###autoload
 (defun qutebrowser-launcher-tab (&optional initial)
@@ -617,7 +613,7 @@ Both bookmark name and URLs are used for matching."
          (matching-bookmarks (qutebrowser-bookmark-filter words bookmarks)))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
-                (propertize (concat qutebrowser-bookmark--tofu url)
+                (propertize (consult--tofu-append url ?m)
                             'input input
                             'title bookmark
                             'bookmark t)))
@@ -631,7 +627,7 @@ Both bookmark name and URLs are used for matching."
     (mapcar (lambda (buffer)
               (let* ((title (substring-no-properties (buffer-name buffer)))
                      (url (qutebrowser-exwm-buffer-url buffer)))
-                (propertize (concat qutebrowser-exwm-buffer--tofu url)
+                (propertize (consult--tofu-append url ?b)
                             'input input
                             'title title
                             'buffer buffer)))
@@ -730,8 +726,8 @@ INITIAL sets the initial input in the minibuffer."
 (defun qutebrowser-advice-vertico-prescient (orig-fun &rest args)
   "Exclude Qutebrowser buffer names and URLs from prescient history.
 The ORIG-FUN takes ARGS."
-  (let* ((selected-candidate
-          (substring (minibuffer-contents-no-properties) 0 -1))
+  (let* ((selected-candidate (qutebrowser--strip-tofus
+                              (minibuffer-contents-no-properties)))
          (selected-buffer (get-buffer selected-candidate)))
     (unless (or (qutebrowser-exwm-p selected-buffer)
                 (string-match-p "^https?://" selected-candidate))
