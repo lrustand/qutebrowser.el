@@ -808,29 +808,25 @@ Useful for initializing window information when first connecting to an
 instance with existing windows."
   (qutebrowser-rpc-call '((request . window-info))))
 
-(defun qutebrowser-rpc--receive-data (proc data)
-  "Receive data from the Qutebrowser RPC.
-PROC is the network process connected to the RPC.
-DATA is the data received, which can be multiple JSON objects separated
-by comma.  The data is therefore wrapped in square brackets to safely
-parse as valid JSON."
+(defun qutebrowser-rpc--receive-data (_ data)
+  "Receive DATA from the Qutebrowser RPC.
+DATA can be multiple JSON objects separated by comma.  The data is
+therefore wrapped in square brackets to safely parse as valid JSON."
   ;; Wrap received data in [] in case multiple messages are received
   (let* ((messages (json-read-from-string (format "[%s]" data))))
     (seq-doseq (message messages)
-      (qutebrowser-rpc--receive-message proc message))))
+      (qutebrowser-rpc--receive-message message))))
 
-(defun qutebrowser-rpc--receive-message (_ data)
-  "Receive a single message from RPC.
-PROC is the network process connected to the RPC.
-DATA is the data received."
-  (let* ((sig (alist-get 'signal data))
-         (repl-response (alist-get 'repl-response data))
-         (rpc-response (alist-get 'rpc-response data))
-         (window-info (alist-get 'window-info data))
-         (eval (alist-get 'eval data)))
+(defun qutebrowser-rpc--receive-message (message)
+  "Receive a single MESSAGE from RPC."
+  (let* ((sig (alist-get 'signal message))
+         (repl-response (alist-get 'repl-response message))
+         (rpc-response (alist-get 'rpc-response message))
+         (window-info (alist-get 'window-info message))
+         (eval (alist-get 'eval message)))
     (cond
      (sig (let ((functions (symbol-value (intern-soft (format "qutebrowser-on-%s-functions" sig))))
-                (args (alist-get 'args data)))
+                (args (alist-get 'args message)))
             (dolist (fun functions)
               (funcall fun args))
             ;; TODO: Decide on ordering of this in relation to hooks
