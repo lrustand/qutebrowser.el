@@ -44,18 +44,6 @@
 (require 'evil)
 (require 'url-parse)
 
-;; FIXME: Until I figure out why the fuck wrapping doom modeline stuff
-;; inside a "with-eval-after-load doom-modeline" is apparently not
-;; enough to protect against undefined usage I guess I just have to
-;; add it as a hard dependency. The funny thing is it is only
-;; noticable after an install from git and a reboot of emacs. Evaling
-;; the buffer always works fine.
-(require 'doom-modeline)
-
-;;(declare-function doom-modeline-display-text "ext:doom-modeline-core")
-;;(declare-function doom-modeline-def-segment "ext:doom-modeline-core" t t)
-;;(declare-function doom-modeline-def-modeline "ext:doom-modeline-core" t t)
-;;(declare-function doom-modeline-set-modeline "ext:doom-modeline-core")
 (declare-function password-store-get "ext:password-store")
 (declare-function password-store-list "ext:password-store")
 (declare-function password-store-otp-token "ext:password-store-otp")
@@ -513,35 +501,6 @@ Return up to LIMIT results."
   "Return a list of Qutebrowser bookmarks."
   (seq-filter #'qutebrowser-bookmark-p
               (bookmark-all-names)))
-
-;;;; Doom modeline
-
-;; FIXME: This is a workaround because use-package doesn't understand
-;; that the modeline segment name is not a variable, so we make a
-;; dummy variable to avoid error.
-(defvar qutebrowser-url nil)
-
-(with-eval-after-load 'doom-modeline
-  (defun qutebrowser-doom-set-favicon (&optional buffer)
-    "Show favicon in doom modeline."
-    (when-let* ((image qutebrowser-exwm-favicon))
-      (with-current-buffer (or buffer (current-buffer))
-        (setq-local doom-modeline--buffer-file-icon
-                    (propertize ""
-                                'display image
-                                'face '(:inherit doom-modeline))))))
-
-  (doom-modeline-def-segment qutebrowser-url
-    "Display the currently visited or hovered URL."
-    (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
-                              (doom-modeline-display-text
-                               (concat " " (if qutebrowser-exwm-hovered-url
-                                               (propertize qutebrowser-exwm-hovered-url 'face 'link-visited)
-                                             (propertize (or qutebrowser-exwm-current-url "") 'face 'success))))))
-
-  (doom-modeline-def-modeline 'qutebrowser-doom-modeline
-    '(bar workspace-name window-number modals buffer-info-simple)
-    '(misc-info qutebrowser-url)))
 
 ;;;; Dynamic consult source
 
