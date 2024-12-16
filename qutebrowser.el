@@ -44,10 +44,18 @@
 (require 'evil)
 (require 'url-parse)
 
-(declare-function doom-modeline-display-text "ext:doom-modeline-core")
-(declare-function doom-modeline-def-segment "ext:doom-modeline-core" t t)
-(declare-function doom-modeline-def-modeline "ext:doom-modeline-core" t t)
-(declare-function doom-modeline-set-modeline "ext:doom-modeline-core")
+;; FIXME: Until I figure out why the fuck wrapping doom modeline stuff
+;; inside a "with-eval-after-load doom-modeline" is apparently not
+;; enough to protect against undefined usage I guess I just have to
+;; add it as a hard dependency. The funny thing is it is only
+;; noticable after an install from git and a reboot of emacs. Evaling
+;; the buffer always works fine.
+(require 'doom-modeline)
+
+;;(declare-function doom-modeline-display-text "ext:doom-modeline-core")
+;;(declare-function doom-modeline-def-segment "ext:doom-modeline-core" t t)
+;;(declare-function doom-modeline-def-modeline "ext:doom-modeline-core" t t)
+;;(declare-function doom-modeline-set-modeline "ext:doom-modeline-core")
 (declare-function password-store-get "ext:password-store")
 (declare-function password-store-list "ext:password-store")
 (declare-function password-store-otp-token "ext:password-store-otp")
