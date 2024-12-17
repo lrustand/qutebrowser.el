@@ -240,8 +240,13 @@ query is built, see `qutebrowser--history-search'."
 
 ;;;; Variables
 
-(defvar qutebrowser-process-name "qutebrowser"
-  "Name of the Qutebrowser process.")
+(defvar qutebrowser-process-names
+  '("qutebrowser"
+    ".qutebrowser-real" ;; Process name on Guix
+    ".qutebrowser-re"   ;; Process name on Guix, mangled by Emacs
+    "QtWebEngineProcess")
+  "List of possible names of the Qutebrowser process.
+This list is used to identify running Qutebrowser processes.")
 
 (defvar qutebrowser-history-matching-pattern
   "(url || title) LIKE '%%%s%%'"
@@ -1037,7 +1042,7 @@ one.  If there is only one matching entry it is selected automatically."
    (lambda (pid)
      (let* ((attrs (process-attributes pid))
             (cmd (alist-get 'comm attrs)))
-       (string= qutebrowser-process-name cmd)))
+       (member cmd qutebrowser-process-names)))
    (list-system-processes)))
 
 (defun qutebrowser--get-process-attribute (attr)
