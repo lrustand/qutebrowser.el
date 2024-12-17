@@ -732,16 +732,19 @@ Qutebrowser."
 (defun qutebrowser-rpc--make-network-process ()
   "Make a network process connected to the RPC socket."
   (unless (file-exists-p "/tmp/emacs-ipc")
-    (qutebrowser-rpc--bootstrap-server))
-  (make-network-process
-   :name "qutebrowser-rpc"
-   :family 'local
-   :filter #'qutebrowser-rpc--receive-data
-   :service "/tmp/emacs-ipc"
-   :sentinel (lambda (proc event)
-               (when (string= event "connection broken by remote peer\n")
-                 (delete-process proc)
-                 (qutebrowser-rpc--make-network-process)))))
+    (message "NO RPC SOCKET")
+    (qutebrowser-rpc--bootstrap-server)
+    (sit-for 1))
+  (when (file-exists-p "/tmp/emacs-ipc")
+      (make-network-process
+       :name "qutebrowser-rpc"
+       :family 'local
+       :filter #'qutebrowser-rpc--receive-data
+       :service "/tmp/emacs-ipc"
+       :sentinel (lambda (proc event)
+                   (when (string= event "connection broken by remote peer\n")
+                     (delete-process proc)
+                     (run-with-timer 10 0 #'qutebrowser-rpc--make-network-process))))))
 
 (defun qutebrowser-rpc-get-connection (&optional flush)
   "Return a process connected to the RPC socket.
@@ -752,10 +755,9 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
       (delete-process process)
       (setq process nil))
     (or process
-        (progn
-          (let ((process (qutebrowser-rpc--make-network-process)))
-            (qutebrowser-rpc-request-window-info)
-            process)))))
+        (when-let ((process (qutebrowser-rpc--make-network-process)))
+          (qutebrowser-rpc-request-window-info)
+          process))))
 
 (defun qutebrowser-rpc-connected-p ()
   "Check if connected to the Qutebrowser RPC."
