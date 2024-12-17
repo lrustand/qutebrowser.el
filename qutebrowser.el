@@ -731,6 +731,8 @@ Qutebrowser."
 
 (defun qutebrowser-rpc--make-network-process ()
   "Make a network process connected to the RPC socket."
+  (unless (file-exists-p "/tmp/emacs-ipc")
+    (qutebrowser-rpc--bootstrap-server))
   (make-network-process
    :name "qutebrowser-rpc"
    :family 'local
@@ -751,7 +753,6 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
       (setq process nil))
     (or process
         (progn
-          (qutebrowser-rpc--bootstrap-server)
           (let ((process (qutebrowser-rpc--make-network-process)))
             (qutebrowser-rpc-request-window-info)
             process)))))
