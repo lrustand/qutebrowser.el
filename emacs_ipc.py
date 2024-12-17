@@ -3,7 +3,7 @@
 """IPC server for Emacs."""
 
 from PyQt6.QtCore import QByteArray, pyqtSlot
-from qutebrowser.api import message
+from qutebrowser.api import message, cmdutils
 from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
@@ -107,7 +107,8 @@ class EmacsIPCServer(IPCServer):
             socket.write(QByteArray(json_data.encode("utf-8")))
             socket.flush()
 
-    def send_cmd(self, cmd):
+    @cmdutils.register(instance="emacs-ipc", maxsplit=0, name="emacs")
+    def send_cmd(self, cmd: str) -> None:
         """Send a command to be evaluated in Emacs.
 
         Args:
