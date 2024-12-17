@@ -53,7 +53,7 @@
   :global nil
   (if qutebrowser-doom-modeline-mode
       (progn
-        ;;(qutebrowser-rpc-get-connection)
+        (qutebrowser-rpc-get-connection)
         (doom-modeline-set-modeline 'qutebrowser-doom-modeline))
     (doom-modeline-set-modeline 'main)))
 
