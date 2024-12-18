@@ -971,7 +971,9 @@ Creates a temporary file and sources it in Qutebrowser using the
   :lighter nil
   :global t
   (if qutebrowser-theme-export-mode
-      (advice-add 'enable-theme :after #'qutebrowser-theme-export-and-apply)
+      (progn
+        (qutebrowser-theme-export-and-apply)
+        (advice-add 'enable-theme :after #'qutebrowser-theme-export-and-apply))
     (advice-remove 'enable-theme #'qutebrowser-theme-export-and-apply)))
 
 
