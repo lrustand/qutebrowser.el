@@ -25,10 +25,10 @@
 (require 'qutebrowser)
 (require 'doom-modeline)
 
-(defun qutebrowser-doom-set-favicon (&optional buffer)
+(defun qutebrowser-doom-set-favicon (&rest _)
   "Show favicon in doom modeline."
-  (when-let* ((image qutebrowser-exwm-favicon))
-    (with-current-buffer (or buffer (current-buffer))
+  (with-current-buffer (current-buffer)
+    (when-let* ((image qutebrowser-exwm-favicon))
       (setq-local doom-modeline--buffer-file-icon
                   (propertize ""
                               'display image
@@ -54,8 +54,13 @@
   (if qutebrowser-doom-modeline-mode
       (progn
         (qutebrowser-rpc-get-connection)
+        (add-hook 'qutebrowser-on-icon-changed-functions
+                  #'qutebrowser-doom-set-favicon nil t)
         (doom-modeline-set-modeline 'qutebrowser-doom-modeline))
-    (doom-modeline-set-modeline 'main)))
+    (progn
+      (doom-modeline-set-modeline 'main)
+      (remove-hook 'qutebrowser-on-icon-changed-functions
+                   #'qutebrowser-doom-set-favicon t))))
 
 (defun qutebrowser-doom-modeline-mode-maybe-enable ()
   "Enable `qutebrowser-doom-modeline-mode' if the buffer is a Qutebrowser buffer."
