@@ -32,6 +32,19 @@ class EmacsIPCServer(IPCServer):
         #message.debug("Ignoring timeout")
         return
 
+    def eval_or_exec(self, code):
+        """Evaluate or execute code."""
+        try:
+            try:
+                return str(eval(code))
+            except SyntaxError:
+                exec(code, globals())
+                return ""
+        except Exception as e:
+            return str(e)
+        except:
+            return "Error!"
+
     def _handle_data(self, data):
         """Handle data received from Emacs.
 
@@ -40,23 +53,11 @@ class EmacsIPCServer(IPCServer):
         """
         json_data = json.loads(data.decode("utf-8"))
         if "eval" in json_data:
-            try:
-                response = str(eval(json_data["eval"]))
-            except Exception as e:
-                response = str(e)
-            except:
-                response = "Error!"
-            self.send_data({"rpc-response": response})
+            self.send_data({"rpc-response": self.eval_or_exec(json_data["eval"])})
         if "request" in json_data:
             self.handle_request(json_data["request"], json_data.get("args", {}))
         if "repl" in json_data:
-            try:
-                response = str(eval(json_data["repl"]))
-            except Exception as e:
-                response = str(e)
-            except:
-                response = "Error!"
-            self.send_data({"repl-response": response})
+            self.send_data({"repl-response": self.eval_or_exec(json_data["repl"])})
 
     def handle_request(self, request, args={}):
         """Handle a request for data.
@@ -100,7 +101,6 @@ class EmacsIPCServer(IPCServer):
         Args:
             data: The data to send. This should be a dictionary, which
                   Emacs will receive as an alist.
-
         """
         json_data = json.dumps(data) + ","
         socket = self._get_socket()
