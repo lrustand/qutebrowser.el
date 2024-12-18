@@ -771,7 +771,8 @@ updated it is recommended to run this function when loading the package."
   (dolist (file '("emacs_ipc.py"
                   "emacs_hooks.py"))
     (copy-file (expand-file-name file qutebrowser--package-directory)
-               (expand-file-name file qutebrowser-config-directory))))
+               (expand-file-name file qutebrowser-config-directory)
+	       'overwrite)))
 
 (defun qutebrowser-rpc-request-window-info ()
   "Request window-info from Qutebrowser.
