@@ -34,6 +34,9 @@
                               'display image
                               'face '(:inherit doom-modeline))))))
 
+(defun qutebrowser-doom-modeline--update (&rest _)
+  (force-mode-line-update))
+
 (doom-modeline-def-segment qutebrowser-url
   "Display the currently visited or hovered URL."
   (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
@@ -54,11 +57,19 @@
   (if qutebrowser-doom-modeline-mode
       (progn
         (qutebrowser-rpc-get-connection)
+        (add-hook 'qutebrowser-on-url-changed-functions
+                  #'qutebrowser-doom-modeline--update nil t)
+        (add-hook 'qutebrowser-on-link-hovered-functions
+                  #'qutebrowser-doom-modeline--update nil t)
         (add-hook 'qutebrowser-on-icon-changed-functions
                   #'qutebrowser-doom-set-favicon nil t)
         (doom-modeline-set-modeline 'qutebrowser-doom-modeline))
     (progn
       (doom-modeline-set-modeline 'main)
+      (remove-hook 'qutebrowser-on-url-changed-functions
+                   #'qutebrowser-doom-modeline--update t)
+      (remove-hook 'qutebrowser-on-link-hovered-functions
+                   #'qutebrowser-doom-modeline--update t)
       (remove-hook 'qutebrowser-on-icon-changed-functions
                    #'qutebrowser-doom-set-favicon t))))
 
