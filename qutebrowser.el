@@ -790,18 +790,16 @@ therefore wrapped in square brackets to safely parse as valid JSON."
 
 (defun qutebrowser-rpc--receive-message (message)
   "Receive a single MESSAGE from RPC."
-  (let* ((sig (alist-get 'signal message))
-         (repl-response (alist-get 'repl-response message))
-         (rpc-response (alist-get 'rpc-response message))
-         (window-info (alist-get 'window-info message))
-         (eval (alist-get 'eval message)))
+  (let ((sig (alist-get 'signal message))
+        (repl-response (alist-get 'repl-response message))
+        (rpc-response (alist-get 'rpc-response message))
+        (window-info (alist-get 'window-info message))
+        (eval (alist-get 'eval message)))
     (cond
-     (sig (let ((functions (symbol-value (intern-soft (format "qutebrowser-on-%s-functions" sig))))
+     (sig (let ((hook (intern-soft (format "qutebrowser-on-%s-functions" sig)))
                 (args (alist-get 'args message)))
-            (dolist (fun functions)
-              (funcall fun args))
-            ;; TODO: Decide on ordering of this in relation to hooks
-            (qutebrowser-exwm-update-window-info args)))
+            (qutebrowser-exwm-update-window-info args)
+            (run-hook-with-args hook args)))
      (window-info (qutebrowser-exwm-update-window-info window-info t))
      (rpc-response (message rpc-response))
      (repl-response (qutebrowser-repl-receive-response repl-response))
