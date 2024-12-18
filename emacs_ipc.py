@@ -87,6 +87,7 @@ class EmacsIPCServer(IPCServer):
                                                 "icon-file": icon_file,
                                                 "search": search,
                                                 "hover": hover,
+                                                "private": window.is_private,
                                                 "mode": mode}})
 
     def send_data(self, data):
