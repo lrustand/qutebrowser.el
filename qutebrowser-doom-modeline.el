@@ -82,6 +82,7 @@
 (define-globalized-minor-mode global-qutebrowser-doom-modeline-mode
   qutebrowser-doom-modeline-mode
   qutebrowser-doom-modeline-mode-maybe-enable
+  :group 'qutebrowser
   (if global-qutebrowser-doom-modeline-mode
       (add-hook 'exwm-manage-finish-hook #'qutebrowser-doom-modeline-mode-maybe-enable)
     (remove-hook 'exwm-manage-finish-hook #'qutebrowser-doom-modeline-mode-maybe-enable)))
