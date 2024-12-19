@@ -588,7 +588,7 @@ than `qutebrowser-url-display-length'."
       (qutebrowser-highlight-matches input title))
     (qutebrowser--shorten-display-url entry)
     (let* ((pad-length (max 0 (- qutebrowser-url-display-length
-                                 (length url))))
+                                 (1- (length url)))))
            ;; When used in the dynamic qutebrowser-select-url, we need
            ;; to pad the annotations for alignment. This is not needed
            ;; when the annotations are used in non-dynamic buffer
