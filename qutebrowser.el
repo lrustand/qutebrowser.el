@@ -337,7 +337,6 @@ This list is used to identify running Qutebrowser processes.")
         (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
           (let ((old-icon-file (image-property qutebrowser-exwm-favicon :file)))
             (setq-local qutebrowser-exwm-favicon image)
-            ;;(qutebrowser-doom-set-favicon buffer)
             (when old-icon-file
               (delete-file old-icon-file)))))
     ;; Delete invalid/empty icon files

@@ -25,28 +25,41 @@
 (require 'qutebrowser)
 (require 'doom-modeline)
 
-(defun qutebrowser-doom-set-favicon (&rest _)
+(defsubst qutebrowser-doom--favicon ()
   "Show favicon in doom modeline."
-  (with-current-buffer (current-buffer)
-    (when-let* ((image qutebrowser-exwm-favicon))
-      (setq-local doom-modeline--buffer-file-icon
-                  (propertize ""
-                              'display image
-                              'face '(:inherit doom-modeline))))))
+  (propertize ""
+              'display (or qutebrowser-exwm-favicon "")
+              'face '(:inherit doom-modeline)))
+
+(defsubst qutebrowser-doom--title ()
+  "Qutebrowser title."
+  (propertize "%b"
+              'face (doom-modeline-face 'doom-modeline-buffer-file)
+              'mouse-face 'doom-modeline-highlight
+              'help-echo "Qutebrowser title
+mouse-1: Previous buffer\nmouse-3: Next buffer"
+              'local-map mode-line-buffer-identification-keymap))
 
 (defun qutebrowser-doom-modeline--update (&rest _)
   (force-mode-line-update))
 
 (doom-modeline-def-segment qutebrowser-url
   "Display the currently visited or hovered URL."
-  (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
-                            (doom-modeline-display-text
-                             (concat " " (if qutebrowser-exwm-hovered-url
-                                             (propertize qutebrowser-exwm-hovered-url 'face 'link-visited)
-                                           (propertize (or qutebrowser-exwm-current-url "") 'face 'success))))))
+  (let ((url (or qutebrowser-exwm-hovered-url qutebrowser-exwm-current-url ""))
+        (face (if qutebrowser-exwm-hovered-url 'link-visited 'success)))
+    (doom-modeline-display-text
+     (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
+                               (concat (doom-modeline-spc)
+                                       (propertize url 'face face))))))
+
+(doom-modeline-def-segment qutebrowser-title
+  (concat
+   (qutebrowser-doom--favicon)
+   (doom-modeline-spc)
+   (qutebrowser-doom--title)))
 
 (doom-modeline-def-modeline 'qutebrowser-doom-modeline
-  '(bar workspace-name window-number modals buffer-info-simple)
+  '(bar workspace-name window-number modals qutebrowser-title)
   '(misc-info qutebrowser-url))
 
 ;;;###autoload
@@ -61,17 +74,13 @@
                   #'qutebrowser-doom-modeline--update nil t)
         (add-hook 'qutebrowser-on-link-hovered-functions
                   #'qutebrowser-doom-modeline--update nil t)
-        (add-hook 'qutebrowser-on-icon-changed-functions
-                  #'qutebrowser-doom-set-favicon nil t)
         (doom-modeline-set-modeline 'qutebrowser-doom-modeline))
     (progn
       (doom-modeline-set-modeline 'main)
       (remove-hook 'qutebrowser-on-url-changed-functions
                    #'qutebrowser-doom-modeline--update t)
       (remove-hook 'qutebrowser-on-link-hovered-functions
-                   #'qutebrowser-doom-modeline--update t)
-      (remove-hook 'qutebrowser-on-icon-changed-functions
-                   #'qutebrowser-doom-set-favicon t))))
+                   #'qutebrowser-doom-modeline--update t))))
 
 (defun qutebrowser-doom-modeline-mode-maybe-enable ()
   "Enable `qutebrowser-doom-modeline-mode' if the buffer is a Qutebrowser buffer."
