@@ -18,6 +18,19 @@
 
 ;;; Commentary:
 
+;; Special doom-modeline for Qutebrowser buffers, displaying window
+;; title, favicon, and URL. Meant to be used instead of the statusbar
+;; in Qutebrowser.
+
+;; Install:
+
+;; 1. Remove Qutebrowser statusbar by setting:
+;;    'c.statusbar.show = "never"'
+;;    in your config.py.
+;;
+;; 2. Enable the modeline:
+;;    (global-qutebrowser-doom-modeline-mode 1)
+
 ;;; Change Log:
 
 ;;; Code:
