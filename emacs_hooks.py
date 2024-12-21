@@ -32,10 +32,12 @@ class EmacsHookManager:
         except:
             window_registry = {}
 
-        # Enable the window hooks on startup
+        # Enable the window and tab hooks on startup
         if len(window_registry) > 0:
             for window in objreg.window_registry.values():
                 self.enable_window_hooks(window)
+                for tab in window.tabbed_browser.widgets():
+                    self.enable_tab_hooks(tab, None)
         else:
             message.info("No window found, not enabling window hooks.")
         # Enable new window hook
