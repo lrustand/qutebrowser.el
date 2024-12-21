@@ -984,8 +984,11 @@ Creates a temporary file and sources it in Qutebrowser using the
   (cl-remove-if-not
    (lambda (pid)
      (let* ((attrs (process-attributes pid))
-            (cmd (alist-get 'comm attrs)))
-       (member cmd qutebrowser-process-names)))
+            (cmd (alist-get 'comm attrs))
+            (state (alist-get 'state attrs)))
+       (and (member cmd qutebrowser-process-names)
+            ;; Sometimes a zombie process sticks around
+            (not (string= "Z" state)))))
    (list-system-processes)))
 
 (defun qutebrowser--get-process-attribute (attr)
