@@ -15,15 +15,17 @@ import os
 
 class EmacsIPCServer(IPCServer):
     """IPC server for Emacs."""
-    def __init__(self, hook_manager=None):
+
+    def __init__(self):
+        old_server = objreg.get("emacs-ipc", None)
+        if old_server:
+            message.info("Shutting down old server")
+            old_server.shutdown()
+
         super().__init__("/tmp/emacs-ipc")
         objreg.register(name = "emacs-ipc",
                         obj = self,
                         update = True)
-        self.hook_manager = objreg.get("emacs-hook-manager", hook_manager)
-        if not self.hook_manager:
-            from emacs_hooks import EmacsHookManager
-            self.hook_manager = EmacsHookManager(self)
         self.listen()
 
     @pyqtSlot()
@@ -119,12 +121,7 @@ class EmacsIPCServer(IPCServer):
         self.send_data({"eval": cmd})
 
 
-# Fails if run during startup, qapp not initialized yet
-if objects.qapp:
-    server = objreg.get("emacs-ipc", None)
-    if not server:
-        message.info("No IPC server found. Starting one.")
-        server = EmacsIPCServer()
+EmacsIPCServer()
 
 
 # Local Variables:

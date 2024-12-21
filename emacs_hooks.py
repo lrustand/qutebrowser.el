@@ -17,31 +17,27 @@ class EmacsHookManager:
     Subscribes to a set of Qt signals exposed by Qutebrowser and
     forwards them to Emacs.
     """
+
     # TODO: Delete old favicon tempfiles on init
-    def __init__(self, server=None):
-        self.server = objreg.get("emacs-ipc", server)
-        if not server:
-            from emacs_ipc import EmacsIPCServer
-            self.server = EmacsIPCServer(self)
+    def __init__(self):
+
+        old_manager = objreg.get("emacs-hook-manager", None)
+
         objreg.register(name = "emacs-hook-manager",
                         obj = self,
                         update = True)
-        # Get the window list
-        try:
-            window_registry = objreg.window_registry
-        except:
-            window_registry = {}
 
         # Enable the window and tab hooks on startup
-        if len(window_registry) > 0:
+        if objreg.window_registry:
             for window in objreg.window_registry.values():
                 self.enable_window_hooks(window)
                 for tab in window.tabbed_browser.widgets():
                     self.enable_tab_hooks(tab, None)
-        else:
-            message.info("No window found, not enabling window hooks.")
+
         # Enable new window hook
         if objects.qapp:
+            if old_server:
+                objects.qapp.new_window.disconnect(old_manager.on_new_window)
             objects.qapp.new_window.connect(self.on_new_window)
 
     def on_url_changed(self, window, url):
@@ -122,27 +118,24 @@ class EmacsHookManager:
         """
         tab.icon_changed.connect(partial(self.on_icon_changed, tab))
 
-    def enable_window_hooks(self, window=None):
+    def enable_window_hooks(self, window):
         """Enable window local hooks.
 
         Args:
             window: The window to enable hooks for.
-                    If unspecified, use the last visible window.
         """
-        if not window:
-            window = objreg.last_visible_window()
-        if not hasattr(window, "hooks_initialized"):
-            mode_manager = modeman.instance(window.win_id)
-            tabbed_browser = window.tabbed_browser
-            status = window.status
 
-            mode_manager.entered.connect(partial(self.on_enter_mode, window))
-            mode_manager.left.connect(partial(self.on_leave_mode, window))
-            tabbed_browser.cur_url_changed.connect(partial(self.on_url_changed, window))
-            tabbed_browser.cur_link_hovered.connect(partial(self.on_link_hovered, window))
-            tabbed_browser.new_tab.connect(self.enable_tab_hooks)
-            status.cmd.got_search.connect(partial(self.on_search, window))
-            window.hooks_initialized = True
+        mode_manager = modeman.instance(window.win_id)
+        tabbed_browser = window.tabbed_browser
+        status = window.status
+
+        mode_manager.entered.connect(partial(self.on_enter_mode, window))
+        mode_manager.entered.connect(partial(self.on_enter_mode, window))
+        mode_manager.left.connect(partial(self.on_leave_mode, window))
+        tabbed_browser.cur_url_changed.connect(partial(self.on_url_changed, window))
+        tabbed_browser.cur_link_hovered.connect(partial(self.on_link_hovered, window))
+        tabbed_browser.new_tab.connect(self.enable_tab_hooks)
+        status.cmd.got_search.connect(partial(self.on_search, window))
 
     def on_new_window(self, window):
         """Called when a new window is created.
@@ -162,8 +155,15 @@ class EmacsHookManager:
             signal: The name of the signal to be sent.
             args: The arguments to pass to the signal handler in Emacs.
         """
-        self.server.send_data({"signal": signal, "args": args})
 
+        server = objreg.get("emacs-ipc", None)
+        if server:
+            server.send_data({"signal": signal, "args": args})
+        else:
+            message.info("No server found! Could not send signal!")
+
+
+EmacsHookManager()
 
 # Local Variables:
 # eval: (qutebrowser-config-mode)

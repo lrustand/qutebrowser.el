@@ -716,12 +716,17 @@ Qutebrowser."
     (process-send-string process (concat json-string "\n"))))
 
 (defun qutebrowser-rpc--bootstrap-server ()
-  "Bootstrap the RPC server by sourcing the config file."
-  (let ((filename (expand-file-name "emacs_ipc.py"
-                                    qutebrowser-config-directory)))
-    (if (file-regular-p filename)
+  "Bootstrap the RPC server and hooks by sourcing the config files."
+  (let ((ipc (expand-file-name "emacs_ipc.py"
+                               qutebrowser-config-directory))
+        (hooks (expand-file-name "emacs_hooks.py"
+                                 qutebrowser-config-directory)))
+    (if (and (file-regular-p ipc)
+             (file-regular-p hooks))
         ;; TODO: Detect when it is necessary to do this
-        (qutebrowser-config-source filename)
+        (progn
+          (qutebrowser-config-source ipc)
+          (qutebrowser-config-source hooks))
       (message "RPC Python backend not found. Did you install it? Tip: run `qutebrowser-rpc-ensure-installed'."))))
 
 (defun qutebrowser-rpc--make-network-process ()
