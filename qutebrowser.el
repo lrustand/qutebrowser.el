@@ -727,7 +727,6 @@ Qutebrowser."
 (defun qutebrowser-rpc--make-network-process ()
   "Make a network process connected to the RPC socket."
   (unless (file-exists-p "/tmp/emacs-ipc")
-    (message "NO RPC SOCKET")
     (qutebrowser-rpc--bootstrap-server)
     (sit-for 1))
   (when (file-exists-p "/tmp/emacs-ipc")
