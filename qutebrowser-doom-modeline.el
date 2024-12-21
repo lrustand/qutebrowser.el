@@ -39,7 +39,7 @@
 (require 'doom-modeline)
 
 (defsubst qutebrowser-doom--favicon ()
-  "Show favicon in doom modeline."
+  "Qutebrowser favicon."
   (propertize ""
               'display (or qutebrowser-exwm-favicon "")
               'face '(:inherit doom-modeline)))
@@ -53,27 +53,36 @@
 mouse-1: Previous buffer\nmouse-3: Next buffer"
               'local-map mode-line-buffer-identification-keymap))
 
-(defun qutebrowser-doom-modeline--update (&rest _)
-  (force-mode-line-update))
+(defsubst qutebrowser-doom--url ()
+  "Qutebrowser visited or hovered URL."
+  (let ((url (or qutebrowser-exwm-hovered-url qutebrowser-exwm-current-url ""))
+        (face (if qutebrowser-exwm-hovered-url 'link-visited 'success)))
+    ;; Avoid formatting nonsense
+    (string-replace "%" "%%" (propertize url 'face (doom-modeline-face face)))))
 
 (doom-modeline-def-segment qutebrowser-url
   "Display the currently visited or hovered URL."
-  (let ((url (or qutebrowser-exwm-hovered-url qutebrowser-exwm-current-url ""))
-        (face (if qutebrowser-exwm-hovered-url 'link-visited 'success)))
-    (doom-modeline-display-text
-     (replace-regexp-in-string "%" "%%" ;; Avoid formatting nonsense
-                               (concat (doom-modeline-spc)
-                                       (propertize url 'face face))))))
+  (concat
+   (doom-modeline-spc)
+   (qutebrowser-doom--url)))
 
 (doom-modeline-def-segment qutebrowser-title
+  "Qutebrowser favicon and title."
   (concat
+   (doom-modeline-vspc)
    (qutebrowser-doom--favicon)
-   (doom-modeline-spc)
+   (doom-modeline-vspc)
    (qutebrowser-doom--title)))
 
 (doom-modeline-def-modeline 'qutebrowser-doom-modeline
   '(bar workspace-name window-number modals qutebrowser-title)
-  '(misc-info qutebrowser-url))
+  '(qutebrowser-url))
+
+(defun qutebrowser-doom-modeline--update (&rest _)
+  "Update the Doom modeline.
+Simple wrapper around `force-mode-line-update' to ignore arguments when
+run from `qutebrowser-on-<SIGNAL>-functions'."
+  (force-mode-line-update))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-doom-modeline-mode
@@ -89,7 +98,8 @@ mouse-1: Previous buffer\nmouse-3: Next buffer"
                   #'qutebrowser-doom-modeline--update nil t)
         (doom-modeline-set-modeline 'qutebrowser-doom-modeline))
     (progn
-      (doom-modeline-set-modeline 'main)
+      (unless (doom-modeline-auto-set-modeline)
+        (doom-modeline-set-main-modeline))
       (remove-hook 'qutebrowser-on-url-changed-functions
                    #'qutebrowser-doom-modeline--update t)
       (remove-hook 'qutebrowser-on-link-hovered-functions
