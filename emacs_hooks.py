@@ -36,7 +36,7 @@ class EmacsHookManager:
 
         # Enable new window hook
         if objects.qapp:
-            if old_server:
+            if old_manager:
                 objects.qapp.new_window.disconnect(old_manager.on_new_window)
             objects.qapp.new_window.connect(self.on_new_window)
 
