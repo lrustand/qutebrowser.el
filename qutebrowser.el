@@ -144,8 +144,8 @@
            (tabs.selected.odd.fg . tab-line)
            (tabs.selected.odd.bg . tab-line)
            (tabs.selected.even.fg . tab-line)
-           (tabs.selected.even.bg . tab-line)
-           (webpage.bg . default))
+           (tabs.selected.even.bg . tab-line))
+           ;;(webpage.bg . default))
          "Mapping between Emacs faces and Qutebrowser color settings."
          :type '(alist :key-type symbol
                        :value-type face)
