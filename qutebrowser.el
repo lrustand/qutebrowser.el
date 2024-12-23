@@ -807,9 +807,14 @@ instance with existing windows."
 
 
 (defun qutebrowser-rpc--notification-dispatcher (conn method params)
-  (let ((hook (intern-soft (format "qutebrowser-on-%s-functions" method))))
+  (let* ((hook (intern-soft (format "qutebrowser-on-%s-functions" method)))
+         (win-id (plist-get params :win-id))
+         (buffer (exwm--id->buffer win-id)))
     (qutebrowser-exwm-update-window-info params)
-    (run-hook-with-args hook params)))
+    (if buffer
+        (with-current-buffer buffer
+          (run-hook-with-args hook params))
+      (run-hook-with-args hook params))))
 
 ;; TODO: Implement methods
 (defun qutebrowser-rpc--request-dispatcher (conn method params)
