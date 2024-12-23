@@ -62,7 +62,15 @@
     (setq qutebrowser-repl-history-position 0)
     (goto-char (point-max))
     (insert "\n")
-    (insert (qutebrowser-rpc-request "repl" `(:input ,input)) "\n")
+    (condition-case err
+        (insert (qutebrowser-rpc-request "eval" `(:code ,input)) "\n")
+      (jsonrpc-error
+       (let* ((err (cddr err))
+              (code (alist-get 'jsonrpc-error-code err))
+              (message (alist-get 'jsonrpc-error-message err))
+              (data (alist-get 'jsonrpc-error-data err))
+              (traceback (plist-get data :traceback)))
+         (insert (format "%s" traceback) "\n"))))
     (insert qutebrowser-repl-prompt)
     (let ((inhibit-read-only t))
       (add-text-properties (point-min) (point-max)

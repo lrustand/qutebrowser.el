@@ -783,18 +783,31 @@ updated it is recommended to run this function when loading the package."
                (expand-file-name file qutebrowser-config-directory)
 	       'overwrite)))
 
+(defun qutebrowser--json-encode-with-newline (object)
+  ;; Qutebrowser reads until newline.
+  ;; Need to add one to avoid hanging the process.
+  ;; FIXME: Making a new subclass of jsonrpc-connection would solve this
+  (concat
+   (json-serialize object
+                   :false-object :json-false
+                   :null-object nil)
+   "\n"))
+
 (defun qutebrowser-rpc-request (method &optional params)
   (let ((conn (qutebrowser-rpc-get-connection)))
     ;; Qutebrowser reads until newline.
     ;; Need to add one to avoid hanging the process.
     (cl-letf (((symbol-function 'jsonrpc--json-encode)
-               (lambda (object)
-                 (concat
-                  (json-serialize object
-                                  :false-object :json-false
-                                  :null-object nil)
-                  "\n"))))
+               #'qutebrowser--json-encode-with-newline))
       (jsonrpc-request conn method params))))
+
+(defun qutebrowser-rpc-notify (method &optional params)
+  (let ((conn (qutebrowser-rpc-get-connection)))
+    ;; Qutebrowser reads until newline.
+    ;; Need to add one to avoid hanging the process.
+    (cl-letf (((symbol-function 'jsonrpc--json-encode)
+               #'qutebrowser--json-encode-with-newline))
+      (jsonrpc-notify conn method params))))
 
 
 ;; TODO: Rename and move elsewhere
@@ -802,7 +815,7 @@ updated it is recommended to run this function when loading the package."
   "Request window-info from Qutebrowser.
 Useful for initializing window information when first connecting to an
 instance with existing windows."
-  (seq-doseq (win (qutebrowser-rpc-request "window-info" nil))
+  (seq-doseq (win (qutebrowser-rpc-request :get-window-info nil))
     (qutebrowser-exwm-update-window-info win nil)))
 
 

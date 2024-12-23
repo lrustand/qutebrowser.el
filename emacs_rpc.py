@@ -13,9 +13,52 @@ from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
 from qutebrowser.utils import objreg
+from qutebrowser import app
 import json
 from tempfile import mkstemp
 import os
+import inspect
+import traceback
+
+
+class rpcmethod():
+    """Decorator for registering an RPC method.
+
+    Register a function as an RPC method in the "rpcmethods"
+    dictionary in objreg. The functions are then exposed over JSON-RPC
+    by the RPC server and can be called remotely using the JSON-RPC
+    protocol.
+
+    Any parameters given in "params" in the JSON-RPC request are
+    mapped onto the correspondingly named keyword arguments of the
+    function.
+    """
+
+    def __init__(self, method):
+        self.method = method
+        self.name = method.__name__.lower().replace('_', '-')
+
+        signature = inspect.signature(method)
+        self.params_info = {}
+
+        # Get the parameter names and default values
+        for name, param in signature.parameters.items():
+            if name != 'self':
+                default = param.default is not inspect.Parameter.empty
+                self.params_info[name] = default
+
+        # Register the method in objreg
+        rpcmethods = objreg.get("rpcmethods", {})
+        rpcmethods[self.name] = self
+        objreg.register("rpcmethods",
+                        obj=rpcmethods,
+                        update=True)
+
+    def __call__(self, instance, params):
+        if params:
+            return self.method(instance, **params)
+        else:
+            return self.method(instance)
 
 
 class EmacsRPCServer(IPCServer):
@@ -41,7 +84,8 @@ class EmacsRPCServer(IPCServer):
         # message.debug("Ignoring timeout")
         return
 
-    def eval_or_exec(self, code):
+    @rpcmethod
+    def eval(self, code):
         """Evaluate or execute code.
 
         Will first try to evaluate as an expression to return a value.
@@ -49,54 +93,121 @@ class EmacsRPCServer(IPCServer):
         or multi-line code.
         """
         try:
-            try:
-                return str(eval(code))
-            except SyntaxError:
-                exec(code, globals())
-                return ""
-        except Exception as e:
-            return str(e)
-        except:
-            return "Error!"
+            return str(eval(code))
+        except SyntaxError:
+            exec(code, globals())
+            return ""
+
+    @rpcmethod
+    def command(self, commands):
+        """Run interactive commands.
+
+        Args:
+            commands: A list of commands to run.
+        """
+
+        if isinstance(commands, str):
+            commands = [commands]
+
+        app.process_pos_args(commands, via_ipc=True)
+        return True
 
     def call_method(self, method, params):
-        match method:
-            case "window-info":
-                return self.get_window_info()
-            case "eval":
-                return self.eval_or_exec(params["code"])
-            case "repl":
-                return self.eval_or_exec(params["input"])
-            case _:
-                return f"ERROR: Unknown method {method}"
+        """Call an RPC method registered with @rpcmethod.
+
+        Used to dispatch RPC calls to the correct function. Functions can be
+        registered as an RPC method by decorating them with the @rpcmethod
+        decorator.
+
+        The function will be called with **kwargs corresponding to the params
+        received from the JSON-RPC request.
+
+        Args:
+            method: The method to call. Names a function decorated with @rpcmethod.
+            params: The parameters to the method, given in the params
+                    field of the JSON-RPC message. Should be a dictionary
+                    containing parameter names and values and will be mapped
+                    onto the function parameters of the method.
+        """
+
+        rpcmethods = objreg.get("rpcmethods", {})
+        method = rpcmethods.get(method, None)
+
+        if not method:
+            raise Exception(f"Unknown RPC method {method}")
+
+        # Call the decorated method with the keyword arguments from
+        # params.  The __call__ function of the decorator calls the
+        # actual underlying function and passes a reference to the
+        # EmacsRPCServer object as self.
+        return method(self, params)
 
     def _handle_data(self, data):
         """Handle data received from Emacs.
+
+        Override the _handle_data function from the superclass IPCServer.
+
+        If the data is not valid JSON data we simply ignore it.  The
+        jsonrpc-process-connection implementation in Emacs sends some
+        HTTP headers before the actual JSON data, but we don't care
+        about those.
+
+        Any valid JSON data that is not a valid JSON-RPC message is
+        also ignored.
+
+        Exceptions are catched and sent back as a JSON-RPC error
+        response if a response is expected, otherwise they are ignored.
 
         Args:
             data: The data received from Emacs.
         """
         try:
             json_data = json.loads(data.decode("utf-8"))
-        except:
-            json_data = {}
 
-        if "jsonrpc" in json_data:
             method = json_data.get("method", None)
-            params = json_data.get("params", None)
+            params = json_data.get("params", {})
             result = json_data.get("result", None)
+            error = json_data.get("error", None)
             req_id = json_data.get("id", None)
 
-            if method and req_id:
+            if "jsonrpc" not in json_data:
+                raise Exception("Invalid JSON-RPC message: {json_data}")
+
+            # Requests MUST contain both "method" and "id"
+            if (method is not None) and (req_id is not None):
                 message_type = "request"
                 self.handle_request(method, params, req_id)
-            elif method:
-                message_type = "notification"
+
+            # Notifications contain "method" but not "id"
+            elif method is not None:
+                message_type = "request"
                 self.handle_notification(method, params)
-            elif result:
-                message_type = "response"
+
+            # Result responses MUST contain "result" but NOT "error"
+            elif (result is not None) and (error is None):
+                message_type = "result"
+                self.handle_result(result, req_id)
+
+            # Error responses MUST contain "error" but NOT "result"
+            elif (error is not None) and (result is None):
+                message_type = "error"
+                self.handle_error(error, req_id)
+
+            # Anything else is not a valid JSON-RPC message
             else:
-                message.info(f"Unknown jsonrpc message type: {data}")
+                message_type = "invalid"
+                raise Exception(f"Invalid JSON-RPC message: {json_data}")
+
+        # Ignore non-JSON data
+        except json.JSONDecodeError:
+            return
+
+        except Exception as err:
+            # Only respond to requests
+            if message_type in ("request", "invalid"):
+                self.send_error(req_id=req_id,
+                                message=f"{err.__class__.__name__}: {err}",
+                                data={"traceback": traceback.format_exc()})
 
     def handle_notification(self, method, params):
         """Handle a received notification."""
@@ -105,18 +216,33 @@ class EmacsRPCServer(IPCServer):
     def handle_request(self, method, params, req_id):
         """Handle a received request."""
         result = self.call_method(method, params)
-        self.send_response(result=result, req_id=req_id)
+        self.send_result(result, req_id)
 
-    def send_response(self, result=None, error=None, req_id=None):
-        response = {"id": req_id}
-        if error:
-            response["error"] = error
-        elif result:
-            response["result"] = result
-        else:
-            message.info("Invalid call to send_response. Missing result/error.")
-            return
-        self.send_data(response)
+    def handle_result(self, result, req_id):
+        """Handle a received response."""
+        # TODO: Implement
+        pass
+
+    def handle_error(self, error, req_id):
+        """Handle a received error response."""
+        # TODO: Implement
+        pass
+
+    def send_error(self, code=-1, message=None, data=None, req_id=None):
+        """Send an error response to a received request."""
+
+        error = {"code": code,
+                 "message": message}
+
+        if data is not None:
+            error["data"] = data
+
+        self.send_data({"id": req_id, "error": error})
+
+    def send_result(self, result, req_id=None):
+        """Send a result response to a received request."""
+        self.send_data({"id": req_id,
+                        "result": result})
 
     def send_notification(self, method, params={}):
         """Send a JSON-RPC notification.
@@ -147,6 +273,7 @@ class EmacsRPCServer(IPCServer):
             socket.write(QByteArray(message.encode("utf-8")))
             socket.flush()
 
+    @rpcmethod
     def get_window_info(self):
         """Get a list of window information.
 
