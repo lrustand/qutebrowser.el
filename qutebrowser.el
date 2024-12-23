@@ -750,8 +750,8 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
       (delete-process process)
       (setq process nil))
     (unless (qutebrowser-rpc-connected-p)
-      (if-let ((proc (qutebrowser-rpc--make-network-process)))
-          (progn
+      (condition-case err
+          (when-let ((proc (qutebrowser-rpc--make-network-process)))
             (setq qutebrowser-rpc-connection
                   (jsonrpc-process-connection
                    :name "qutebrowser-jsonrpc"
@@ -761,7 +761,10 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
                    :request-dispatcher
                    #'qutebrowser-rpc--request-dispatcher))
             (qutebrowser-rpc-request-window-info))
-        (message "Could not connect jsonrpc")))
+        (file-error
+           (message "Error connecting to Qutebrowser RPC socket: %s" (error-message-string err)))
+        (error
+         (message "Unexpected error when connecting jsonrpc: %s" (error-message-string err)))))
     qutebrowser-rpc-connection))
 
 (defun qutebrowser-rpc-connected-p ()
