@@ -38,6 +38,7 @@
 (require 'consult)
 (require 'exwm)
 (require 'json)
+(require 'jsonrpc)
 (require 'color)
 (require 'cl-lib)
 (require 'dash)
@@ -366,28 +367,28 @@ This list is used to identify running Qutebrowser processes.")
     (setq-local qutebrowser-exwm-current-search search)))
 
 (defun qutebrowser-exwm-update-window-info (window-info &optional accept-nil)
-  (let* ((win-id (alist-get 'win-id window-info))
-         (buffer (exwm--id->buffer win-id))
-         (url (alist-get 'url window-info))
-         (icon-file (alist-get 'icon-file window-info))
-         (hover (alist-get 'hover window-info))
-         (search (alist-get 'search window-info))
-         (mode (alist-get 'mode window-info)))
+  (when-let* ((win-id (plist-get window-info :win-id))
+              (buffer (exwm--id->buffer win-id)))
+    (let* ((url (plist-get window-info :url))
+           (icon-file (plist-get window-info :icon-file))
+           (hover (plist-get window-info :hover))
+           (search (plist-get window-info :search))
+           (mode (plist-get window-info :mode)))
 
-    (when (or mode accept-nil)
-      (qutebrowser-exwm-update-evil-state buffer mode))
+      (when (or mode accept-nil)
+        (qutebrowser-exwm-update-evil-state buffer mode))
 
-    (when (or icon-file accept-nil)
-      (qutebrowser-exwm-update-favicon buffer icon-file))
+      (when (or icon-file accept-nil)
+        (qutebrowser-exwm-update-favicon buffer icon-file))
 
-    (when (or search accept-nil)
-      (qutebrowser-exwm-update-search buffer search))
+      (when (or search accept-nil)
+        (qutebrowser-exwm-update-search buffer search))
 
-    (when (or hover accept-nil)
-      (qutebrowser-exwm-update-hovered-url buffer hover))
+      (when (or hover accept-nil)
+        (qutebrowser-exwm-update-hovered-url buffer hover))
 
-    (when (or url accept-nil)
-      (qutebrowser-exwm-update-current-url buffer url))))
+      (when (or url accept-nil)
+        (qutebrowser-exwm-update-current-url buffer url)))))
 
 ;;;; History database functions
 
@@ -706,15 +707,6 @@ The ORIG-FUN takes ARGS."
 
 ;;;; RPC functions
 
-(defun qutebrowser-rpc-call (data)
-  "Perform RPC call.
-DATA should be an alist, and will be JSON-encode before being sent to
-Qutebrowser."
-  ;; TODO: Document RPC protocol
-  (let ((process (qutebrowser-rpc-get-connection))
-        (json-string (json-encode data)))
-    (process-send-string process (concat json-string "\n"))))
-
 (defun qutebrowser-rpc--bootstrap-server ()
   "Bootstrap the RPC server and hooks by sourcing the config files."
   (let ((ipc (expand-file-name "emacs_ipc.py"
@@ -735,32 +727,43 @@ Qutebrowser."
     (qutebrowser-rpc--bootstrap-server)
     (sit-for 1))
   (when (file-exists-p "/tmp/emacs-ipc")
-      (make-network-process
-       :name "qutebrowser-rpc"
-       :family 'local
-       :filter #'qutebrowser-rpc--receive-data
-       :service "/tmp/emacs-ipc"
-       :sentinel (lambda (proc event)
-                   (when (string= event "connection broken by remote peer\n")
-                     (delete-process proc)
-                     (run-with-timer 10 0 #'qutebrowser-rpc--make-network-process))))))
+    (make-network-process
+     :name "qutebrowser-rpc"
+     :family 'local
+     :service "/tmp/emacs-ipc"
+     :sentinel (lambda (proc event)
+                 (when (string= event "connection broken by remote peer\n")
+                   (delete-process proc))))))
+
+(defvar qutebrowser-rpc-connection nil)
 
 (defun qutebrowser-rpc-get-connection (&optional flush)
-  "Return a process connected to the RPC socket.
+  "Return a `jsonrpc-connection' to the RPC socket.
 If FLUSH is non-nil, delete any existing connection before reconnecting."
   (interactive)
   (let ((process (get-process "qutebrowser-rpc")))
     (when (and flush process)
       (delete-process process)
       (setq process nil))
-    (or process
-        (when-let ((process (qutebrowser-rpc--make-network-process)))
-          (qutebrowser-rpc-request-window-info)
-          process))))
+    (unless (qutebrowser-rpc-connected-p)
+      (if-let ((proc (qutebrowser-rpc--make-network-process)))
+          (progn
+            (setq qutebrowser-rpc-connection
+                  (jsonrpc-process-connection
+                   :name "qutebrowser-jsonrpc"
+                   :process proc
+                   :notification-dispatcher
+                   #'qutebrowser-rpc--notification-dispatcher
+                   :request-dispatcher
+                   #'qutebrowser-rpc--request-dispatcher))
+            (qutebrowser-rpc-request-window-info))
+        (message "Could not connect jsonrpc")))
+    qutebrowser-rpc-connection))
 
 (defun qutebrowser-rpc-connected-p ()
   "Check if connected to the Qutebrowser RPC."
-  (process-live-p (get-process "qutebrowser-rpc")))
+  (and (jsonrpc-process-connection-p qutebrowser-rpc-connection)
+       (jsonrpc-running-p qutebrowser-rpc-connection)))
 
 (defun qutebrowser-rpc-ensure-installed ()
   "Ensure that the Python backend files for RPC and hooks are installed.
@@ -773,38 +776,38 @@ updated it is recommended to run this function when loading the package."
                (expand-file-name file qutebrowser-config-directory)
 	       'overwrite)))
 
+(defun qutebrowser-rpc-request (method &optional params)
+  (let ((conn (qutebrowser-rpc-get-connection)))
+    ;; Qutebrowser reads until newline.
+    ;; Need to add one to avoid hanging the process.
+    (cl-letf (((symbol-function 'jsonrpc--json-encode)
+               (lambda (object)
+                 (concat
+                  (json-serialize object
+                                  :false-object :json-false
+                                  :null-object nil)
+                  "\n"))))
+      (jsonrpc-request conn method params))))
+
+
+;; TODO: Rename and move elsewhere
 (defun qutebrowser-rpc-request-window-info ()
   "Request window-info from Qutebrowser.
 Useful for initializing window information when first connecting to an
 instance with existing windows."
-  (qutebrowser-rpc-call '((request . window-info))))
+  (seq-doseq (win (qutebrowser-rpc-request "window-info" nil))
+    (qutebrowser-exwm-update-window-info win nil)))
 
-(defun qutebrowser-rpc--receive-data (_ data)
-  "Receive DATA from the Qutebrowser RPC.
-DATA can be multiple JSON objects separated by comma.  The data is
-therefore wrapped in square brackets to safely parse as valid JSON."
-  ;; Wrap received data in [] in case multiple messages are received
-  (let* ((messages (json-read-from-string (format "[%s]" data))))
-    (seq-doseq (message messages)
-      (qutebrowser-rpc--receive-message message))))
 
-(defun qutebrowser-rpc--receive-message (message)
-  "Receive a single MESSAGE from RPC."
-  (let ((sig (alist-get 'signal message))
-        (repl-response (alist-get 'repl-response message))
-        (rpc-response (alist-get 'rpc-response message))
-        (window-info (alist-get 'window-info message))
-        (eval (alist-get 'eval message)))
-    (cond
-     (sig (let ((hook (intern-soft (format "qutebrowser-on-%s-functions" sig)))
-                (args (alist-get 'args message)))
-            (qutebrowser-exwm-update-window-info args)
-            (run-hook-with-args hook args)))
-     (window-info (qutebrowser-exwm-update-window-info window-info t))
-     (rpc-response (message rpc-response))
-     (repl-response (qutebrowser-repl-receive-response repl-response))
-     (eval (eval (read eval))))))
+(defun qutebrowser-rpc--notification-dispatcher (conn method params)
+  (let ((hook (intern-soft (format "qutebrowser-on-%s-functions" method))))
+    (qutebrowser-exwm-update-window-info params)
+    (run-hook-with-args hook params)))
 
+;; TODO: Implement methods
+(defun qutebrowser-rpc--request-dispatcher (conn method params)
+  (message "Receive request from QB: %s, %s" method params)
+  "Responding from Emacs!")
 
 ;;;; Command sending functions
 
@@ -1068,8 +1071,13 @@ Creates a temporary file and sources it in Qutebrowser using the
                 (point-max))))
     (push input qutebrowser-repl-history)
     (setq qutebrowser-repl-history-position 0)
-    (qutebrowser-rpc-call `((repl . ,input)))
-    (insert "\n")))
+    (goto-char (point-max))
+    (insert "\n")
+    (insert (qutebrowser-rpc-request "repl" `(:input ,input)) "\n")
+    (insert qutebrowser-repl-prompt)
+    (let ((inhibit-read-only t))
+      (add-text-properties (point-min) (point-max)
+                           '(read-only t rear-nonsticky t)))))
 
 (defun qutebrowser-repl-previous-input ()
   "Cycle backwards through input history."
@@ -1100,16 +1108,6 @@ Creates a temporary file and sources it in Qutebrowser using the
                     (length qutebrowser-repl-prompt))
                  (point-max))
   (insert new-input))
-
-(defun qutebrowser-repl-receive-response (response)
-  "Receive RESPONSE from Qutebrowser and output it in the REPL."
-  (with-current-buffer (qutebrowser-create-repl-buffer)
-    (goto-char (point-max))
-    (insert response "\n")
-    (insert qutebrowser-repl-prompt)
-    (let ((inhibit-read-only t))
-      (add-text-properties (point-min) (point-max)
-                           '(read-only t rear-nonsticky t)))))
 
 (define-derived-mode qutebrowser-repl-mode fundamental-mode "Qutebrowser REPL"
   "Major mode for Qutebrowser REPL."

@@ -158,7 +158,7 @@ class EmacsHookManager:
 
         server = objreg.get("emacs-ipc", None)
         if server:
-            server.send_data({"signal": signal, "args": args})
+            server.send_notification(method=signal, params=args)
         else:
             message.info("No server found! Could not send signal!")
 

@@ -53,72 +53,87 @@ class EmacsIPCServer(IPCServer):
         Args:
             data: The data received from Emacs.
         """
-        json_data = json.loads(data.decode("utf-8"))
-        if "eval" in json_data:
-            self.send_data({"rpc-response": self.eval_or_exec(json_data["eval"])})
-        if "request" in json_data:
-            self.handle_request(json_data["request"], json_data.get("args", {}))
-        if "repl" in json_data:
-            self.send_data({"repl-response": self.eval_or_exec(json_data["repl"])})
 
-    def handle_request(self, request, args={}):
-        """Handle a request for data.
+        try:
+            json_data = json.loads(data.decode("utf-8"))
+        except:
+            json_data = {}
 
-        Currently implemented endpoint is 'window-info', that returns
-        a dictionary containing all information about a window.
-        """
-        if request == "window-info":
-            for window in objreg.window_registry.values():
-                tabbed_browser = window.tabbed_browser
-                mode_manager = modeman.instance(window.win_id)
-                win_id = int(window.winId())
-                try:
-                    # This can fail if the url is empty
-                    url = tabbed_browser.current_url().toString()
-                except:
-                    url = None
-                title = window.windowTitle()
-                fd, icon_file = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
-                os.close(fd)
-                tabbed_browser.windowIcon().pixmap(16,16).save(icon_file)
-                search = tabbed_browser.search_text
-                hover = None # FIXME
-                mode = str(mode_manager.mode)
-                self.send_data({"window-info": {"win-id": win_id,
-                                                "url": url,
-                                                "title": title,
-                                                "icon-file": icon_file,
-                                                "search": search,
-                                                "hover": hover,
-                                                "private": window.is_private,
-                                                "mode": mode}})
+        if "jsonrpc" in json_data:
+            method = json_data.get("method")
+            params = json_data.get("params",[])
+            req_id = json_data.get("id", None)
+
+            match method:
+                case "window-info":
+                    result = self.get_window_info()
+                case "eval":
+                    result = self.eval_or_exec(params["code"])
+                case "repl":
+                    result = self.eval_or_exec(params["input"])
+                case _:
+                    result = f"ERROR: Unknown method {method}"
+
+            self.send_data({"result": result,
+                            "id": req_id})
+
+    def send_notification(self, method, params={}):
+        self.send_data({"method": method,
+                        "params": params})
 
     def send_data(self, data):
-        """Send data to Emacs.
-
-        The data is JSON-encoded before sending over the socket to
-        Emacs. A comma is appended to the end of the JSON string in
-        case multiple JSON messages are received at once.
-
-        Args:
-            data: The data to send. This should be a dictionary, which
-                  Emacs will receive as an alist.
-        """
-        json_data = json.dumps(data) + ","
+        data["jsonrpc"] = "2.0"
+        json_data = json.dumps(data)
+        message = f"Content-Length: {len(json_data)}\r\n\r\n{json_data}\r\n"
         socket = self._get_socket()
         if socket and socket.isOpen():
-            socket.write(QByteArray(json_data.encode("utf-8")))
+            socket.write(QByteArray(message.encode("utf-8")))
             socket.flush()
+
+    def get_window_info(self):
+
+        window_info_list = []
+
+        for window in objreg.window_registry.values():
+            tabbed_browser = window.tabbed_browser
+            mode_manager = modeman.instance(window.win_id)
+            win_id = int(window.winId())
+
+            try:
+                # This can fail if the url is empty
+                url = tabbed_browser.current_url().toString()
+            except:
+                url = None
+
+            title = window.windowTitle()
+            fd, icon_file = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
+            os.close(fd)
+            tabbed_browser.windowIcon().pixmap(16,16).save(icon_file)
+            search = tabbed_browser.search_text
+            hover = None # FIXME
+            mode = str(mode_manager.mode)
+            window_info = {"win-id": win_id,
+                           "url": url,
+                           "title": title,
+                           "icon-file": icon_file,
+                           "search": search,
+                           "hover": hover,
+                           "private": window.is_private,
+                           "mode": mode}
+
+            window_info_list.append(window_info)
+        return window_info_list
 
     # FIXME: :emacs command temporarily disabled because it causes problems when redefined
     #@cmdutils.register(instance="emacs-ipc", maxsplit=0, name="emacs")
-    def send_cmd(self, cmd: str) -> None:
-        """Send a command to be evaluated in Emacs.
+    # FIXME: Implement in jsonrpc
+    #def send_cmd(self, cmd: str) -> None:
+    #    """Send a command to be evaluated in Emacs.
 
-        Args:
-            cmd: The command(s) to be executed in Emacs.
-        """
-        self.send_data({"eval": cmd})
+    #    Args:
+    #        cmd: The command(s) to be executed in Emacs.
+    #    """
+    #    self.send_data({"eval": cmd})
 
 
 EmacsIPCServer()
