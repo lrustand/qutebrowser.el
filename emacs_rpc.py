@@ -54,11 +54,91 @@ class rpcmethod():
                         obj=rpcmethods,
                         update=True)
 
-    def __call__(self, instance, params):
-        if params:
-            return self.method(instance, **params)
-        else:
-            return self.method(instance)
+    def __call__(self, **params):
+        return self.method(**params)
+
+
+@rpcmethod
+def eval(code):
+    """Evaluate or execute code.
+
+    Will first try to evaluate as an expression to return a value.
+    If this is not possible, instead try to execute it as a statement
+    or multi-line code.
+    """
+    try:
+        return str(eval(code))
+    except SyntaxError:
+        exec(code, globals())
+        return ""
+
+
+@rpcmethod
+def command(commands):
+    """Run interactive commands.
+
+    Args:
+        commands: A list of commands to run.
+    """
+
+    if isinstance(commands, str):
+        commands = [commands]
+
+    app.process_pos_args(commands, via_ipc=True)
+    return True
+
+
+@rpcmethod
+def get_window_info():
+    """Get a list of window information.
+
+    Return a list of window information for each window in
+    Qutebrowser. Each item in the list is a dictionary containing
+    the following information:
+
+    Keys:
+        win-id: The X11 window ID.
+        url: The currently visited URL in the window.
+        title: The title of the window.
+        icon-file: A temp file containing the favicon.
+        search: The current search text.
+        hover: The currently hovered link.
+        private: If the window is private.
+        mode: The KeyMode of the window.
+    """
+
+    window_info_list = []
+
+    for window in objreg.window_registry.values():
+        tabbed_browser = window.tabbed_browser
+        mode_manager = modeman.instance(window.win_id)
+        win_id = int(window.winId())
+
+        try:
+            # This can fail if the url is empty
+            url = tabbed_browser.current_url().toString()
+        except Exception:
+            url = None
+
+        title = window.windowTitle()
+        fd, icon_file = mkstemp(prefix="qutebrowser-favicon-",
+                                suffix=".png")
+        os.close(fd)
+        tabbed_browser.windowIcon().pixmap(16, 16).save(icon_file)
+        search = tabbed_browser.search_text
+        hover = None  # FIXME
+        mode = str(mode_manager.mode)
+        window_info = {"win-id": win_id,
+                        "url": url,
+                        "title": title,
+                        "icon-file": icon_file,
+                        "search": search,
+                        "hover": hover,
+                        "private": window.is_private,
+                        "mode": mode}
+
+        window_info_list.append(window_info)
+    return window_info_list
 
 
 class EmacsRPCServer(IPCServer):
@@ -84,34 +164,6 @@ class EmacsRPCServer(IPCServer):
         # message.debug("Ignoring timeout")
         return
 
-    @rpcmethod
-    def eval(self, code):
-        """Evaluate or execute code.
-
-        Will first try to evaluate as an expression to return a value.
-        If this is not possible, instead try to execute it as a statement
-        or multi-line code.
-        """
-        try:
-            return str(eval(code))
-        except SyntaxError:
-            exec(code, globals())
-            return ""
-
-    @rpcmethod
-    def command(self, commands):
-        """Run interactive commands.
-
-        Args:
-            commands: A list of commands to run.
-        """
-
-        if isinstance(commands, str):
-            commands = [commands]
-
-        app.process_pos_args(commands, via_ipc=True)
-        return True
-
     def call_method(self, method, params):
         """Call an RPC method registered with @rpcmethod.
 
@@ -136,11 +188,7 @@ class EmacsRPCServer(IPCServer):
         if not method:
             raise Exception(f"Unknown RPC method {method}")
 
-        # Call the decorated method with the keyword arguments from
-        # params.  The __call__ function of the decorator calls the
-        # actual underlying function and passes a reference to the
-        # EmacsRPCServer object as self.
-        return method(self, params)
+        return method(**params)
 
     def _handle_data(self, data):
         """Handle data received from Emacs.
@@ -272,58 +320,6 @@ class EmacsRPCServer(IPCServer):
         if socket and socket.isOpen():
             socket.write(QByteArray(message.encode("utf-8")))
             socket.flush()
-
-    @rpcmethod
-    def get_window_info(self):
-        """Get a list of window information.
-
-        Return a list of window information for each window in
-        Qutebrowser. Each item in the list is a dictionary containing
-        the following information:
-
-        Keys:
-            win-id: The X11 window ID.
-            url: The currently visited URL in the window.
-            title: The title of the window.
-            icon-file: A temp file containing the favicon.
-            search: The current search text.
-            hover: The currently hovered link.
-            private: If the window is private.
-            mode: The KeyMode of the window.
-        """
-
-        window_info_list = []
-
-        for window in objreg.window_registry.values():
-            tabbed_browser = window.tabbed_browser
-            mode_manager = modeman.instance(window.win_id)
-            win_id = int(window.winId())
-
-            try:
-                # This can fail if the url is empty
-                url = tabbed_browser.current_url().toString()
-            except Exception:
-                url = None
-
-            title = window.windowTitle()
-            fd, icon_file = mkstemp(prefix="qutebrowser-favicon-",
-                                    suffix=".png")
-            os.close(fd)
-            tabbed_browser.windowIcon().pixmap(16, 16).save(icon_file)
-            search = tabbed_browser.search_text
-            hover = None  # FIXME
-            mode = str(mode_manager.mode)
-            window_info = {"win-id": win_id,
-                           "url": url,
-                           "title": title,
-                           "icon-file": icon_file,
-                           "search": search,
-                           "hover": hover,
-                           "private": window.is_private,
-                           "mode": mode}
-
-            window_info_list.append(window_info)
-        return window_info_list
 
 
 EmacsRPCServer()
