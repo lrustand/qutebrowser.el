@@ -18,17 +18,17 @@ from tempfile import mkstemp
 import os
 
 
-class EmacsIPCServer(IPCServer):
-    """IPC server for Emacs."""
+class EmacsRPCServer(IPCServer):
+    """RPC server for Emacs."""
 
     def __init__(self):
-        old_server = objreg.get("emacs-ipc", None)
+        old_server = objreg.get("emacs-rpc", None)
         if old_server:
             message.info("Shutting down old server")
             old_server.shutdown()
 
-        super().__init__("/tmp/emacs-ipc")
-        objreg.register(name = "emacs-ipc",
+        super().__init__("/tmp/emacs-rpc")
+        objreg.register(name = "emacs-rpc",
                         obj = self,
                         update = True)
         self.listen()
@@ -163,7 +163,7 @@ class EmacsIPCServer(IPCServer):
         return window_info_list
 
     # FIXME: :emacs command temporarily disabled because it causes problems when redefined
-    #@cmdutils.register(instance="emacs-ipc", maxsplit=0, name="emacs")
+    #@cmdutils.register(instance="emacs-rpc", maxsplit=0, name="emacs")
     # FIXME: Implement in jsonrpc
     #def send_cmd(self, cmd: str) -> None:
     #    """Send a command to be evaluated in Emacs.
@@ -174,7 +174,7 @@ class EmacsIPCServer(IPCServer):
     #    self.send_data({"eval": cmd})
 
 
-EmacsIPCServer()
+EmacsRPCServer()
 
 
 # Local Variables:

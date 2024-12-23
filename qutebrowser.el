@@ -713,28 +713,28 @@ The ORIG-FUN takes ARGS."
 
 (defun qutebrowser-rpc--bootstrap-server ()
   "Bootstrap the RPC server and hooks by sourcing the config files."
-  (let ((ipc (expand-file-name "emacs_ipc.py"
+  (let ((rpc (expand-file-name "emacs_rpc.py"
                                qutebrowser-config-directory))
         (hooks (expand-file-name "emacs_hooks.py"
                                  qutebrowser-config-directory)))
-    (if (and (file-regular-p ipc)
+    (if (and (file-regular-p rpc)
              (file-regular-p hooks))
         ;; TODO: Detect when it is necessary to do this
         (progn
-          (qutebrowser-config-source ipc)
+          (qutebrowser-config-source rpc)
           (qutebrowser-config-source hooks))
       (message "RPC Python backend not found. Did you install it? Tip: run `qutebrowser-rpc-ensure-installed'."))))
 
 (defun qutebrowser-rpc--make-network-process ()
   "Make a network process connected to the RPC socket."
-  (unless (file-exists-p "/tmp/emacs-ipc")
+  (unless (file-exists-p "/tmp/emacs-rpc")
     (qutebrowser-rpc--bootstrap-server)
     (sit-for 1))
-  (when (file-exists-p "/tmp/emacs-ipc")
+  (when (file-exists-p "/tmp/emacs-rpc")
     (make-network-process
      :name "qutebrowser-rpc"
      :family 'local
-     :service "/tmp/emacs-ipc"
+     :service "/tmp/emacs-rpc"
      :sentinel (lambda (proc event)
                  (when (string= event "connection broken by remote peer\n")
                    (delete-process proc))))))
@@ -774,7 +774,7 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
 To make sure that these files are updated whenever the package is
 updated it is recommended to run this function when loading the package."
   (interactive)
-  (dolist (file '("emacs_ipc.py"
+  (dolist (file '("emacs_rpc.py"
                   "emacs_hooks.py"))
     (copy-file (expand-file-name file qutebrowser--package-directory)
                (expand-file-name file qutebrowser-config-directory)

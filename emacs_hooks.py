@@ -204,11 +204,11 @@ class EmacsHookManager:
             args: The arguments to pass to the signal handler in Emacs.
         """
 
-        server = objreg.get("emacs-ipc", None)
+        server = objreg.get("emacs-rpc", None)
         if server:
             server.send_notification(method=signal, params=args)
         else:
-            message.info("No server found! Could not send signal!")
+            message.info("No RPC server found! Could not send signal!")
 
 
 EmacsHookManager()
