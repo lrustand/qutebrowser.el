@@ -140,7 +140,7 @@ class EmacsHookManager:
         """Called when starting to load a new webpage.
 
         Args:
-            tab: The tab that started loading.
+            window: The window that started loading.
         """
         window_id = int(window.winId())
         self.send_signal("load-started", {"win-id": window_id})
@@ -149,7 +149,7 @@ class EmacsHookManager:
         """Called when finished loading a new webpage.
 
         Args:
-            tab: The tab that finished loading.
+            window: The window that finished loading.
         """
         window_id = int(window.winId())
         self.send_signal("load-finished", {"win-id": window_id})
