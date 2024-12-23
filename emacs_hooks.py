@@ -78,6 +78,31 @@ class EmacsHookManager:
         window.windowIcon().pixmap(16,16).save(path)
         self.send_signal("icon-changed", {"win-id": window_id, "icon-file": path})
 
+    def on_scroll_perc_changed(self, window, x_perc, y_perc):
+        """Called when the scroll position changes.
+
+        Args:
+            window: The window that the scroll position changed in.
+            x_perc: X scroll position in percentage.
+            y_perc: Y scroll position in percentage.
+        """
+        window_id = int(window.winId())
+        self.send_signal("scroll-perc-changed", {"win-id": window_id,
+                                                 "x-scroll-perc": x_perc,
+                                                 "y-scroll-perc": y_perc})
+
+    def on_recently_audible_changed(self, tab):
+        """Called when the audible state changes.
+
+        Args:
+            tab: The tab that the audible state changed in.
+        """
+        window = tab.window()
+        window_id = int(window.winId())
+        recently_audible = tab.audio.is_recently_audible()
+        self.send_signal("recently-audible-changed", {"win-id": window_id,
+                                                      "recently-audible": recently_audible})
+
     def on_search(self, window, search):
         """Called when a search is performed.
 
@@ -110,6 +135,24 @@ class EmacsHookManager:
                                        "left-mode": str(mode),
                                        "mode": "KeyMode.normal"})
 
+    def on_load_started(self, window):
+        """Called when starting to load a new webpage.
+
+        Args:
+            tab: The tab that started loading.
+        """
+        window_id = int(window.winId())
+        self.send_signal("load-started", {"win-id": window_id})
+
+    def on_load_finished(self, window):
+        """Called when finished loading a new webpage.
+
+        Args:
+            tab: The tab that finished loading.
+        """
+        window_id = int(window.winId())
+        self.send_signal("load-finished", {"win-id": window_id})
+
     def enable_tab_hooks(self, tab, _):
         """Enable tab local hooks.
 
@@ -117,6 +160,7 @@ class EmacsHookManager:
             tab: The tab to enable hooks for.
         """
         tab.icon_changed.connect(partial(self.on_icon_changed, tab))
+        tab.audio.recently_audible_changed.connect(partial(self.on_recently_audible_changed, tab))
 
     def enable_window_hooks(self, window):
         """Enable window local hooks.
@@ -135,6 +179,9 @@ class EmacsHookManager:
         tabbed_browser.cur_url_changed.connect(partial(self.on_url_changed, window))
         tabbed_browser.cur_link_hovered.connect(partial(self.on_link_hovered, window))
         tabbed_browser.new_tab.connect(self.enable_tab_hooks)
+        tabbed_browser.cur_load_started.connect(partial(self.on_load_started, window))
+        tabbed_browser.cur_load_finished.connect(partial(self.on_load_finished, window))
+        tabbed_browser.cur_scroll_perc_changed.connect(partial(self.on_scroll_perc_changed, window))
         status.cmd.got_search.connect(partial(self.on_search, window))
 
     def on_new_window(self, window):

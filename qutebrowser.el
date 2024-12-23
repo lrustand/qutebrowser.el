@@ -274,6 +274,18 @@ This list is used to identify running Qutebrowser processes.")
 (defvar qutebrowser-on-got-search-functions '()
   "Functions run when receiving a `got-search` signal.")
 
+(defvar qutebrowser-on-load-started-functions '()
+  "Functions run when receiving a `load-started` signal.")
+
+(defvar qutebrowser-on-load-finished-functions '()
+  "Functions run when receiving a `load-finished` signal.")
+
+(defvar qutebrowser-on-scroll-perc-changed-functions '()
+  "Functions run when receiving a `scroll-perc-changed` signal.")
+
+(defvar qutebrowser-on-recently-audible-changed-functions '()
+  "Functions run when receiving a `recently-audible-changed` signal.")
+
 (defvar qutebrowser--db-object nil
   "Contains a reference to the database connection.")
 
