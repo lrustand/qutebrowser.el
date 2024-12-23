@@ -15,7 +15,8 @@ class EmacsHookManager:
     """Manager for Emacs hooks.
 
     Subscribes to a set of Qt signals exposed by Qutebrowser and
-    forwards them to Emacs.
+    forwards them to Emacs. Communication is done through the central
+    EmacsRPCServer instance registered in objreg.
     """
 
     # TODO: Delete old favicon tempfiles on init
@@ -66,7 +67,7 @@ class EmacsHookManager:
         """Called when the favicon changes.
 
         Saves the new favicon to a tempfile and sends the filename and
-        window ID to Emacs.
+        X11 window ID to Emacs.
 
         Args:
             tab: The tab that the favicon changed in.

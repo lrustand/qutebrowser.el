@@ -1,6 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-"""IPC server for Emacs."""
+"""RPC server for Emacs.
+
+This provides a two-way communication channel between Qutebrowser and
+Emacs, and implements a RPC scheme for executing Python code inside
+the context of the running Qutebrowser instance.
+"""
 
 from PyQt6.QtCore import QByteArray, pyqtSlot
 from qutebrowser.api import message, cmdutils
@@ -35,7 +40,12 @@ class EmacsIPCServer(IPCServer):
         return
 
     def eval_or_exec(self, code):
-        """Evaluate or execute code."""
+        """Evaluate or execute code.
+
+        Will first try to evaluate expression to return a value. If
+        this is not possible, instead try to execute it as a statement
+        or multi-line code.
+        """
         try:
             try:
                 return str(eval(code))
