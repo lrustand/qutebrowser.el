@@ -303,6 +303,15 @@ This list is used to identify running Qutebrowser processes.")
 (defvar-local qutebrowser-exwm-current-search nil
   "Contains the current search terms of Qutebrowser.")
 
+(defvar-local qutebrowser-exwm-recently-audible nil
+  "Contains the recently audible status of Qutebrowser.")
+
+(defvar-local qutebrowser-exwm-x-scroll-perc nil
+  "Contains the current x scroll percentage of Qutebrowser.")
+
+(defvar-local qutebrowser-exwm-y-scroll-perc nil
+  "Contains the current y scroll percentage of Qutebrowser.")
+
 (defvar qutebrowser-exwm-mode-map
   (let ((map (make-sparse-keymap)))
     map)
@@ -321,29 +330,16 @@ This list is used to identify running Qutebrowser processes.")
                                                                   buffer-file-name)))
 ;;;; Hook functions
 
-(defun qutebrowser-exwm-update-current-url (buffer url)
-  "Update the buffer-local variable `qutebrowser-exwm-current-url'."
-  (with-current-buffer buffer
-    (setq-local qutebrowser-exwm-current-url (unless (string-empty-p url)
-                                               url))))
-
-(defun qutebrowser-exwm-update-hovered-url (buffer hover)
-  "Update the currently hovered URL."
-  (with-current-buffer buffer
-    (when (string= hover "") (setq hover nil))
-    (setq-local qutebrowser-exwm-hovered-url hover)))
-
-(defun qutebrowser-exwm-update-favicon (buffer icon-file)
+(defun qutebrowser-exwm-update-favicon (icon-file)
   "Update the favicon."
   (if (and (file-regular-p icon-file)
            ;; Not empty
            (> (nth 7 (file-attributes icon-file)) 0))
-      (with-current-buffer buffer
-        (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
-          (let ((old-icon-file (image-property qutebrowser-exwm-favicon :file)))
-            (setq-local qutebrowser-exwm-favicon image)
-            (when old-icon-file
-              (delete-file old-icon-file)))))
+      (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
+        (let ((old-icon-file (image-property qutebrowser-exwm-favicon :file)))
+          (setq-local qutebrowser-exwm-favicon image)
+          (when old-icon-file
+            (delete-file old-icon-file))))
     ;; Delete invalid/empty icon files
     (delete-file icon-file)))
 
@@ -354,45 +350,58 @@ This list is used to identify running Qutebrowser processes.")
 
 (add-hook 'kill-buffer-hook #'qutebrowser-exwm-delete-favicon-tempfile)
 
-(defun qutebrowser-exwm-update-evil-state (buffer mode)
-  "Set evil state to match Qutebrowser keymode."
-  (with-current-buffer buffer
-    (setq-local qutebrowser-exwm-keymode mode)
-    (pcase mode
-      ("KeyMode.insert" (evil-insert-state))
-      ("KeyMode.caret" (evil-visual-state))
-      ("KeyMode.hint" (evil-motion-state))
-      ("KeyMode.command" (evil-emacs-state))
-      ("KeyMode.normal" (evil-normal-state)))))
+(defun qutebrowser-exwm-update-evil-state (mode)
+  "Set evil state to match Qutebrowser keymode MODE."
+  (setq-local qutebrowser-exwm-keymode mode)
+  (pcase mode
+    ("KeyMode.insert" (evil-insert-state))
+    ("KeyMode.caret" (evil-visual-state))
+    ("KeyMode.hint" (evil-motion-state))
+    ("KeyMode.command" (evil-emacs-state))
+    ("KeyMode.normal" (evil-normal-state))))
 
-(defun qutebrowser-exwm-update-search (buffer search)
-  "Update the variable `qutebrowser-exwm-current-search'."
-  (with-current-buffer buffer
-    (setq-local qutebrowser-exwm-current-search search)))
+(defmacro qutebrowser--with-plist-key (key plist &rest body)
+  "Execute BODY if KEY exists in PLIST, with KEY's value bound.
+KEY should be the name of a plist key without he colon.
+PLIST is the property list to check.
+BODY is one or more forms to execute if KEY is found in PLIST."
+  (declare (indent defun))
+  (let ((key-keyword (intern (concat ":" (symbol-name key)))))
+    `(when (plist-member ,plist ,key-keyword)
+       (let ((,key (plist-get ,plist ,key-keyword)))
+         ,@body))))
 
-(defun qutebrowser-exwm-update-window-info (window-info &optional accept-nil)
+(defmacro qutebrowser--with-plist (plist &rest clauses)
+  "Execute forms based on the presence of keys in PLIST.
+PLIST is the property list to check against.
+CLAUSES are of the form (KEY BODY...), where KEY is a symbol
+and BODY is one or more forms to execute if KEY is in PLIST."
+  (declare (indent 1))
+  `(progn
+     ,@(mapcar (lambda (clause)
+                 (let ((key (car clause))
+                       (body (cdr clause)))
+                   `(qutebrowser--with-plist-key ,key ,plist
+                      ,@body)))
+               clauses)))
+
+(defun qutebrowser-exwm-update-window-info (window-info)
+  "Update buffer-local variables from WINDOW-INFO."
   (when-let* ((win-id (plist-get window-info :win-id))
               (buffer (exwm--id->buffer win-id)))
-    (let* ((url (plist-get window-info :url))
-           (icon-file (plist-get window-info :icon-file))
-           (hover (plist-get window-info :hover))
-           (search (plist-get window-info :search))
-           (mode (plist-get window-info :mode)))
+    (with-current-buffer buffer
+      (qutebrowser--with-plist window-info
+        (mode (qutebrowser-exwm-update-evil-state mode))
+        (icon-file (qutebrowser-exwm-update-favicon icon-file))
+        (search (setq-local qutebrowser-exwm-current-search search))
+        (hover (when (string= hover "") (setq hover nil))
+               (setq-local qutebrowser-exwm-hovered-url hover))
+        (url (setq-local qutebrowser-exwm-current-url
+                         (unless (string-empty-p url) url)))
+        (x-scroll-perc (setq-local qutebrowser-exwm-x-scroll-perc x-scroll-perc))
+        (y-scroll-perc (setq-local qutebrowser-exwm-y-scroll-perc y-scroll-perc))
+        (recently-audible (setq-local qutebrowser-exwm-recently-audible recently-audible))))))
 
-      (when (or mode accept-nil)
-        (qutebrowser-exwm-update-evil-state buffer mode))
-
-      (when (or icon-file accept-nil)
-        (qutebrowser-exwm-update-favicon buffer icon-file))
-
-      (when (or search accept-nil)
-        (qutebrowser-exwm-update-search buffer search))
-
-      (when (or hover accept-nil)
-        (qutebrowser-exwm-update-hovered-url buffer hover))
-
-      (when (or url accept-nil)
-        (qutebrowser-exwm-update-current-url buffer url)))))
 
 ;;;; History database functions
 
@@ -816,7 +825,7 @@ updated it is recommended to run this function when loading the package."
 Useful for initializing window information when first connecting to an
 instance with existing windows."
   (seq-doseq (win (qutebrowser-rpc-request :get-window-info nil))
-    (qutebrowser-exwm-update-window-info win nil)))
+    (qutebrowser-exwm-update-window-info win)))
 
 
 (defun qutebrowser-rpc--notification-dispatcher (conn method params)
