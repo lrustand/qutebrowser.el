@@ -41,7 +41,6 @@
 (require 'jsonrpc)
 (require 'color)
 (require 'cl-lib)
-(require 'dash)
 (require 'evil)
 
 (declare-function evil-emacs-state "ext:evil-states" t t)
@@ -504,12 +503,12 @@ Both buffer names and URLs are used for matching."
   (seq-filter
    (lambda (buffer)
      ;; All search words matching
-     (-all-p (lambda (word)
-               (let ((title (or (buffer-name buffer) ""))
-                     (url (or (qutebrowser-exwm-buffer-url buffer) "")))
-               (or (string-match-p word title)
-                   (string-match-p word url))))
-             words))
+     (seq-every-p (lambda (word)
+                    (let ((title (or (buffer-name buffer) ""))
+                          (url (or (qutebrowser-exwm-buffer-url buffer) "")))
+                      (or (string-match-p word title)
+                          (string-match-p word url))))
+                  words))
    buffers))
 
 (defun qutebrowser-bookmark-filter (words bookmarks)
@@ -518,10 +517,10 @@ Both bookmark name and URLs are used for matching."
   (seq-filter
    (lambda (bookmark)
      ;; All search words matching
-     (-all-p (lambda (word)
-               (or (string-match-p word bookmark)
-                   (string-match-p word (qutebrowser-bookmark-url bookmark))))
-             words))
+     (seq-every-p (lambda (word)
+                    (or (string-match-p word bookmark)
+                        (string-match-p word (qutebrowser-bookmark-url bookmark))))
+                  words))
    bookmarks))
 
 (defun qutebrowser-bookmark-search (&optional input)
