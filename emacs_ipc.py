@@ -47,6 +47,17 @@ class EmacsIPCServer(IPCServer):
         except:
             return "Error!"
 
+    def call_method(self, method, params):
+        match method:
+            case "window-info":
+                return self.get_window_info()
+            case "eval":
+                return self.eval_or_exec(params["code"])
+            case "repl":
+                return self.eval_or_exec(params["input"])
+            case _:
+                return f"ERROR: Unknown method {method}"
+
     def _handle_data(self, data):
         """Handle data received from Emacs.
 
@@ -60,22 +71,39 @@ class EmacsIPCServer(IPCServer):
             json_data = {}
 
         if "jsonrpc" in json_data:
-            method = json_data.get("method")
-            params = json_data.get("params",[])
+            method = json_data.get("method", None)
+            params = json_data.get("params", None)
+            result = json_data.get("result", None)
             req_id = json_data.get("id", None)
 
-            match method:
-                case "window-info":
-                    result = self.get_window_info()
-                case "eval":
-                    result = self.eval_or_exec(params["code"])
-                case "repl":
-                    result = self.eval_or_exec(params["input"])
-                case _:
-                    result = f"ERROR: Unknown method {method}"
+            if method and req_id:
+                message_type = "request"
+                self.handle_request(method, params, req_id)
+            elif method:
+                message_type = "notification"
+                self.handle_notification(method, params)
+            elif result:
+                message_type = "response"
+            else:
+                message.info(f"Unknown jsonrpc message type: {data}")
 
-            self.send_data({"result": result,
-                            "id": req_id})
+    def handle_notification(self, method, params):
+        self.call_method(method, params)
+
+    def handle_request(self, method, params, req_id):
+        result = self.call_method(method, params)
+        self.send_response(result=result, req_id=req_id)
+
+    def send_response(self, result=None, error=None, req_id=None):
+        response = {"id": req_id}
+        if error:
+            response["error"] = error
+        elif result:
+            response["result"] = result
+        else:
+            message.info("Invalid call to send_response. Missing result/error.")
+            return
+        self.send_data(response)
 
     def send_notification(self, method, params={}):
         self.send_data({"method": method,
