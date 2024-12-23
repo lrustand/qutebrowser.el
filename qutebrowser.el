@@ -241,7 +241,8 @@ query is built, see `qutebrowser--history-search'."
   '("qutebrowser"
     ".qutebrowser-real" ;; Process name on Guix
     ".qutebrowser-re"   ;; Process name on Guix, mangled by Emacs
-    "QtWebEngineProcess")
+    "QtWebEngineProcess"
+    "QtWebEngineProc") ;; Mangled by emacs
   "List of possible names of the Qutebrowser process.
 This list is used to identify running Qutebrowser processes.")
 
