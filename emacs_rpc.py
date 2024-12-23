@@ -185,6 +185,9 @@ class EmacsRPCServer(IPCServer):
         rpcmethods = objreg.get("rpcmethods", {})
         method = rpcmethods.get(method, None)
 
+        if not params:
+            params = {}
+
         if not method:
             raise Exception(f"Unknown RPC method {method}")
 
