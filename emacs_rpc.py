@@ -22,28 +22,30 @@ class EmacsRPCServer(IPCServer):
     """RPC server for Emacs."""
 
     def __init__(self):
+        """Initialize RPC server instance."""
         old_server = objreg.get("emacs-rpc", None)
         if old_server:
             message.info("Shutting down old server")
             old_server.shutdown()
 
         super().__init__("/tmp/emacs-rpc")
-        objreg.register(name = "emacs-rpc",
-                        obj = self,
-                        update = True)
+        objreg.register(name="emacs-rpc",
+                        obj=self,
+                        update=True)
         self.listen()
 
     @pyqtSlot()
     def on_timeout(self):
+        """Disable the timeout function of IPCServer."""
         # this needs to be adjusted
-        #message.debug("Ignoring timeout")
+        # message.debug("Ignoring timeout")
         return
 
     def eval_or_exec(self, code):
         """Evaluate or execute code.
 
-        Will first try to evaluate expression to return a value. If
-        this is not possible, instead try to execute it as a statement
+        Will first try to evaluate as an expression to return a value.
+        If this is not possible, instead try to execute it as a statement
         or multi-line code.
         """
         try:
@@ -74,7 +76,6 @@ class EmacsRPCServer(IPCServer):
         Args:
             data: The data received from Emacs.
         """
-
         try:
             json_data = json.loads(data.decode("utf-8"))
         except:
@@ -98,9 +99,11 @@ class EmacsRPCServer(IPCServer):
                 message.info(f"Unknown jsonrpc message type: {data}")
 
     def handle_notification(self, method, params):
+        """Handle a received notification."""
         self.call_method(method, params)
 
     def handle_request(self, method, params, req_id):
+        """Handle a received request."""
         result = self.call_method(method, params)
         self.send_response(result=result, req_id=req_id)
 
@@ -116,19 +119,51 @@ class EmacsRPCServer(IPCServer):
         self.send_data(response)
 
     def send_notification(self, method, params={}):
+        """Send a JSON-RPC notification.
+
+        Does not expect a response.
+        """
         self.send_data({"method": method,
                         "params": params})
 
     def send_data(self, data):
-        data["jsonrpc"] = "2.0"
+        """Send data over JSON-RPC.
+
+        The data is prepended with some HTTP style headers as expected
+        by the jsonrpc-process-connection implementation in Emacs.
+
+        The "jsonrpc" key is added with a value of "2.0" if it is not
+        already present in the data.
+
+        Args:
+            data: JSON-serializable data to send.
+        """
+        data["jsonrpc"] = data.get("jsonrpc", "2.0")
         json_data = json.dumps(data)
         message = f"Content-Length: {len(json_data)}\r\n\r\n{json_data}\r\n"
         socket = self._get_socket()
+
         if socket and socket.isOpen():
             socket.write(QByteArray(message.encode("utf-8")))
             socket.flush()
 
     def get_window_info(self):
+        """Get a list of window information.
+
+        Return a list of window information for each window in
+        Qutebrowser. Each item in the list is a dictionary containing
+        the following information:
+
+        Keys:
+            win-id: The X11 window ID.
+            url: The currently visited URL in the window.
+            title: The title of the window.
+            icon-file: A temp file containing the favicon.
+            search: The current search text.
+            hover: The currently hovered link.
+            private: If the window is private.
+            mode: The KeyMode of the window.
+        """
 
         window_info_list = []
 
@@ -140,15 +175,16 @@ class EmacsRPCServer(IPCServer):
             try:
                 # This can fail if the url is empty
                 url = tabbed_browser.current_url().toString()
-            except:
+            except Exception:
                 url = None
 
             title = window.windowTitle()
-            fd, icon_file = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
+            fd, icon_file = mkstemp(prefix="qutebrowser-favicon-",
+                                    suffix=".png")
             os.close(fd)
-            tabbed_browser.windowIcon().pixmap(16,16).save(icon_file)
+            tabbed_browser.windowIcon().pixmap(16, 16).save(icon_file)
             search = tabbed_browser.search_text
-            hover = None # FIXME
+            hover = None  # FIXME
             mode = str(mode_manager.mode)
             window_info = {"win-id": win_id,
                            "url": url,
@@ -161,17 +197,6 @@ class EmacsRPCServer(IPCServer):
 
             window_info_list.append(window_info)
         return window_info_list
-
-    # FIXME: :emacs command temporarily disabled because it causes problems when redefined
-    #@cmdutils.register(instance="emacs-rpc", maxsplit=0, name="emacs")
-    # FIXME: Implement in jsonrpc
-    #def send_cmd(self, cmd: str) -> None:
-    #    """Send a command to be evaluated in Emacs.
-
-    #    Args:
-    #        cmd: The command(s) to be executed in Emacs.
-    #    """
-    #    self.send_data({"eval": cmd})
 
 
 EmacsRPCServer()
