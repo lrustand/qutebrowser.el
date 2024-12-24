@@ -246,7 +246,8 @@ class EmacsHookManager:
             message.info("No RPC server found! Could not send signal!")
 
 
-EmacsHookManager()
+if __name__ == "config":
+    EmacsHookManager()
 
 # Local Variables:
 # eval: (qutebrowser-config-mode)

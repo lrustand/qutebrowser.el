@@ -325,7 +325,8 @@ class EmacsRPCServer(IPCServer):
             socket.flush()
 
 
-EmacsRPCServer()
+if __name__ == "config":
+    EmacsRPCServer()
 
 
 # Local Variables:
