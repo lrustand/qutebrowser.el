@@ -58,7 +58,7 @@ class rpcmethod():
 
 
 @rpcmethod
-def eval(code):
+def EVAL(code):
     """Evaluate or execute code.
 
     Will first try to evaluate as an expression to return a value.
