@@ -8,9 +8,8 @@ the context of the running Qutebrowser instance.
 """
 
 from PyQt6.QtCore import QByteArray, pyqtSlot
-from qutebrowser.api import message, cmdutils
+from qutebrowser.api import message
 from qutebrowser.keyinput import modeman
-from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
 from qutebrowser.utils import objreg
 from qutebrowser import app
