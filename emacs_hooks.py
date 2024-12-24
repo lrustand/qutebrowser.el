@@ -24,9 +24,9 @@ class EmacsHookManager:
 
         old_manager = objreg.get("emacs-hook-manager", None)
 
-        objreg.register(name = "emacs-hook-manager",
-                        obj = self,
-                        update = True)
+        objreg.register(name="emacs-hook-manager",
+                        obj=self,
+                        update=True)
 
         # Enable the window and tab hooks on startup
         if objreg.window_registry:
@@ -50,7 +50,11 @@ class EmacsHookManager:
         """
         url = url.toString()
         window_id = int(window.winId())
-        self.send_signal("url-changed", {"win-id": window_id, "url": url})
+
+        data = {"win-id": window_id,
+                "url": url}
+
+        self.send_signal("url-changed", data)
 
     def on_link_hovered(self, window, url):
         """Called when a link is hover or unhovered.
@@ -61,7 +65,11 @@ class EmacsHookManager:
                  was an unhovering, the URL is ''.
         """
         window_id = int(window.winId())
-        self.send_signal("link-hovered", {"win-id": window_id, "hover": url})
+
+        data = {"win-id": window_id,
+                "hover": url}
+
+        self.send_signal("link-hovered", data)
 
     def on_icon_changed(self, tab):
         """Called when the favicon changes.
@@ -74,10 +82,14 @@ class EmacsHookManager:
         """
         window = tab.window()
         window_id = int(window.winId())
-        fd, path = mkstemp(suffix=".png", prefix="qutebrowser-favicon-")
+        fd, path = mkstemp(prefix="qutebrowser-favicon-", suffix=".png")
         os.close(fd)
-        window.windowIcon().pixmap(16,16).save(path)
-        self.send_signal("icon-changed", {"win-id": window_id, "icon-file": path})
+        window.windowIcon().pixmap(16, 16).save(path)
+
+        data = {"win-id": window_id,
+                "icon-file": path}
+
+        self.send_signal("icon-changed", data)
 
     def on_scroll_perc_changed(self, window, x_perc, y_perc):
         """Called when the scroll position changes.
@@ -88,9 +100,12 @@ class EmacsHookManager:
             y_perc: Y scroll position in percentage.
         """
         window_id = int(window.winId())
-        self.send_signal("scroll-perc-changed", {"win-id": window_id,
-                                                 "x-scroll-perc": x_perc,
-                                                 "y-scroll-perc": y_perc})
+
+        data = {"win-id": window_id,
+                "x-scroll-perc": x_perc,
+                "y-scroll-perc": y_perc}
+
+        self.send_signal("scroll-perc-changed", data)
 
     def on_recently_audible_changed(self, tab):
         """Called when the audible state changes.
@@ -101,8 +116,11 @@ class EmacsHookManager:
         window = tab.window()
         window_id = int(window.winId())
         recently_audible = tab.audio.is_recently_audible()
-        self.send_signal("recently-audible-changed", {"win-id": window_id,
-                                                      "recently-audible": recently_audible})
+
+        data = {"win-id": window_id,
+                "recently-audible": recently_audible}
+
+        self.send_signal("recently-audible-changed", data)
 
     def on_search(self, window, search):
         """Called when a search is performed.
@@ -112,7 +130,11 @@ class EmacsHookManager:
             search: The entered search term.
         """
         window_id = int(window.winId())
-        self.send_signal("got-search", {"win-id": window_id, "search": search})
+
+        data = {"win-id": window_id,
+                "search": search}
+
+        self.send_signal("got-search", data)
 
     def on_enter_mode(self, window, mode):
         """Called when a mode is entered.
@@ -122,7 +144,11 @@ class EmacsHookManager:
             mode: The mode that was entered.
         """
         window_id = int(window.winId())
-        self.send_signal("entered-mode", {"win-id": window_id, "mode": str(mode)})
+
+        data = {"win-id": window_id,
+                "mode": str(mode)}
+
+        self.send_signal("entered-mode", data)
 
     def on_leave_mode(self, window, mode):
         """Called when a mode is left.
@@ -132,9 +158,12 @@ class EmacsHookManager:
             mode: The mode that was left.
         """
         window_id = int(window.winId())
-        self.send_signal("left-mode", {"win-id": window_id,
-                                       "left-mode": str(mode),
-                                       "mode": "KeyMode.normal"})
+
+        data = {"win-id": window_id,
+                "left-mode": str(mode),
+                "mode": "KeyMode.normal"}
+
+        self.send_signal("left-mode", data)
 
     def on_load_started(self, window):
         """Called when starting to load a new webpage.
@@ -161,7 +190,8 @@ class EmacsHookManager:
             tab: The tab to enable hooks for.
         """
         tab.icon_changed.connect(partial(self.on_icon_changed, tab))
-        tab.audio.recently_audible_changed.connect(partial(self.on_recently_audible_changed, tab))
+        tab.audio.recently_audible_changed.connect(
+            partial(self.on_recently_audible_changed, tab))
 
     def enable_window_hooks(self, window):
         """Enable window local hooks.
@@ -177,12 +207,17 @@ class EmacsHookManager:
         mode_manager.entered.connect(partial(self.on_enter_mode, window))
         mode_manager.entered.connect(partial(self.on_enter_mode, window))
         mode_manager.left.connect(partial(self.on_leave_mode, window))
-        tabbed_browser.cur_url_changed.connect(partial(self.on_url_changed, window))
-        tabbed_browser.cur_link_hovered.connect(partial(self.on_link_hovered, window))
+        tabbed_browser.cur_url_changed.connect(
+            partial(self.on_url_changed, window))
+        tabbed_browser.cur_link_hovered.connect(
+            partial(self.on_link_hovered, window))
         tabbed_browser.new_tab.connect(self.enable_tab_hooks)
-        tabbed_browser.cur_load_started.connect(partial(self.on_load_started, window))
-        tabbed_browser.cur_load_finished.connect(partial(self.on_load_finished, window))
-        tabbed_browser.cur_scroll_perc_changed.connect(partial(self.on_scroll_perc_changed, window))
+        tabbed_browser.cur_load_started.connect(
+            partial(self.on_load_started, window))
+        tabbed_browser.cur_load_finished.connect(
+            partial(self.on_load_finished, window))
+        tabbed_browser.cur_scroll_perc_changed.connect(
+            partial(self.on_scroll_perc_changed, window))
         status.cmd.got_search.connect(partial(self.on_search, window))
 
     def on_new_window(self, window):

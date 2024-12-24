@@ -129,13 +129,13 @@ def get_window_info():
         hover = None  # FIXME
         mode = str(mode_manager.mode)
         window_info = {"win-id": win_id,
-                        "url": url,
-                        "title": title,
-                        "icon-file": icon_file,
-                        "search": search,
-                        "hover": hover,
-                        "private": window.is_private,
-                        "mode": mode}
+                       "url": url,
+                       "title": title,
+                       "icon-file": icon_file,
+                       "search": search,
+                       "hover": hover,
+                       "private": window.is_private,
+                       "mode": mode}
 
         window_info_list.append(window_info)
     return window_info_list

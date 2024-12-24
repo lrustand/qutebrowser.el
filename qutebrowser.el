@@ -335,7 +335,9 @@ single property for a single window.")
 ;;;; Hook functions
 
 (defun qutebrowser-exwm-update-favicon (icon-file)
-  "Update the favicon."
+  "Update the favicon.
+ICON-FILE is a temp-file containing the favicon.  Any previous ICON-FILE
+will be deleted."
   (if (and (file-regular-p icon-file)
            ;; Not empty
            (> (nth 7 (file-attributes icon-file)) 0))
@@ -477,6 +479,7 @@ Return up to LIMIT results."
     url))
 
 (defun qutebrowser--strip-tofus (str)
+  "Return STR stripped of any consult tofus."
   (let* ((end (length str)))
     (while (and (> end 0) (consult--tofu-p (aref str (1- end))))
       (cl-decf end))
@@ -787,6 +790,7 @@ updated it is recommended to run this function when loading the package."
 	       'overwrite)))
 
 (defun qutebrowser--json-encode-with-newline (object)
+  "JSON-encode OBJECT and add a newline."
   ;; Qutebrowser reads until newline.
   ;; Need to add one to avoid hanging the process.
   ;; FIXME: Making a new subclass of jsonrpc-connection would solve this
@@ -797,6 +801,10 @@ updated it is recommended to run this function when loading the package."
    "\n"))
 
 (defun qutebrowser-rpc-request (method &optional params)
+  "Send an RPC request synchronously and wait for a response.
+METHOD is the RPC method to call.
+PARAMS are the arguments for the method, and should be a plist
+containing keyword arguments."
   (let ((conn (qutebrowser-rpc-get-connection)))
     ;; Qutebrowser reads until newline.
     ;; Need to add one to avoid hanging the process.
@@ -805,6 +813,10 @@ updated it is recommended to run this function when loading the package."
       (jsonrpc-request conn method params))))
 
 (defun qutebrowser-rpc-notify (method &optional params)
+  "Send an RPC notification and do not expect a response.
+METHOD is the RPC method to call.
+PARAMS are the arguments for the method, and should be a plist
+containing keyword arguments."
   (let ((conn (qutebrowser-rpc-get-connection)))
     ;; Qutebrowser reads until newline.
     ;; Need to add one to avoid hanging the process.
@@ -823,6 +835,10 @@ instance with existing windows."
 
 
 (defun qutebrowser-rpc--notification-dispatcher (conn method params)
+  "Dispatcher for RPC notifications received from Qutebrowser.
+CONN is the `jsonrpc-connection' the request was received on.
+METHOD is the method that was called.
+PARAMS are the parameters given."
   (let* ((hook (intern-soft (format "qutebrowser-on-%s-functions" method)))
          (win-id (plist-get params :win-id))
          (buffer (exwm--id->buffer win-id)))
@@ -834,6 +850,10 @@ instance with existing windows."
 
 ;; TODO: Implement methods
 (defun qutebrowser-rpc--request-dispatcher (conn method params)
+  "Dispatcher for RPC requests received from Qutebrowser.
+CONN is the `jsonrpc-connection' the request was received on.
+METHOD is the method that was called.
+PARAMS are the parameters given."
   (message "Receive request from QB: %s, %s" method params)
   "Responding from Emacs!")
 
