@@ -16,7 +16,6 @@ from qutebrowser import app
 import json
 from tempfile import mkstemp
 import os
-import inspect
 import traceback
 
 
@@ -36,15 +35,6 @@ class rpcmethod():
     def __init__(self, method):
         self.method = method
         self.name = method.__name__.lower().replace('_', '-')
-
-        signature = inspect.signature(method)
-        self.params_info = {}
-
-        # Get the parameter names and default values
-        for name, param in signature.parameters.items():
-            if name != 'self':
-                default = param.default is not inspect.Parameter.empty
-                self.params_info[name] = default
 
         # Register the method in objreg
         rpcmethods = objreg.get("rpcmethods", {})
