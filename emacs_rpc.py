@@ -54,7 +54,14 @@ class rpcmethod():
                         update=True)
 
     def __call__(self, **params):
-        return self.method(**params)
+
+        # Convert parameter names
+        converted_params = {}
+        for key, value in params.items():
+            key = key.lower().replace("-", "_")
+            converted_params[key] = value
+
+        return self.method(**converted_params)
 
 
 @rpcmethod
