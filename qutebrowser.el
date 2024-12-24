@@ -227,6 +227,128 @@ query is built, see `qutebrowser--history-search'."
   :group 'qutebrowser
   :group 'faces)
 
+(defgroup qutebrowser-hooks nil
+  "Hooks for various Qutebrowser events.
+All the hooks having a name like qutebrowser-on-SOME-SIGNAL-functions
+are ran when the Qt signal SOME-SIGNAL is emitted in Qutebrowser.  The
+functions are called with a plist containing any information related to
+the signal that was emitted.  This plist usually contains WIN-ID which
+is an X11 window ID of the window that emitted the signal.
+
+If the plist contains a WIN-ID that can be resolved to an EXWM buffer,
+the hooks are run with that buffer as `current-buffer'.
+
+The hooks are automatically dispatched from
+`qutebrowser-rpc--notification-dispatcher' based on the name of the
+signal received."
+  :group 'qutebrowser)
+
+(defcustom qutebrowser-on-entered-mode-functions '()
+  "Functions run when receiving a `entered-mode` signal.
+The functions are run with one argument, a plist containing WIN-ID and
+MODE.  See also `qutebrowser-on-left-mode-functions'."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-left-mode-functions '()
+  "Functions run when receiving a `left-mode` signal.
+The functions are run with one argument, a plist containing WIN-ID,
+LEFT-MODE, and MODE.  Where LEFT-MODE is the mode that was left, and
+MODE is the new mode after leaving the mode.
+
+See also `qutebrowser-on-entered-mode-functions'."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-new-window-functions '()
+  "Functions run when receiving a `new-window` signal.
+The functions are run with one argument, a plist containing WIN-ID"
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-url-changed-functions '()
+  "Functions run when receiving a `url-changed` signal.
+The functions are run with one argument, a plist containing WIN-ID and
+URL.  See also `qutebrowser-on-link-hovered-functions'."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-link-hovered-functions '()
+  "Functions run when receiving a `link-hovered` signal.
+The functions are run with one argument, a plist containing WIN-ID and
+HOVER.  See also `qutebrowser-on-url-changed-functions'."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-icon-changed-functions '()
+  "Functions run when receiving a `icon-changed` signal.
+The functions are run with one argument, a plist containing WIN-ID and
+ICON-FILE."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-got-search-functions '()
+  "Functions run when receiving a `got-search` signal.
+The functions are run with one argument, a plist containing WIN-ID and
+SEARCH."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-load-started-functions '()
+  "Functions run when receiving a `load-started` signal.
+The functions are run with one argument, a plist containing WIN-ID."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-load-finished-functions '()
+  "Functions run when receiving a `load-finished` signal.
+The functions are run with one argument, a plist containing WIN-ID."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-scroll-perc-changed-functions '()
+  "Functions run when receiving a `scroll-perc-changed` signal.
+The functions are run with one argument, a plist containing WIN-ID,
+X-SCROLL-PERC, and Y-SCROLL-PERC."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-on-recently-audible-changed-functions '()
+  "Functions run when receiving a `recently-audible-changed` signal.
+The functions are run with one argument, a plist containing WIN-ID and
+RECENTLY-AUDIBLE."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-update-window-info-functions
+  '(qutebrowser-exwm-update-window-info)
+  "Functions to run with updated information about windows.
+These functions should not be considered as hooks for any kind of event,
+and can be triggered both manually and automatically by various functions
+to refresh the local copy of window information.
+
+The functions are called with whatever new window information was
+received, whether that is a full list of window properties, or just a
+single property for a single window.  Any time a signal is received from
+Qutebrowser, this hook is triggered in addition to the corresponding
+qutebrowser-on-SIGNAL-functions hook.
+
+The window information plist contains (one or more of) the following keys:
+
+  - `:win-id' is the X11 window ID of the window the informations is about.
+  - `:url' is the currently visited URL.
+  - `:title' is the title of the window.
+  - `:icon-file' is a temp-file containing the favicon.
+  - `:search' is the active search term.
+  - `:hover' is the URL of the currently hovered link.
+  - `:private' is t if window is private.
+  - `:mode' is the KeyMode of the window.
+  - `:recently-audible' is t if the window is currently or was recently audible.
+  - `:x-scroll-perc' is the scroll percentage in the x direction.
+  - `:y-scroll-perc' is the scroll percentage in the y direction."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
 ;;;; Variables
 
 (defvar qutebrowser-process-names
@@ -241,54 +363,6 @@ This list is used to identify running Qutebrowser processes.")
 (defvar qutebrowser-history-matching-pattern
   "(url || title) LIKE '%%%s%%'"
   "SQL matching pattern used for each input word.")
-
-(defvar qutebrowser-on-entered-mode-functions '()
-  "Functions run when receiving a `entered-mode` signal.")
-
-(defvar qutebrowser-on-left-mode-functions '()
-  "Functions run when receiving a `left-mode` signal.")
-
-(defvar qutebrowser-on-new-window-functions '()
-  "Functions run when receiving a `new-window` signal.")
-
-;; This triggers ~300 times (maybe once per line?)
-(defvar qutebrowser-on-config-changed-functions '()
-  "Functions run when receiving a `config-changed` signal.")
-
-(defvar qutebrowser-on-url-changed-functions '()
-  "Functions run when receiving a `url-changed` signal.")
-
-(defvar qutebrowser-on-link-hovered-functions '()
-  "Functions run when receiving a `link-hovered` signal.")
-
-(defvar qutebrowser-on-icon-changed-functions '()
-  "Functions run when receiving a `icon-changed` signal.")
-
-(defvar qutebrowser-on-got-search-functions '()
-  "Functions run when receiving a `got-search` signal.")
-
-(defvar qutebrowser-on-load-started-functions '()
-  "Functions run when receiving a `load-started` signal.")
-
-(defvar qutebrowser-on-load-finished-functions '()
-  "Functions run when receiving a `load-finished` signal.")
-
-(defvar qutebrowser-on-scroll-perc-changed-functions '()
-  "Functions run when receiving a `scroll-perc-changed` signal.")
-
-(defvar qutebrowser-on-recently-audible-changed-functions '()
-  "Functions run when receiving a `recently-audible-changed` signal.")
-
-(defvar qutebrowser-update-window-info-functions
-  '(qutebrowser-exwm-update-window-info)
-  "Functions to run with updated information about windows.
-These functions should not be considered as hooks for any kind of event,
-and can be triggered both manually and automatically by various functions
-to refresh the local copy of window information.
-
-The functions are called with whatever new window information was
-received, whether that is a full list of window properties, or just a
-single property for a single window.")
 
 (defvar qutebrowser--db-object nil
   "Contains a reference to the database connection.")
