@@ -182,15 +182,15 @@ class EmacsRPCServer(IPCServer):
         """
 
         rpcmethods = objreg.get("rpcmethods", {})
-        method = rpcmethods.get(method, None)
+        function = rpcmethods.get(method)
 
         if not params:
             params = {}
 
-        if not method:
+        if not function:
             raise Exception(f"Unknown RPC method {method}")
 
-        return method(**params)
+        return function(**params)
 
     def _handle_data(self, data):
         """Handle data received from Emacs.
