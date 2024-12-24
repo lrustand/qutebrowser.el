@@ -41,13 +41,6 @@
 (require 'jsonrpc)
 (require 'color)
 (require 'cl-lib)
-(require 'evil)
-
-(declare-function evil-emacs-state "ext:evil-states" t t)
-(declare-function evil-motion-state "ext:evil-states" t t)
-(declare-function evil-visual-state "ext:evil-states" t t)
-(declare-function evil-insert-state "ext:evil-states" t t)
-(declare-function evil-normal-state "ext:evil-states" t t)
 
 ;;;; Customizable variables
 
@@ -286,6 +279,17 @@ This list is used to identify running Qutebrowser processes.")
 (defvar qutebrowser-on-recently-audible-changed-functions '()
   "Functions run when receiving a `recently-audible-changed` signal.")
 
+(defvar qutebrowser-update-window-info-functions
+  '(qutebrowser-exwm-update-window-info)
+  "Functions to run with updated information about windows.
+These functions should not be considered as hooks for any kind of event,
+and can be triggered both manually and automatically by various functions
+to refresh the local copy of window information.
+
+The functions are called with whatever new window information was
+received, whether that is a full list of window properties, or just a
+single property for a single window.")
+
 (defvar qutebrowser--db-object nil
   "Contains a reference to the database connection.")
 
@@ -350,16 +354,6 @@ This list is used to identify running Qutebrowser processes.")
 
 (add-hook 'kill-buffer-hook #'qutebrowser-exwm-delete-favicon-tempfile)
 
-(defun qutebrowser-exwm-update-evil-state (mode)
-  "Set evil state to match Qutebrowser keymode MODE."
-  (setq-local qutebrowser-exwm-keymode mode)
-  (pcase mode
-    ("KeyMode.insert" (evil-insert-state))
-    ("KeyMode.caret" (evil-visual-state))
-    ("KeyMode.hint" (evil-motion-state))
-    ("KeyMode.command" (evil-emacs-state))
-    ("KeyMode.normal" (evil-normal-state))))
-
 (defmacro qutebrowser--with-plist-key (key plist &rest body)
   "Execute BODY if KEY exists in PLIST, with KEY's value bound.
 KEY should be the name of a plist key without he colon.
@@ -391,7 +385,7 @@ and BODY is one or more forms to execute if KEY is in PLIST."
               (buffer (exwm--id->buffer win-id)))
     (with-current-buffer buffer
       (qutebrowser--with-plist window-info
-        (mode (qutebrowser-exwm-update-evil-state mode))
+        (mode (setq-local qutebrowser-exwm-keymode mode))
         (icon-file (qutebrowser-exwm-update-favicon icon-file))
         (search (setq-local qutebrowser-exwm-current-search search))
         (hover (when (string= hover "") (setq hover nil))
@@ -825,14 +819,14 @@ updated it is recommended to run this function when loading the package."
 Useful for initializing window information when first connecting to an
 instance with existing windows."
   (seq-doseq (win (qutebrowser-rpc-request :get-window-info nil))
-    (qutebrowser-exwm-update-window-info win)))
+    (run-hook-with-args 'qutebrowser-update-window-info-functions win)))
 
 
 (defun qutebrowser-rpc--notification-dispatcher (conn method params)
   (let* ((hook (intern-soft (format "qutebrowser-on-%s-functions" method)))
          (win-id (plist-get params :win-id))
          (buffer (exwm--id->buffer win-id)))
-    (qutebrowser-exwm-update-window-info params)
+    (run-hook-with-args 'qutebrowser-update-window-info-functions params)
     (if buffer
         (with-current-buffer buffer
           (run-hook-with-args hook params))
