@@ -916,10 +916,8 @@ PARAMS are the parameters given."
   (let* ((hook (intern-soft (format "qutebrowser-on-%s-functions" method)))
          (win-id (plist-get params :win-id))
          (buffer (exwm--id->buffer win-id)))
-    (run-hook-with-args 'qutebrowser-update-window-info-functions params)
-    (if buffer
-        (with-current-buffer buffer
-          (run-hook-with-args hook params))
+    (with-current-buffer (or buffer (current-buffer))
+      (run-hook-with-args 'qutebrowser-update-window-info-functions params)
       (run-hook-with-args hook params))))
 
 ;; TODO: Implement methods
