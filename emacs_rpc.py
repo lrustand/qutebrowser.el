@@ -191,6 +191,9 @@ def get_window_info():
         hover: The currently hovered link.
         private: If the window is private.
         mode: The KeyMode of the window.
+        recently-audible: The audible status of the window.
+        x-scroll-perc: The scroll percentage in the x direction.
+        y-scroll-perc: The scroll percentage in the y direction.
     """
 
     window_info_list = []
@@ -214,6 +217,9 @@ def get_window_info():
         search = tabbed_browser.search_text
         hover = None  # FIXME
         mode = str(mode_manager.mode)
+        recently_audible = is_window_audible(win_id=win_id)
+        x_scroll, y_scroll = get_window_scroll(win_id=win_id)
+
         window_info = {"win-id": win_id,
                        "url": url,
                        "title": title,
@@ -221,7 +227,10 @@ def get_window_info():
                        "search": search,
                        "hover": hover,
                        "private": window.is_private,
-                       "mode": mode}
+                       "mode": mode,
+                       "recently-audible": recently_audible,
+                       "x-scroll-perc": x_scroll,
+                       "y-scroll-perc": y_scroll}
 
         window_info_list.append(window_info)
     return window_info_list
