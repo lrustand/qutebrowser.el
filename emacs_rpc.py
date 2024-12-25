@@ -43,7 +43,7 @@ class rpcmethod():
                         obj=rpcmethods,
                         update=True)
 
-    def __call__(self, **params):
+    def __call__(self, *args, **params):
 
         # Convert parameter names
         converted_params = {}
@@ -51,7 +51,7 @@ class rpcmethod():
             key = key.lower().replace("-", "_")
             converted_params[key] = value
 
-        return self.method(**converted_params)
+        return self.method(*args, **converted_params)
 
 
 def get_tabs(window):
@@ -217,8 +217,8 @@ def get_window_info():
         search = tabbed_browser.search_text
         hover = None  # FIXME
         mode = str(mode_manager.mode)
-        recently_audible = is_window_audible(win_id=win_id)
-        x_scroll, y_scroll = get_window_scroll(win_id=win_id)
+        recently_audible = is_window_audible(win_id)
+        x_scroll, y_scroll = get_window_scroll(win_id)
 
         window_info = {"win-id": win_id,
                        "url": url,
