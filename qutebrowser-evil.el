@@ -27,21 +27,32 @@
 (require 'exwm)
 
 
+(defvar qutebrowser-evil-state-mappings
+  '(("KeyMode.insert" #'evil-insert-state)
+    ("KeyMode.caret" #'evil-visual-state)
+    ("KeyMode.hint" #'evil-motion-state)
+    ("KeyMode.command" #'evil-emacs-state)
+    ("KeyMode.normal" #'evil-normal-state)))
+
 (defun qutebrowser-evil-update-state (window-info)
   "Set evil state to match Qutebrowser keymode from WINDOW-INFO."
   (when-let* ((win-id (plist-get window-info :win-id))
               (buffer (exwm--id->buffer win-id)))
     (with-current-buffer buffer
       (qutebrowser--with-plist-key mode window-info
-        (pcase mode
-          ("KeyMode.insert" (evil-insert-state))
-          ("KeyMode.caret" (evil-visual-state))
-          ("KeyMode.hint" (evil-motion-state))
-          ("KeyMode.command" (evil-emacs-state))
-          ("KeyMode.normal" (evil-normal-state)))))))
+        (let ((func (alist-get mode qutebrowser-evil-state-mappings)))
+          (apply func))))))
 
-(add-hook 'qutebrowser-update-window-info-functions
-          #'qutebrowser-evil-update-state)
+;;;###autoload
+(define-minor-mode qutebrowser-evil-state-mode
+  "Minor mode to synchronize the evil state with the Qutebrowser KeyMode."
+  :lighter nil
+  :global t
+  (if qutebrowser-evil-state-mode
+      (add-hook 'qutebrowser-update-window-info-functions
+                #'qutebrowser-evil-update-state)
+    (remove-hook 'qutebrowser-update-window-info-functions
+                 #'qutebrowser-evil-update-state)))
 
 
 (provide 'qutebrowser-evil)
