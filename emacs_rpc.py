@@ -54,6 +54,20 @@ class rpcmethod():
         return self.method(**converted_params)
 
 
+def get_tabs(window):
+    tab_registry = objreg._get_window_registry(window.win_id)["tab-registry"]
+    tabs = list(tab_registry.values())
+    return tabs
+
+
+def get_window(win_id):
+    """Find window based on X11 window ID."""
+    for win in objreg.window_registry.values():
+        if win_id == int(win.winId()):
+            return win
+    raise Exception(f"Could not find window with X11 ID {win_id}")
+
+
 @rpcmethod
 def EVAL(code):
     """Evaluate or execute code.
@@ -82,6 +96,82 @@ def command(commands):
 
     app.process_pos_args(commands, via_ipc=True)
     return True
+
+
+@rpcmethod
+def get_window_url(win_id):
+    window = get_window(win_id)
+    tabbed_browser = window.tabbed_browser
+    try:
+        url = tabbed_browser.current_url().toString()
+    except Exception:
+        url = None
+    return url
+
+
+@rpcmethod
+def get_window_title(win_id):
+    window = get_window(win_id)
+    return window.windowTitle()
+
+
+@rpcmethod
+def get_window_icon(win_id):
+    window = get_window(win_id)
+    tabbed_browser = window.tabbed_browser
+    fd, icon_file = mkstemp(prefix="qutebrowser-favicon-",
+                            suffix=".png")
+    os.close(fd)
+    tabbed_browser.windowIcon().pixmap(16, 16).save(icon_file)
+
+    return icon_file
+
+
+@rpcmethod
+def get_window_search(win_id):
+    window = get_window(win_id)
+    tabbed_browser = window.tabbed_browser
+
+    return tabbed_browser.search_text
+
+
+@rpcmethod
+def is_window_private(win_id):
+    window = get_window(win_id)
+
+    return window.is_private
+
+
+@rpcmethod
+def get_window_mode(win_id):
+    window = get_window(win_id)
+    mode_manager = modeman.instance(window.win_id)
+
+    return str(mode_manager.mode)
+
+
+@rpcmethod
+def is_window_audible(win_id):
+    window = get_window(win_id)
+
+    for tab in get_tabs(window):
+        if tab.audio.is_recently_audible():
+            return True
+
+    return False
+
+
+@rpcmethod
+def get_window_scroll(win_id):
+    window = get_window(win_id)
+    tab = window.tabbed_browser.widget.currentWidget()
+    x_scroll, y_scroll = tab.scroller.pos_perc()
+    return (x_scroll, y_scroll)
+
+
+@rpcmethod
+def list_rpc_methods():
+    return list(objreg.get("rpcmethods", {}).keys())
 
 
 @rpcmethod
