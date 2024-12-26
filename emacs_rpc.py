@@ -10,6 +10,7 @@ the context of the running Qutebrowser instance.
 from PyQt6.QtCore import QByteArray, pyqtSlot
 from qutebrowser.api import message
 from qutebrowser.keyinput import modeman
+from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
 from qutebrowser.utils import objreg
 from qutebrowser import app
@@ -167,6 +168,11 @@ def get_window_scroll(win_id):
     tab = window.tabbed_browser.widget.currentWidget()
     x_scroll, y_scroll = tab.scroller.pos_perc()
     return (x_scroll, y_scroll)
+
+
+@rpcmethod
+def list_commands():
+    return list(objects.commands.keys())
 
 
 @rpcmethod
