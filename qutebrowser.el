@@ -361,7 +361,7 @@ The window information plist contains (one or more of) the following keys:
 This list is used to identify running Qutebrowser processes.")
 
 (defvar qutebrowser-history-matching-pattern
-  "(url || title) LIKE '%%%s%%'"
+  "(url || title) LIKE ('%%' || ? || '%%')"
   "SQL matching pattern used for each input word.")
 
 (defvar qutebrowser--db-object nil
@@ -487,8 +487,9 @@ Return up to LIMIT results."
   (let* ((db (qutebrowser--get-db))
          ;; Safeguarding to avoid nil value
          (words (or (string-split (or input "")) '("")))
-         (inclusion (mapconcat (apply-partially 'format qutebrowser-history-matching-pattern)
-                               words " AND "))
+         (inclusion (string-join (make-list (length words)
+                                            qutebrowser-history-matching-pattern)
+                                 " AND "))
          (exclusion (mapconcat (apply-partially 'format " url LIKE '%s'")
                                qutebrowser-history-exclusion-patterns " OR "))
          (limit (if limit (format "LIMIT %s" limit) ""))
@@ -509,7 +510,7 @@ Return up to LIMIT results."
                 (propertize (consult--tofu-append url ?h)
                             'input input
                             'title title)))
-            (sqlite-select db query))))
+            (sqlite-select db query words))))
 
 ;;;; Utility functions
 
@@ -598,8 +599,8 @@ Both buffer names and URLs are used for matching."
      (seq-every-p (lambda (word)
                     (let ((title (or (buffer-name buffer) ""))
                           (url (or (qutebrowser-exwm-buffer-url buffer) "")))
-                      (or (string-match-p word title)
-                          (string-match-p word url))))
+                      (or (cl-search word title)
+                          (cl-search word url))))
                   words))
    buffers))
 
@@ -610,8 +611,8 @@ Both bookmark name and URLs are used for matching."
    (lambda (bookmark)
      ;; All search words matching
      (seq-every-p (lambda (word)
-                    (or (string-match-p word bookmark)
-                        (string-match-p word (qutebrowser-bookmark-url bookmark))))
+                    (or (cl-search word bookmark)
+                        (cl-search word (qutebrowser-bookmark-url bookmark))))
                   words))
    bookmarks))
 
@@ -645,7 +646,7 @@ Both bookmark name and URLs are used for matching."
 (defun qutebrowser-highlight-matches (input str)
   "Highlight all occurrences of words in INPUT in STR."
   (dolist (word (string-split input))
-    (if-let* ((start (string-match word str))
+    (if-let* ((start (cl-search word str))
               (end (+ start (length word))))
         (put-text-property start end 'face 'link str))))
 
