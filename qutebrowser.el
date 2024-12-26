@@ -816,6 +816,7 @@ The ORIG-FUN takes ARGS."
      :name "qutebrowser-rpc"
      :family 'local
      :service "/tmp/emacs-rpc"
+     :noquery t
      :sentinel (lambda (proc event)
                  (when (string= event "connection broken by remote peer\n")
                    (delete-process proc))))))
