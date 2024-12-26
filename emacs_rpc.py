@@ -56,6 +56,7 @@ class rpcmethod():
 
 
 def get_tabs(window):
+    """Get a list of tab objects belonging to window."""
     tab_registry = objreg._get_window_registry(window.win_id)["tab-registry"]
     tabs = list(tab_registry.values())
     return tabs
@@ -101,6 +102,7 @@ def command(commands):
 
 @rpcmethod
 def get_window_url(win_id):
+    """Return the URL of X11 window."""
     window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
     try:
@@ -112,12 +114,14 @@ def get_window_url(win_id):
 
 @rpcmethod
 def get_window_title(win_id):
+    """Return the title of X11 window."""
     window = get_window(win_id)
     return window.windowTitle()
 
 
 @rpcmethod
 def get_window_icon(win_id):
+    """Return the favicon of X11 window."""
     window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
     fd, icon_file = mkstemp(prefix="qutebrowser-favicon-",
@@ -130,6 +134,7 @@ def get_window_icon(win_id):
 
 @rpcmethod
 def get_window_search(win_id):
+    """Return the search term of X11 window."""
     window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
 
@@ -138,6 +143,7 @@ def get_window_search(win_id):
 
 @rpcmethod
 def is_window_private(win_id):
+    """Return a boolean indicating the private status of X11 window."""
     window = get_window(win_id)
 
     return window.is_private
@@ -145,6 +151,7 @@ def is_window_private(win_id):
 
 @rpcmethod
 def get_window_mode(win_id):
+    """Return the mode of X11 window."""
     window = get_window(win_id)
     mode_manager = modeman.instance(window.win_id)
 
@@ -153,6 +160,7 @@ def get_window_mode(win_id):
 
 @rpcmethod
 def is_window_audible(win_id):
+    """Return a boolean indicating the audible status of X11 window."""
     window = get_window(win_id)
 
     for tab in get_tabs(window):
@@ -164,6 +172,7 @@ def is_window_audible(win_id):
 
 @rpcmethod
 def get_window_scroll(win_id):
+    """Return the X and Y scroll percentages of X11 window."""
     window = get_window(win_id)
     tab = window.tabbed_browser.widget.currentWidget()
     x_scroll, y_scroll = tab.scroller.pos_perc()
@@ -172,11 +181,13 @@ def get_window_scroll(win_id):
 
 @rpcmethod
 def list_commands():
+    """Return a list of Qutebrowser commands."""
     return list(objects.commands.keys())
 
 
 @rpcmethod
 def list_rpc_methods():
+    """Return a list of RPC methods."""
     return list(objreg.get("rpcmethods", {}).keys())
 
 
