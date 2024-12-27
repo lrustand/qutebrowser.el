@@ -368,10 +368,6 @@ class EmacsRPCServer(IPCServer):
                 message_type = "invalid"
                 raise Exception(f"Invalid JSON-RPC message: {json_data}")
 
-        # Ignore non-JSON data
-        except json.JSONDecodeError:
-            return
-
         except Exception as err:
             # Only respond to requests
             if message_type in ("request", "invalid"):

@@ -840,7 +840,7 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
       (condition-case err
           (when-let ((proc (qutebrowser-rpc--make-network-process)))
             (setq qutebrowser-rpc-connection
-                  (jsonrpc-process-connection
+                  (qutebrowser-jsonrpc-process-connection
                    :name "qutebrowser-jsonrpc"
                    :process proc
                    :notification-dispatcher
@@ -855,9 +855,30 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
          (message "Unexpected error when connecting jsonrpc: %s" (error-message-string err)))))
     qutebrowser-rpc-connection))
 
+(defclass qutebrowser-jsonrpc-process-connection (jsonrpc-process-connection)
+  nil)
+
+(cl-defmethod initialize-instance ((conn qutebrowser-jsonrpc-process-connection) slots)
+  (cl-call-next-method))
+
+(cl-defmethod jsonrpc-connection-send
+  ((connection qutebrowser-jsonrpc-process-connection) &rest args
+   &key _id method _params _result _error _partial)
+  "Send MESSAGE, a JSON object, to CONNECTION."
+  (when method
+    (plist-put args :method
+               (cond ((keywordp method) (substring (symbol-name method) 1))
+                     ((and method (symbolp method)) (symbol-name method))
+                     ((stringp method) method))))
+  (let* ((message `(:jsonrpc "2.0" ,@args))
+         (json (jsonrpc--json-encode message)))
+    ;; Qutebrowser reads until newline.
+    ;; Need to add one to avoid hanging the process.
+    (process-send-string (jsonrpc--process connection) (concat json "\n"))))
+
 (defun qutebrowser-rpc-connected-p ()
   "Check if connected to the Qutebrowser RPC."
-  (and (jsonrpc-process-connection-p qutebrowser-rpc-connection)
+  (and (qutebrowser-jsonrpc-process-connection-p qutebrowser-rpc-connection)
        (jsonrpc-running-p qutebrowser-rpc-connection)))
 
 (defun qutebrowser-rpc-ensure-installed ()
@@ -871,28 +892,13 @@ updated it is recommended to run this function when loading the package."
                (expand-file-name file qutebrowser-config-directory)
 	       'overwrite)))
 
-(defun qutebrowser--json-encode-with-newline (object)
-  "JSON-encode OBJECT and add a newline."
-  ;; Qutebrowser reads until newline.
-  ;; Need to add one to avoid hanging the process.
-  ;; FIXME: Making a new subclass of jsonrpc-connection would solve this
-  (concat
-   (json-serialize object
-                   :false-object :json-false
-                   :null-object nil)
-   "\n"))
-
 (defun qutebrowser-rpc-request (method &optional params)
   "Send an RPC request synchronously and wait for a response.
 METHOD is the RPC method to call.
 PARAMS are the arguments for the method, and should be a plist
 containing keyword arguments."
   (let ((conn (qutebrowser-rpc-get-connection)))
-    ;; Qutebrowser reads until newline.
-    ;; Need to add one to avoid hanging the process.
-    (cl-letf (((symbol-function 'jsonrpc--json-encode)
-               #'qutebrowser--json-encode-with-newline))
-      (jsonrpc-request conn method params))))
+    (jsonrpc-request conn method params)))
 
 (defun qutebrowser-rpc-notify (method &optional params)
   "Send an RPC notification and do not expect a response.
@@ -900,11 +906,7 @@ METHOD is the RPC method to call.
 PARAMS are the arguments for the method, and should be a plist
 containing keyword arguments."
   (let ((conn (qutebrowser-rpc-get-connection)))
-    ;; Qutebrowser reads until newline.
-    ;; Need to add one to avoid hanging the process.
-    (cl-letf (((symbol-function 'jsonrpc--json-encode)
-               #'qutebrowser--json-encode-with-newline))
-      (jsonrpc-notify conn method params))))
+    (jsonrpc-notify conn method params)))
 
 
 ;; TODO: Rename and move elsewhere
