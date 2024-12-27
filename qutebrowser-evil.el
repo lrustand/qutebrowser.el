@@ -29,7 +29,7 @@
 
 (defvar qutebrowser-evil-state-mappings
   '(("KeyMode.insert" . evil-insert-state)
-    ("KeyMode.caret" . evil-visual-state)
+    ("KeyMode.caret" . evil-visual-char)
     ("KeyMode.hint" . evil-motion-state)
     ("KeyMode.command" . evil-emacs-state)
     ("KeyMode.normal" . evil-normal-state)))
