@@ -300,13 +300,17 @@ class EmacsRPCServer(IPCServer):
         rpcmethods = objreg.get("rpcmethods", {})
         function = rpcmethods.get(method)
 
-        if not params:
-            params = {}
-
         if not function:
             raise Exception(f"Unknown RPC method {method}")
 
-        return function(**params)
+        if isinstance(params, dict):
+            return function(**params)
+        elif isinstance(params, (list, tuple)):
+            return function(*params)
+        elif params is None:
+            return function()
+        else:
+            return function(params)
 
     def _handle_data(self, data):
         """Handle data received from Emacs.
@@ -331,7 +335,7 @@ class EmacsRPCServer(IPCServer):
             json_data = json.loads(data.decode("utf-8"))
 
             method = json_data.get("method", None)
-            params = json_data.get("params", {})
+            params = json_data.get("params", None)
             result = json_data.get("result", None)
             error = json_data.get("error", None)
             req_id = json_data.get("id", None)
@@ -410,13 +414,17 @@ class EmacsRPCServer(IPCServer):
         self.send_data({"id": req_id,
                         "result": result})
 
-    def send_notification(self, method, params={}):
+    def send_notification(self, method, params=None):
         """Send a JSON-RPC notification.
 
         Does not expect a response.
         """
-        self.send_data({"method": method,
-                        "params": params})
+        data = {"method": method}
+
+        if params is not None:
+            data["params"] = params
+
+        self.send_data(data)
 
     def send_data(self, data):
         """Send data over JSON-RPC.
