@@ -261,16 +261,26 @@ class EmacsRPCServer(IPCServer):
 
     def __init__(self):
         """Initialize RPC server instance."""
+
+        self._req_id = 0
+        self.continuations = {}
         old_server = objreg.get("emacs-rpc", None)
+
         if old_server:
             message.info("Shutting down old server")
             old_server.shutdown()
+            self._req_id = getattr(old_server, "_req_id", 0)
+            self.continuations = getattr(old_server, "continuations", {})
 
         super().__init__("/tmp/emacs-rpc")
         objreg.register(name="emacs-rpc",
                         obj=self,
                         update=True)
         self.listen()
+
+    def _request_id(self):
+        self._req_id += 1
+        return self._req_id
 
     @pyqtSlot()
     def on_timeout(self):
@@ -341,20 +351,10 @@ class EmacsRPCServer(IPCServer):
             req_id = json_data.get("id", None)
 
             if "jsonrpc" not in json_data:
-                raise Exception("Invalid JSON-RPC message: {json_data}")
-
-            # Requests MUST contain both "method" and "id"
-            if (method is not None) and (req_id is not None):
-                message_type = "request"
-                self.handle_request(method, params, req_id)
-
-            # Notifications contain "method" but not "id"
-            elif method is not None:
-                message_type = "request"
-                self.handle_notification(method, params)
+                raise Exception(f"Invalid JSON-RPC message: {json_data}")
 
             # Result responses MUST contain "result" but NOT "error"
-            elif (result is not None) and (error is None):
+            if (result is not None) and (error is None):
                 message_type = "result"
                 self.handle_result(result, req_id)
 
@@ -362,6 +362,16 @@ class EmacsRPCServer(IPCServer):
             elif (error is not None) and (result is None):
                 message_type = "error"
                 self.handle_error(error, req_id)
+
+            # Requests MUST contain both "method" and "id"
+            elif (method is not None) and (req_id is not None):
+                message_type = "request"
+                self.handle_request(method, params, req_id)
+
+            # Notifications contain "method" but not "id"
+            elif method is not None:
+                message_type = "request"
+                self.handle_notification(method, params)
 
             # Anything else is not a valid JSON-RPC message
             else:
@@ -386,13 +396,23 @@ class EmacsRPCServer(IPCServer):
 
     def handle_result(self, result, req_id):
         """Handle a received response."""
-        # TODO: Implement
-        pass
+        cont = self.continuations.pop(req_id, None)
+
+        kwargs = {"result": result,
+                  "id": req_id}
+
+        if cont is not None:
+            cont[0](**kwargs)
 
     def handle_error(self, error, req_id):
         """Handle a received error response."""
-        # TODO: Implement
-        pass
+        cont = self.continuations.pop(req_id, None)
+
+        kwargs = {"error": error,
+                  "id": req_id}
+
+        if cont is not None:
+            cont[1](**kwargs)
 
     def send_error(self, code=-1, message=None, data=None, req_id=None):
         """Send an error response to a received request."""
@@ -419,6 +439,25 @@ class EmacsRPCServer(IPCServer):
 
         if params is not None:
             data["params"] = params
+
+        self.send_data(data)
+
+    def send_request(self,
+                     method,
+                     params=None,
+                     result_callback=None,
+                     error_callback=None):
+        """Send a JSON-RPC request.
+        """
+        req_id = self._request_id()
+        data = {"id": req_id,
+                "method": method}
+
+        if params is not None:
+            data["params"] = params
+
+        if (result_callback is not None) or (error_callback is not None):
+            self.continuations[req_id] = (result_callback, error_callback)
 
         self.send_data(data)
 
