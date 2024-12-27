@@ -51,7 +51,8 @@ class EmacsHookManager:
         url = url.toString()
         window_id = int(window.winId())
 
-        data = {"win-id": window_id,
+        data = {"x11-win-id": window_id,
+                "win-id": window.win_id,
                 "url": url}
 
         self.send_signal("url-changed", data)
@@ -66,7 +67,8 @@ class EmacsHookManager:
         """
         window_id = int(window.winId())
 
-        data = {"win-id": window_id,
+        data = {"x11-win-id": window_id,
+                "win-id": window.win_id,
                 "hover": url}
 
         self.send_signal("link-hovered", data)
@@ -86,7 +88,8 @@ class EmacsHookManager:
         os.close(fd)
         window.windowIcon().pixmap(16, 16).save(path)
 
-        data = {"win-id": window_id,
+        data = {"x11-win-id": window_id,
+                "win-id": window.win_id,
                 "icon-file": path}
 
         self.send_signal("icon-changed", data)
@@ -101,7 +104,8 @@ class EmacsHookManager:
         """
         window_id = int(window.winId())
 
-        data = {"win-id": window_id,
+        data = {"x11-win-id": window_id,
+                "win-id": window.win_id,
                 "x-scroll-perc": x_perc,
                 "y-scroll-perc": y_perc}
 
@@ -117,7 +121,8 @@ class EmacsHookManager:
         window_id = int(window.winId())
         recently_audible = tab.audio.is_recently_audible()
 
-        data = {"win-id": window_id,
+        data = {"x11-win-id": window_id,
+                "win-id": window.win_id,
                 "recently-audible": recently_audible}
 
         self.send_signal("recently-audible-changed", data)
@@ -131,7 +136,8 @@ class EmacsHookManager:
         """
         window_id = int(window.winId())
 
-        data = {"win-id": window_id,
+        data = {"x11-win-id": window_id,
+                "win-id": window.win_id,
                 "search": search}
 
         self.send_signal("got-search", data)
@@ -145,7 +151,8 @@ class EmacsHookManager:
         """
         window_id = int(window.winId())
 
-        data = {"win-id": window_id,
+        data = {"x11-win-id": window_id,
+                "win-id": window.win_id,
                 "mode": str(mode)}
 
         self.send_signal("entered-mode", data)
@@ -159,7 +166,8 @@ class EmacsHookManager:
         """
         window_id = int(window.winId())
 
-        data = {"win-id": window_id,
+        data = {"x11-win-id": window_id,
+                "win-id": window.win_id,
                 "left-mode": str(mode),
                 "mode": "KeyMode.normal"}
 
@@ -172,7 +180,8 @@ class EmacsHookManager:
             window: The window that started loading.
         """
         window_id = int(window.winId())
-        self.send_signal("load-started", {"win-id": window_id})
+        self.send_signal("load-started", {"x11-win-id": window_id,
+                                          "win-id": window.win_id})
 
     def on_load_finished(self, window):
         """Called when finished loading a new webpage.
@@ -181,7 +190,8 @@ class EmacsHookManager:
             window: The window that finished loading.
         """
         window_id = int(window.winId())
-        self.send_signal("load-finished", {"win-id": window_id})
+        self.send_signal("load-finished", {"x11-win-id": window_id,
+                                           "win-id": window.win_id})
 
     def enable_tab_hooks(self, tab, _):
         """Enable tab local hooks.
@@ -228,7 +238,8 @@ class EmacsHookManager:
         Args:
             window: The window that was created.
         """
-        self.send_signal("new-window", {"win-id": int(window.winId())})
+        self.send_signal("new-window", {"x11-win-id": int(window.winId()),
+                                        "win-id": window.win_id})
         self.enable_window_hooks(window)
 
     def send_signal(self, signal, args={}):

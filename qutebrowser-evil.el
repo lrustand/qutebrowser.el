@@ -36,8 +36,8 @@
 
 (defun qutebrowser-evil-update-state (window-info)
   "Set evil state to match Qutebrowser keymode from WINDOW-INFO."
-  (when-let* ((win-id (plist-get window-info :win-id))
-              (buffer (exwm--id->buffer win-id)))
+  (when-let* ((x11-win-id (plist-get window-info :x11-win-id))
+              (buffer (exwm--id->buffer x11-win-id)))
     (with-current-buffer buffer
       (qutebrowser--with-plist-key mode window-info
         (let ((func (alist-get mode qutebrowser-evil-state-mappings

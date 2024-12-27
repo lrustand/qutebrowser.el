@@ -232,10 +232,10 @@ query is built, see `qutebrowser--history-search'."
 All the hooks having a name like qutebrowser-on-SOME-SIGNAL-functions
 are ran when the Qt signal SOME-SIGNAL is emitted in Qutebrowser.  The
 functions are called with a plist containing any information related to
-the signal that was emitted.  This plist usually contains WIN-ID which
+the signal that was emitted.  This plist usually contains X11-WIN-ID which
 is an X11 window ID of the window that emitted the signal.
 
-If the plist contains a WIN-ID that can be resolved to an EXWM buffer,
+If the plist contains a X11-WIN-ID that can be resolved to an EXWM buffer,
 the hooks are run with that buffer as `current-buffer'.
 
 The hooks are automatically dispatched from
@@ -245,14 +245,14 @@ signal received."
 
 (defcustom qutebrowser-on-entered-mode-functions '()
   "Functions run when receiving a `entered-mode` signal.
-The functions are run with one argument, a plist containing WIN-ID and
+The functions are run with one argument, a plist containing X11-WIN-ID and
 MODE.  See also `qutebrowser-on-left-mode-functions'."
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-left-mode-functions '()
   "Functions run when receiving a `left-mode` signal.
-The functions are run with one argument, a plist containing WIN-ID,
+The functions are run with one argument, a plist containing X11-WIN-ID,
 LEFT-MODE, and MODE.  Where LEFT-MODE is the mode that was left, and
 MODE is the new mode after leaving the mode.
 
@@ -262,60 +262,60 @@ See also `qutebrowser-on-entered-mode-functions'."
 
 (defcustom qutebrowser-on-new-window-functions '()
   "Functions run when receiving a `new-window` signal.
-The functions are run with one argument, a plist containing WIN-ID"
+The functions are run with one argument, a plist containing X11-WIN-ID"
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-url-changed-functions '()
   "Functions run when receiving a `url-changed` signal.
-The functions are run with one argument, a plist containing WIN-ID and
+The functions are run with one argument, a plist containing X11-WIN-ID and
 URL.  See also `qutebrowser-on-link-hovered-functions'."
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-link-hovered-functions '()
   "Functions run when receiving a `link-hovered` signal.
-The functions are run with one argument, a plist containing WIN-ID and
+The functions are run with one argument, a plist containing X11-WIN-ID and
 HOVER.  See also `qutebrowser-on-url-changed-functions'."
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-icon-changed-functions '()
   "Functions run when receiving a `icon-changed` signal.
-The functions are run with one argument, a plist containing WIN-ID and
+The functions are run with one argument, a plist containing X11-WIN-ID and
 ICON-FILE."
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-got-search-functions '()
   "Functions run when receiving a `got-search` signal.
-The functions are run with one argument, a plist containing WIN-ID and
+The functions are run with one argument, a plist containing X11-WIN-ID and
 SEARCH."
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-load-started-functions '()
   "Functions run when receiving a `load-started` signal.
-The functions are run with one argument, a plist containing WIN-ID."
+The functions are run with one argument, a plist containing X11-WIN-ID."
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-load-finished-functions '()
   "Functions run when receiving a `load-finished` signal.
-The functions are run with one argument, a plist containing WIN-ID."
+The functions are run with one argument, a plist containing X11-WIN-ID."
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-scroll-perc-changed-functions '()
   "Functions run when receiving a `scroll-perc-changed` signal.
-The functions are run with one argument, a plist containing WIN-ID,
+The functions are run with one argument, a plist containing X11-WIN-ID,
 X-SCROLL-PERC, and Y-SCROLL-PERC."
   :group 'qutebrowser-hooks
   :type 'hook)
 
 (defcustom qutebrowser-on-recently-audible-changed-functions '()
   "Functions run when receiving a `recently-audible-changed` signal.
-The functions are run with one argument, a plist containing WIN-ID and
+The functions are run with one argument, a plist containing X11-WIN-ID and
 RECENTLY-AUDIBLE."
   :group 'qutebrowser-hooks
   :type 'hook)
@@ -335,7 +335,8 @@ qutebrowser-on-SIGNAL-functions hook.
 
 The window information plist contains (one or more of) the following keys:
 
-  - `:win-id' is the X11 window ID of the window the informations is about.
+  - `:x11-win-id' is the X11 window ID of the window the informations is about.
+  - `:win-id' is the internal window ID of the window the informations is about.
   - `:url' is the currently visited URL.
   - `:title' is the title of the window.
   - `:icon-file' is a temp-file containing the favicon.
@@ -366,6 +367,9 @@ This list is used to identify running Qutebrowser processes.")
 
 (defvar qutebrowser--db-object nil
   "Contains a reference to the database connection.")
+
+(defvar-local qutebrowser-exwm-win-id nil
+  "Contains the internal Qutebrowser window ID.")
 
 (defvar-local qutebrowser-exwm-keymode "KeyMode.normal")
 
@@ -457,10 +461,11 @@ and BODY is one or more forms to execute if KEY is in PLIST."
 
 (defun qutebrowser-exwm-update-window-info (window-info)
   "Update buffer-local variables from WINDOW-INFO."
-  (when-let* ((win-id (plist-get window-info :win-id))
-              (buffer (exwm--id->buffer win-id)))
+  (when-let* ((x11-win-id (plist-get window-info :x11-win-id))
+              (buffer (exwm--id->buffer x11-win-id)))
     (with-current-buffer buffer
       (qutebrowser--with-plist window-info
+        (win-id (setq-local qutebrowser-exwm-win-id win-id))
         (mode (setq-local qutebrowser-exwm-keymode mode))
         (icon-file (qutebrowser-exwm-update-favicon icon-file))
         (search (setq-local qutebrowser-exwm-current-search search))
@@ -917,8 +922,8 @@ CONN is the `jsonrpc-connection' the request was received on.
 METHOD is the method that was called.
 PARAMS are the parameters given."
   (let* ((hook (intern-soft (format "qutebrowser-on-%s-functions" method)))
-         (win-id (plist-get params :win-id))
-         (buffer (exwm--id->buffer win-id)))
+         (x11-win-id (plist-get params :x11-win-id))
+         (buffer (exwm--id->buffer x11-win-id)))
     (with-current-buffer (or buffer (current-buffer))
       (run-hook-with-args 'qutebrowser-update-window-info-functions params)
       (run-hook-with-args hook params))))
