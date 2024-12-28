@@ -1118,9 +1118,7 @@ of the command in Qutebrowser."
            (takes-count (plist-get command :takes-count))
            (func-name (intern (concat "qutebrowser-cmd-" name)))
            (func-args '(&rest args))
-           (func-body `(,(if takes-count
-                             `(interactive "p")
-                           `(interactive))
+           (func-body `((interactive nil qutebrowser-exwm-mode)
                         (let ((args (qutebrowser-cmd--parse-args args)))
                           (qutebrowser-send-commands (concat ":" ,name args)))))
            (doc-string
