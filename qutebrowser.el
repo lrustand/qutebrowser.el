@@ -152,9 +152,10 @@
                  (const :tag "Private Window" private-window))
   :group 'qutebrowser)
 
-(defcustom qutebrowser-command-backend 'qutebrowser-ipc-send
+(defcustom qutebrowser-command-backend 'qutebrowser-rpc-send-commands
   "The backend to use when sending commands to Qutebrowser."
-  :type '(choice (const :tag "IPC" qutebrowser-ipc-send)
+  :type '(choice (const :tag "RPC" qutebrowser-rpc-send-commands)
+                 (const :tag "IPC" qutebrowser-ipc-send)
                  (const :tag "FIFO" qutebrowser-fifo-send)
                  (const :tag "Commandline" qutebrowser-commandline-send)
                  (function :tag "Custom command"))
@@ -892,12 +893,22 @@ updated it is recommended to run this function when loading the package."
                (expand-file-name file qutebrowser-config-directory)
 	       'overwrite)))
 
+(defun qutebrowser-rpc--format-params (params)
+  "Format PARAMS in a way that is JSON-serializable.
+Tries to accept as many different types of parameter lists."
+  (cond
+   ((json-alist-p params) (cl--alist-to-plist params))
+   ((json-plist-p params) params)
+   ((listp params) (apply #'vector params))
+   (t param)))
+
 (defun qutebrowser-rpc-request (method &optional params)
   "Send an RPC request synchronously and wait for a response.
 METHOD is the RPC method to call.
 PARAMS are the arguments for the method, and should be a plist
 containing keyword arguments."
-  (let ((conn (qutebrowser-rpc-get-connection)))
+  (let ((conn (qutebrowser-rpc-get-connection))
+        (params (qutebrowser-rpc--format-params params)))
     (jsonrpc-request conn method params)))
 
 (defun qutebrowser-rpc-notify (method &optional params)
@@ -905,7 +916,8 @@ containing keyword arguments."
 METHOD is the RPC method to call.
 PARAMS are the arguments for the method, and should be a plist
 containing keyword arguments."
-  (let ((conn (qutebrowser-rpc-get-connection)))
+  (let ((conn (qutebrowser-rpc-get-connection))
+        (params (qutebrowser-rpc--format-params params)))
     (jsonrpc-notify conn method params)))
 
 
@@ -914,7 +926,7 @@ containing keyword arguments."
   "Request window-info from Qutebrowser.
 Useful for initializing window information when first connecting to an
 instance with existing windows."
-  (seq-doseq (win (qutebrowser-rpc-request :get-window-info nil))
+  (seq-doseq (win (qutebrowser-rpc-request :get-window-info))
     (run-hook-with-args 'qutebrowser-update-window-info-functions win)))
 
 
@@ -987,6 +999,18 @@ let-binds the path to the Qutebrowser FIFO to the variable
 `qutebrowser-fifo'."
   (dolist (cmd commands)
     (write-region (concat cmd "\n") nil qutebrowser-fifo t 'novisit)))
+
+(defun qutebrowser-rpc-send-commands (&rest commands)
+  "Send COMMANDS to Qutebrowser via RPC.
+
+Supports `with-current-buffer', such that any commands are executed in
+the Qutebrowser window associated with the current buffer.  Otherwise the
+command is executed in the default place, which usually seem to be the
+last visible window."
+  (let ((params `(:commands ,(apply #'vector commands))))
+    (when qutebrowser-exwm-win-id
+      (plist-put params :win-id qutebrowser-exwm-win-id))
+    (qutebrowser-rpc-notify :command params)))
 
 (defun qutebrowser-send-commands (&rest commands)
   "Send COMMANDS to Qutebrowser via the selected backend."
@@ -1078,9 +1102,6 @@ ARGS is the list of arguments where each element has the form
                           (or (plist-get arg :description) "")))
                 args))))
 
-;; FIXME: using with-current-buffer with these commands don't
-;; work. The commands are still executed in the window indicated by
-;; objreg.last_visible_window().
 (defun qutebrowser-populate-commands ()
   "Generate interactive commands for all Qutebrowser commands.
 
