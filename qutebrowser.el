@@ -1120,7 +1120,7 @@ of the command in Qutebrowser."
                              `(interactive "p")
                            `(interactive))
                         (let ((args (qutebrowser-cmd--parse-args args)))
-                          (qutebrowser-send-commands (concat ":" ,name (string-join args " "))))))
+                          (qutebrowser-send-commands (concat ":" ,name args)))))
            (doc-string
             (string-join
              (list desc "\n\n"
