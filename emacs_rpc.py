@@ -93,17 +93,28 @@ def EVAL(code):
 
 
 @rpcmethod
-def command(commands):
+def command(commands, win_id=None):
     """Run interactive commands.
 
     Args:
         commands: A list of commands to run.
+        win_id: The window to run the commands in.
     """
 
-    if isinstance(commands, str):
+    if win_id is None:
+        win_id = objreg.last_visible_window().win_id
+
+    if not isinstance(commands, (list, tuple)):
         commands = [commands]
 
-    app.process_pos_args(commands, via_ipc=True)
+    commandrunner = runners.CommandRunner(win_id)
+
+    for cmd in commands:
+        # We don't use run_safely, since we want to send any
+        # exceptions back to Emacs instead of displaying them in
+        # Qutebrowser.
+        commandrunner.run(cmd[1:])
+
     return True
 
 
