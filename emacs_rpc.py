@@ -9,6 +9,7 @@ the context of the running Qutebrowser instance.
 
 from PyQt6.QtCore import QByteArray, pyqtSlot
 from qutebrowser.api import message
+from qutebrowser.commands import runners
 from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
@@ -208,10 +209,48 @@ def get_window_scroll(win_id):
     return (x_scroll, y_scroll)
 
 
+def get_command_arguments(command):
+    cmd = objects.commands.get(command)
+    args = []
+    keywords = []
+    for arg, name in cmd.pos_args:
+        desc = cmd.docparser.arg_descs.get(arg)
+        args.append({"name": name,
+                     "description": desc})
+
+    for arg, flags in cmd.opt_args.items():
+        long = flags[0]
+        name = long[2:]
+        desc = cmd.docparser.arg_descs.get(arg)
+        keywords.append({"name": name,
+                         "description": desc})
+
+    return {"arguments": args,
+            "keywords": keywords}
+
+
 @rpcmethod
 def list_commands():
     """Return a list of Qutebrowser commands."""
-    return list(objects.commands.keys())
+
+    response = []
+
+    for name, cmd in objects.commands.items():
+        description = cmd.docparser.short_desc
+
+        if cmd.docparser.long_desc:
+            description += "\n" + cmd.docparser.long_desc
+
+        takes_count = cmd.docparser.arg_descs.get("count")
+
+        cmd_info = {"command": name,
+                    "description": description,
+                    "takes-count": takes_count}
+
+        cmd_info.update(get_command_arguments(name))
+        response.append(cmd_info)
+
+    return response
 
 
 @rpcmethod
