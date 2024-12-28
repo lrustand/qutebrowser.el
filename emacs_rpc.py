@@ -153,7 +153,7 @@ def is_window_private(x11_win_id):
 def get_window_mode(x11_win_id):
     """Return the mode of X11 window."""
     window = get_window(x11_win_id)
-    mode_manager = modeman.instance(window.x11_win_id)
+    mode_manager = modeman.instance(window.win_id)
 
     return str(mode_manager.mode)
 
