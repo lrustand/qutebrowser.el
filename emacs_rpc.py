@@ -62,11 +62,18 @@ def get_tabs(window):
     return tabs
 
 
-def get_window(x11_win_id):
-    """Find window based on X11 window ID."""
+def get_window(win_id):
+    """Return window."""
+    return objreg.window_registry.get(win_id)
+
+
+def find_window(x11_win_id):
+    """Find window from X11 window ID."""
+
     for win in objreg.window_registry.values():
         if x11_win_id == int(win.winId()):
             return win
+
     raise Exception(f"Could not find window with X11 ID {x11_win_id}")
 
 
@@ -101,9 +108,21 @@ def command(commands):
 
 
 @rpcmethod
-def get_window_url(x11_win_id):
-    """Return the URL of X11 window."""
-    window = get_window(x11_win_id)
+def x11_win_id_to_win_id(x11_win_id):
+    """Return the win_id corresponding to x11_win_id."""
+    return find_window(x11_win_id).win_id
+
+
+@rpcmethod
+def win_id_to_x11_win_id(win_id):
+    """Return the x11_win_id corresponding to win_id."""
+    return get_window(win_id).winId()
+
+
+@rpcmethod
+def get_window_url(win_id):
+    """Return the URL of window."""
+    window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
     try:
         url = tabbed_browser.current_url().toString()
@@ -113,16 +132,16 @@ def get_window_url(x11_win_id):
 
 
 @rpcmethod
-def get_window_title(x11_win_id):
-    """Return the title of X11 window."""
-    window = get_window(x11_win_id)
+def get_window_title(win_id):
+    """Return the title of window."""
+    window = get_window(win_id)
     return window.windowTitle()
 
 
 @rpcmethod
-def get_window_icon(x11_win_id):
-    """Return the favicon of X11 window."""
-    window = get_window(x11_win_id)
+def get_window_icon(win_id):
+    """Return the favicon of window."""
+    window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
     fd, icon_file = mkstemp(prefix="qutebrowser-favicon-",
                             suffix=".png")
@@ -133,35 +152,34 @@ def get_window_icon(x11_win_id):
 
 
 @rpcmethod
-def get_window_search(x11_win_id):
-    """Return the search term of X11 window."""
-    window = get_window(x11_win_id)
+def get_window_search(win_id):
+    """Return the search term of window."""
+    window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
 
     return tabbed_browser.search_text
 
 
 @rpcmethod
-def is_window_private(x11_win_id):
-    """Return a boolean indicating the private status of X11 window."""
-    window = get_window(x11_win_id)
+def is_window_private(win_id):
+    """Return a boolean indicating the private status of window."""
+    window = get_window(win_id)
 
     return window.is_private
 
 
 @rpcmethod
-def get_window_mode(x11_win_id):
-    """Return the mode of X11 window."""
-    window = get_window(x11_win_id)
-    mode_manager = modeman.instance(window.win_id)
+def get_window_mode(win_id):
+    """Return the mode of window."""
+    mode_manager = modeman.instance(win_id)
 
     return str(mode_manager.mode)
 
 
 @rpcmethod
-def is_window_audible(x11_win_id):
-    """Return a boolean indicating the audible status of X11 window."""
-    window = get_window(x11_win_id)
+def is_window_audible(win_id):
+    """Return a boolean indicating the audible status of window."""
+    window = get_window(win_id)
 
     for tab in get_tabs(window):
         if tab.audio.is_recently_audible():
@@ -171,9 +189,9 @@ def is_window_audible(x11_win_id):
 
 
 @rpcmethod
-def get_window_scroll(x11_win_id):
-    """Return the X and Y scroll percentages of X11 window."""
-    window = get_window(x11_win_id)
+def get_window_scroll(win_id):
+    """Return the X and Y scroll percentages of window."""
+    window = get_window(win_id)
     tab = window.tabbed_browser.widget.currentWidget()
     x_scroll, y_scroll = tab.scroller.pos_perc()
     return (x_scroll, y_scroll)
@@ -236,8 +254,8 @@ def get_window_info():
         search = tabbed_browser.search_text
         hover = None  # FIXME
         mode = str(mode_manager.mode)
-        recently_audible = is_window_audible(x11_win_id)
-        x_scroll, y_scroll = get_window_scroll(x11_win_id)
+        recently_audible = is_window_audible(win_id)
+        x_scroll, y_scroll = get_window_scroll(win_id)
 
         window_info = {"x11-win-id": x11_win_id,
                        "win-id": win_id,
