@@ -215,7 +215,6 @@ class EmacsHookManager:
         status = window.status
 
         mode_manager.entered.connect(partial(self.on_enter_mode, window))
-        mode_manager.entered.connect(partial(self.on_enter_mode, window))
         mode_manager.left.connect(partial(self.on_leave_mode, window))
         tabbed_browser.cur_url_changed.connect(
             partial(self.on_url_changed, window))
