@@ -94,12 +94,13 @@ def EVAL(code):
 
 
 @rpcmethod
-def command(commands, win_id=None):
+def command(commands, win_id=None, count=None):
     """Run interactive commands.
 
     Args:
         commands: A list of commands to run.
         win_id: The window to run the commands in.
+        count: The count to pass to the command.
     """
 
     if win_id is None:
@@ -114,7 +115,7 @@ def command(commands, win_id=None):
         # We don't use run_safely, since we want to send any
         # exceptions back to Emacs instead of displaying them in
         # Qutebrowser.
-        commandrunner.run(cmd[1:])
+        commandrunner.run(cmd[1:], count)
 
     return True
 

@@ -1008,6 +1008,8 @@ the Qutebrowser window associated with the current buffer.  Otherwise the
 command is executed in the default place, which usually seem to be the
 last visible window."
   (let ((params `(:commands ,(apply #'vector commands))))
+    (when (numberp current-prefix-arg)
+      (plist-put params :count current-prefix-arg))
     (when qutebrowser-exwm-win-id
       (plist-put params :win-id qutebrowser-exwm-win-id))
     (qutebrowser-rpc-notify :command params)))
