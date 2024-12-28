@@ -162,7 +162,8 @@ class EmacsHookManager:
 
         Args:
             window: The window that left a mode.
-            mode: The mode that was left.
+            left-mode: The mode that was left.
+            mode: The new mode.
         """
         window_id = int(window.winId())
 
