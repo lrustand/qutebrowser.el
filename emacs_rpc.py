@@ -36,15 +36,27 @@ class rpcmethod():
     def __init__(self):
         pass
 
+    def _convert_name(self, name):
+        return name.lower().replace('_', '-')
+
     def __call__(self, func):
 
-        name = func.__name__.lower().replace('_', '-')
+        self.name = self._convert_name(func.__name__)
+        self.func = func
+        self.desc = inspect.getdoc(func)
+        self.takes_count = None
+        self.interactive = None
+        self.args = []
+
+        for arg in inspect.signature(func).parameters.keys():
+            self.args.append(self._convert_name(arg))
+
         rpcmethods = objreg.get("rpcmethods", None)
 
         if rpcmethods is not None:
-            rpcmethods.update({name: func})
+            rpcmethods.update({self.name: self})
         else:
-            rpcmethods = {name: func}
+            rpcmethods = {self.name: self}
             objreg.register("rpcmethods",
                             obj=rpcmethods)
         return func
@@ -260,7 +272,18 @@ def list_commands():
 @rpcmethod()
 def list_rpc_methods():
     """Return a list of RPC methods."""
-    return list(objreg.get("rpcmethods", {}).keys())
+
+    methods = []
+
+    for name, method in objreg.get("rpcmethods", {}).items():
+        method_info = {"method": method.name,
+                       "description": method.desc,
+                       "arguments": method.args,
+                       "interactive": method.interactive,
+                       "takes-count": method.takes_count}
+        methods.append(method_info)
+
+    return methods
 
 
 @rpcmethod()
@@ -380,9 +403,10 @@ class EmacsRPCServer(IPCServer):
         """
 
         rpcmethods = objreg.get("rpcmethods", {})
-        function = rpcmethods.get(method)
 
-        if not function:
+        try:
+            function = rpcmethods[method].func
+        except KeyError:
             raise Exception(f"Unknown RPC method {method}")
 
         if isinstance(params, dict):
