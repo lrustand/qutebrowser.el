@@ -14,7 +14,6 @@ from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
 from qutebrowser.utils import objreg
-from qutebrowser import app
 import json
 from tempfile import mkstemp
 import os
