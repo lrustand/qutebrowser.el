@@ -38,6 +38,11 @@
 (require 'qutebrowser)
 (require 'doom-modeline)
 
+(defface qutebrowser-doom-rpc-unconnected
+  '((t (:inherit doom-modeline-urgent)))
+  "Face for the RPC not connected warning."
+  :group 'qutebrowser-faces)
+
 (defsubst qutebrowser-doom--favicon ()
   "Qutebrowser favicon."
   (propertize ""
@@ -60,11 +65,30 @@ mouse-1: Previous buffer\nmouse-3: Next buffer"
     ;; Avoid formatting nonsense
     (string-replace "%" "%%" (propertize url 'face (doom-modeline-face face)))))
 
+(defsubst qutebrowser-doom--rpc-status ()
+  "Qutebrowser RPC connection status."
+  (unless (qutebrowser-rpc-connected-p)
+    (let ((face (doom-modeline-face
+                 'qutebrowser-doom-rpc-unconnected)))
+    (propertize "Not connected to RPC." 'face face))))
+
+(doom-modeline-def-segment qutebrowser-rpc
+  "Display the RPC connection status."
+  (qutebrowser-doom--rpc-status))
+
 (doom-modeline-def-segment qutebrowser-url
   "Display the currently visited or hovered URL."
   (concat
    (doom-modeline-spc)
    (qutebrowser-doom--url)))
+
+(doom-modeline-def-segment qutebrowser-status
+  "Display combined status info."
+  (concat
+   (doom-modeline-spc)
+   (or
+    (qutebrowser-doom--rpc-status)
+    (qutebrowser-doom--url))))
 
 (doom-modeline-def-segment qutebrowser-title
   "Qutebrowser favicon and title."
@@ -76,7 +100,7 @@ mouse-1: Previous buffer\nmouse-3: Next buffer"
 
 (doom-modeline-def-modeline 'qutebrowser-doom-modeline
   '(bar workspace-name window-number modals qutebrowser-title)
-  '(qutebrowser-url))
+  '(qutebrowser-status))
 
 (defun qutebrowser-doom-modeline--update (&rest _)
   "Update the Doom modeline.
