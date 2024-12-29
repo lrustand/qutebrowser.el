@@ -144,7 +144,7 @@ def x11_win_id_to_win_id(x11_win_id):
 @rpcmethod()
 def win_id_to_x11_win_id(win_id):
     """Return the x11_win_id corresponding to win_id."""
-    return get_window(win_id).winId()
+    return int(get_window(win_id).winId())
 
 
 @rpcmethod()
