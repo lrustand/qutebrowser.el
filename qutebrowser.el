@@ -153,7 +153,10 @@
   :group 'qutebrowser)
 
 (defcustom qutebrowser-command-backend 'qutebrowser-rpc-send-commands
-  "The backend to use when sending commands to Qutebrowser."
+  "The default backend to use when sending commands to Qutebrowser.
+If the selected one fails to be initialized, the next one is tried. RPC
+is the most featureful one, but also requires some backend Python code
+to be installed in Qutebrowser."
   :type '(choice (const :tag "RPC" qutebrowser-rpc-send-commands)
                  (const :tag "IPC" qutebrowser-ipc-send)
                  (const :tag "FIFO" qutebrowser-fifo-send)
@@ -909,7 +912,22 @@ PARAMS are the arguments for the method, and should be a plist
 containing keyword arguments."
   (let ((conn (qutebrowser-rpc-get-connection))
         (params (qutebrowser-rpc--format-params params)))
-    (jsonrpc-request conn method params)))
+    (jsonrpc-request conn method params :timeout 1)))
+
+(cl-defun qutebrowser-rpc-async-request
+    (method &optional params &rest args &key success-fn error-fn timeout-fn)
+  "Send an RPC request asynchronously.
+METHOD is the RPC method to call.
+PARAMS are the arguments for the method, and should be a plist
+containing keyword arguments.
+SUCCESS-FN, ERROR-FN and TIMEOUT-FN as in `jsonrpc-async-request'."
+  (let ((conn (qutebrowser-rpc-get-connection))
+        (params (qutebrowser-rpc--format-params params)))
+    (jsonrpc-async-request conn method params
+                           :timeout 1
+                           :timeout-fn timeout-fn
+                           :success-fn success-fn
+                           :error-fn error-fn)))
 
 (defun qutebrowser-rpc-notify (method &optional params)
   "Send an RPC notification and do not expect a response.
@@ -1012,7 +1030,10 @@ last visible window."
       (plist-put params :count current-prefix-arg))
     (when qutebrowser-exwm-win-id
       (plist-put params :win-id qutebrowser-exwm-win-id))
-    (qutebrowser-rpc-notify :command params)))
+    (qutebrowser-rpc-async-request :command params :timeout-fn
+                                   (lambda ()
+                                     (message "RPC timed out sending commands. Fallback to IPC.")
+                                     (qutebrowser-ipc-send commands)))))
 
 (defun qutebrowser-send-commands (&rest commands)
   "Send COMMANDS to Qutebrowser via the selected backend."
