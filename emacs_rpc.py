@@ -8,7 +8,7 @@ the context of the running Qutebrowser instance.
 """
 
 from PyQt6.QtCore import QByteArray, pyqtSlot
-from qutebrowser.api import message
+from qutebrowser.api import message, cmdutils
 from qutebrowser.commands import runners
 from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
@@ -555,6 +555,37 @@ class EmacsRPCServer(IPCServer):
         if socket and socket.isOpen():
             socket.write(QByteArray(message.encode("utf-8")))
             socket.flush()
+
+
+def print_result(result, id):
+    """Print the result of a request as an info message."""
+    message.info(f"Result args: {result}")
+
+
+class redefinable_command(cmdutils.register):
+
+    def __call__(self, func: cmdutils._CmdHandlerFunc) -> cmdutils._CmdHandlerType:
+        if self._name is None:
+            name = func.__name__.lower().replace('_', '-')
+        else:
+            assert isinstance(self._name, str), self._name
+            name = self._name
+        objects.commands.pop(name, None)
+        super().__call__(func)
+
+
+@redefinable_command()
+def emacs(code, print=False):
+    """Evaluate lisp code in Emacs.
+
+    Args:
+        code: The code to evaluate.
+        print: Whether to show the result in an info message.
+    """
+
+    callback = print_result if print else None
+    objreg.get("emacs-rpc").send_request("eval", {"code": code},
+                                         result_callback=callback)
 
 
 if __name__ == "config":
