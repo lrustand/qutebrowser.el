@@ -655,9 +655,11 @@ Both bookmark name and URLs are used for matching."
 (defun qutebrowser-highlight-matches (input str)
   "Highlight all occurrences of words in INPUT in STR."
   (dolist (word (string-split input))
-    (if-let* ((start (cl-search word str))
-              (end (+ start (length word))))
-        (put-text-property start end 'face 'link str))))
+    (let ((pos 0))
+      (while-let ((start (cl-search word str :start2 pos :test #'char-equal))
+                  (end (+ start (length word))))
+        (setq pos end)
+        (put-text-property start end 'face 'link str)))))
 
 (defun qutebrowser-annotate (entry &optional pad)
   "Return annotation for ENTRY.
