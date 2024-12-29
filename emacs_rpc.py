@@ -34,26 +34,24 @@ class rpcmethod():
     function.
     """
 
-    def __init__(self, method):
-        self.method = method
-        self.name = method.__name__.lower().replace('_', '-')
+    def __init__(self):
+        pass
 
-        # Register the method in objreg
-        rpcmethods = objreg.get("rpcmethods", {})
-        rpcmethods[self.name] = self
-        objreg.register("rpcmethods",
-                        obj=rpcmethods,
-                        update=True)
+    def __call__(self, func):
 
-    def __call__(self, *args, **params):
+        name = func.__name__.lower().replace('_', '-')
+        rpcmethods = objreg.get("rpcmethods", None)
 
-        # Convert parameter names
-        converted_params = {}
-        for key, value in params.items():
-            key = key.lower().replace("-", "_")
-            converted_params[key] = value
+        if rpcmethods is not None:
+            rpcmethods.update({name: func})
+        else:
+            rpcmethods = {name: func}
+            objreg.register("rpcmethods",
+                            obj=rpcmethods)
+        return func
 
-        return self.method(*args, **converted_params)
+
+
 
 
 def get_tabs(window):
@@ -78,7 +76,7 @@ def find_window(x11_win_id):
     raise Exception(f"Could not find window with X11 ID {x11_win_id}")
 
 
-@rpcmethod
+@rpcmethod()
 def EVAL(code):
     """Evaluate or execute code.
 
@@ -93,7 +91,7 @@ def EVAL(code):
         return ""
 
 
-@rpcmethod
+@rpcmethod()
 def command(commands, win_id=None, count=None):
     """Run interactive commands.
 
@@ -120,19 +118,19 @@ def command(commands, win_id=None, count=None):
     return True
 
 
-@rpcmethod
+@rpcmethod()
 def x11_win_id_to_win_id(x11_win_id):
     """Return the win_id corresponding to x11_win_id."""
     return find_window(x11_win_id).win_id
 
 
-@rpcmethod
+@rpcmethod()
 def win_id_to_x11_win_id(win_id):
     """Return the x11_win_id corresponding to win_id."""
     return get_window(win_id).winId()
 
 
-@rpcmethod
+@rpcmethod()
 def get_window_url(win_id):
     """Return the URL of window."""
     window = get_window(win_id)
@@ -144,14 +142,14 @@ def get_window_url(win_id):
     return url
 
 
-@rpcmethod
+@rpcmethod()
 def get_window_title(win_id):
     """Return the title of window."""
     window = get_window(win_id)
     return window.windowTitle()
 
 
-@rpcmethod
+@rpcmethod()
 def get_window_icon(win_id):
     """Return the favicon of window."""
     window = get_window(win_id)
@@ -164,7 +162,7 @@ def get_window_icon(win_id):
     return icon_file
 
 
-@rpcmethod
+@rpcmethod()
 def get_window_search(win_id):
     """Return the search term of window."""
     window = get_window(win_id)
@@ -173,7 +171,7 @@ def get_window_search(win_id):
     return tabbed_browser.search_text
 
 
-@rpcmethod
+@rpcmethod()
 def is_window_private(win_id):
     """Return a boolean indicating the private status of window."""
     window = get_window(win_id)
@@ -181,7 +179,7 @@ def is_window_private(win_id):
     return window.is_private
 
 
-@rpcmethod
+@rpcmethod()
 def get_window_mode(win_id):
     """Return the mode of window."""
     mode_manager = modeman.instance(win_id)
@@ -189,7 +187,7 @@ def get_window_mode(win_id):
     return str(mode_manager.mode)
 
 
-@rpcmethod
+@rpcmethod()
 def is_window_audible(win_id):
     """Return a boolean indicating the audible status of window."""
     window = get_window(win_id)
@@ -201,7 +199,7 @@ def is_window_audible(win_id):
     return False
 
 
-@rpcmethod
+@rpcmethod()
 def get_window_scroll(win_id):
     """Return the X and Y scroll percentages of window."""
     window = get_window(win_id)
@@ -230,7 +228,7 @@ def get_command_arguments(command):
             "keywords": keywords}
 
 
-@rpcmethod
+@rpcmethod()
 def list_commands():
     """Return a list of Qutebrowser commands."""
 
@@ -254,13 +252,13 @@ def list_commands():
     return response
 
 
-@rpcmethod
+@rpcmethod()
 def list_rpc_methods():
     """Return a list of RPC methods."""
     return list(objreg.get("rpcmethods", {}).keys())
 
 
-@rpcmethod
+@rpcmethod()
 def get_window_info():
     """Get a list of window information.
 
@@ -383,11 +381,19 @@ class EmacsRPCServer(IPCServer):
             raise Exception(f"Unknown RPC method {method}")
 
         if isinstance(params, dict):
-            return function(**params)
+            # Convert parameter names
+            converted_params = {}
+            for key, value in params.items():
+                key = key.lower().replace("-", "_")
+                converted_params[key] = value
+            return function(**converted_params)
+
         elif isinstance(params, (list, tuple)):
             return function(*params)
+
         elif params is None:
             return function()
+
         else:
             return function(params)
 
