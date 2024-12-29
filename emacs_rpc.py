@@ -62,7 +62,13 @@ def get_tabs(window):
 
 def get_window(win_id):
     """Return window."""
-    return objreg.window_registry.get(win_id)
+
+    window = objreg.window_registry.get(win_id)
+
+    if window is None:
+        raise Exception(f"No such window {win_id}")
+
+    return window
 
 
 def find_window(x11_win_id):
