@@ -18,6 +18,7 @@ import json
 from tempfile import mkstemp
 import os
 import traceback
+import inspect
 
 
 class rpcmethod():
