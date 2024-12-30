@@ -511,7 +511,11 @@ Return up to LIMIT results."
                         inclusion
                         exclusion
                         qutebrowser-history-order-by
-                        limit)))
+                        limit))
+         (rows (sqlite-select db query words))
+         (matches (length rows)))
+    (setq qutebrowser-heading-history--with-count
+          (format qutebrowser-heading-history matches))
     ;; Return list of URLs propertized with input and title
     (mapcar (lambda (row)
               (let* ((url (car row))
@@ -519,7 +523,7 @@ Return up to LIMIT results."
                 (propertize (consult--tofu-append url ?h)
                             'input input
                             'title title)))
-            (sqlite-select db query words))))
+            rows)))
 
 ;;;; Utility functions
 
@@ -629,11 +633,13 @@ Both bookmark name and URLs are used for matching."
   "Return a propertized list of Qutebrowser bookmarks matching INPUT."
   (let* ((words (string-split (or input "")))
          (bookmarks (qutebrowser-bookmarks-list))
-         (matching-bookmarks (qutebrowser-bookmark-filter words bookmarks)))
+         (matching-bookmarks (qutebrowser-bookmark-filter words bookmarks))
+         (matches (length matching-bookmarks)))
+    (setq qutebrowser-heading-bookmark--with-count
+          (format qutebrowser-heading-bookmark matches))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
                 (propertize (consult--tofu-append url ?m)
-                            'input input
                             'title bookmark
                             'bookmark t)))
             matching-bookmarks)))
@@ -642,12 +648,14 @@ Both bookmark name and URLs are used for matching."
   "Return a propertized list of Qutebrowser buffers matching INPUT."
   (let* ((words (string-split (or input "")))
          (buffers (qutebrowser-exwm-buffer-list))
-         (matching-buffers (qutebrowser-exwm-buffer-filter words buffers)))
+         (matching-buffers (qutebrowser-exwm-buffer-filter words buffers))
+         (matches (length matching-buffers)))
+    (setq qutebrowser-heading-buffer--with-count
+          (format qutebrowser-heading-buffer matches))
     (mapcar (lambda (buffer)
               (let* ((title (substring-no-properties (buffer-name buffer)))
                      (url (qutebrowser-exwm-buffer-url buffer)))
                 (propertize (consult--tofu-append url ?b)
-                            'input input
                             'title title
                             'buffer buffer)))
             matching-buffers)))
@@ -663,6 +671,7 @@ Both bookmark name and URLs are used for matching."
 
 (defun qutebrowser-annotate (entry &optional pad)
   "Return annotation for ENTRY.
+
 ENTRY can be a bookmark, a buffer, or a history item.  ENTRY should be a
 string containing a URL, and it should be propertized with at least some
 of `input', `url', and/or `title'.
@@ -673,7 +682,7 @@ property, and the end of the string will be hidden by setting the
 
 If PAD is non-nil, add padding to the annotation if ENTRY is shorter
 than `qutebrowser-url-display-length'."
-  (let ((input (get-text-property 0 'input entry))
+  (let ((input qutebrowser-current-launcher-input)
         (url (substring-no-properties entry))
         (title (get-text-property 0 'title entry)))
     ;; Set main face of annotation (title)
@@ -692,6 +701,21 @@ than `qutebrowser-url-display-length'."
            (padding (when pad (make-string pad-length ?\ ))))
       (concat padding " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
 
+(defvar qutebrowser-heading-buffer "Buffer (%s)")
+(defvar qutebrowser-heading-buffer--with-count nil)
+(defvar qutebrowser-heading-bookmark "Bookmark (%s)")
+(defvar qutebrowser-heading-bookmark--with-count nil)
+(defvar qutebrowser-heading-history "History (%s)")
+(defvar qutebrowser-heading-history--with-count nil)
+
+(defun qutebrowser-launcher--group-entries (entry transform)
+  (if transform
+      entry
+    (pcase (consult--tofu-get entry)
+     (?b qutebrowser-heading-buffer--with-count)
+     (?m qutebrowser-heading-bookmark--with-count)
+     (t qutebrowser-heading-history--with-count))))
+
 ;; TODO: Duplicate URL buffers seem to only show once
 (defun qutebrowser-select-url (&optional initial)
   "Dynamically select a URL from Qutebrowser history.
@@ -700,17 +724,12 @@ INITIAL sets the initial input in the minibuffer."
     (consult--read
      (consult--dynamic-collection
       (lambda (input)
+        (setq qutebrowser-current-launcher-input input)
         (append
          (qutebrowser-exwm-buffer-search input)
          (qutebrowser-bookmark-search input)
          (qutebrowser--history-search input qutebrowser-dynamic-results))))
-     :group (lambda (entry transform)
-              (if transform
-                  entry
-                (cond
-                 ((get-text-property 0 'buffer entry) "Buffer")
-                 ((get-text-property 0 'bookmark entry) "Bookmark")
-                 (t "History"))))
+     :group #'qutebrowser-launcher--group-entries
      :sort nil
      :annotate (lambda (entry) (qutebrowser-annotate entry t))
      :initial initial
