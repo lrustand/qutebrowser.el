@@ -812,7 +812,7 @@ The ORIG-FUN takes ARGS."
     (if (and (file-regular-p rpc)
              (file-regular-p hooks))
         ;; TODO: Detect when it is necessary to do this
-        (progn
+        (let ((qutebrowser-command-backend 'qutebrowser-ipc-send)) ;; Don't bootstrap RPC over RPC...
           (qutebrowser-config-source rpc)
           (qutebrowser-config-source hooks))
       (message "RPC Python backend not found. Did you install it? Tip: run `qutebrowser-rpc-ensure-installed'."))))
