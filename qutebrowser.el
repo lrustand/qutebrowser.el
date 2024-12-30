@@ -819,25 +819,35 @@ The ORIG-FUN takes ARGS."
 
 (defun qutebrowser-rpc--make-network-process ()
   "Make a network process connected to the RPC socket."
-  (unless (file-exists-p "/tmp/emacs-rpc")
-    (qutebrowser-rpc--bootstrap-server)
-    (sit-for 1))
-  (when (file-exists-p "/tmp/emacs-rpc")
-    (make-network-process
-     :name "qutebrowser-rpc"
-     :family 'local
-     :service "/tmp/emacs-rpc"
-     :noquery t
-     :sentinel (lambda (proc event)
-                 (when (string= event "connection broken by remote peer\n")
-                   (delete-process proc))))))
+  (when (qutebrowser-is-running-p)
+    (unless (file-exists-p "/tmp/emacs-rpc")
+      (qutebrowser-rpc--bootstrap-server)
+      (sit-for 1))
+    (when (file-exists-p "/tmp/emacs-rpc")
+      (make-network-process
+       :name "qutebrowser-rpc"
+       :family 'local
+       :service "/tmp/emacs-rpc"
+       :noquery t
+       :sentinel (lambda (proc event)
+                   (when (string= event "connection broken by remote peer\n")
+                     (delete-process proc)))))))
 
 (defvar qutebrowser-rpc-connection nil)
+(defvar qutebrowser-rpc-should-reconnect t)
+(defvar qutebrowser-rpc-reconnect-timer nil)
 
-(defun qutebrowser-rpc-get-connection (&optional flush)
-  "Return a `jsonrpc-connection' to the RPC socket.
+(defun qutebrowser-rpc-maybe-reconnect (&rest _)
+  (when qutebrowser-rpc-should-reconnect
+    (when (timerp qutebrowser-rpc-reconnect-timer)
+      (cancel-timer qutebrowser-rpc-reconnect-timer))
+    (setq qutebrowser-rpc-reconnect-timer
+          (run-with-timer 1 10 #'qutebrowser-rpc-connect))))
+
+(defun qutebrowser-rpc-connect (&optional flush)
+  "Connect to RPC.
 If FLUSH is non-nil, delete any existing connection before reconnecting."
-  (interactive)
+  (interactive "p")
   (let ((process (get-process "qutebrowser-rpc")))
     (when (and flush process)
       (delete-process process)
@@ -849,18 +859,24 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
                   (qutebrowser-jsonrpc-process-connection
                    :name "qutebrowser-jsonrpc"
                    :process proc
-                   :notification-dispatcher
-                   #'qutebrowser-rpc--notification-dispatcher
-                   :request-dispatcher
-                   #'qutebrowser-rpc--request-dispatcher))
+                   :notification-dispatcher #'qutebrowser-rpc--notification-dispatcher
+                   :request-dispatcher #'qutebrowser-rpc--request-dispatcher
+                   :on-shutdown #'qutebrowser-rpc-maybe-reconnect))
             (qutebrowser-rpc-request-window-info)
             (qutebrowser-populate-commands)
-            (qutebrowser-populate-rpcmethods))
+            (qutebrowser-populate-rpcmethods)
+            (when (timerp qutebrowser-rpc-reconnect-timer)
+              (cancel-timer qutebrowser-rpc-reconnect-timer)))
         (file-error
-           (message "Error connecting to Qutebrowser RPC socket: %s" (error-message-string err)))
+         (message "Error connecting to Qutebrowser RPC socket: %s" (error-message-string err)))
         (error
-         (message "Unexpected error when connecting jsonrpc: %s" (error-message-string err)))))
-    qutebrowser-rpc-connection))
+         (message "Unexpected error when connecting jsonrpc: %s" (error-message-string err)))))))
+
+(defun qutebrowser-rpc-get-connection ()
+  "Return a `jsonrpc-connection' to the RPC socket."
+    (unless (qutebrowser-rpc-connected-p)
+      (qutebrowser-rpc-connect))
+    qutebrowser-rpc-connection)
 
 (defclass qutebrowser-jsonrpc-process-connection (jsonrpc-process-connection)
   nil)
