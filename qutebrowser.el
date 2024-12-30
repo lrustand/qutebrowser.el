@@ -629,6 +629,21 @@ Both bookmark name and URLs are used for matching."
                   words))
    bookmarks))
 
+(defun qutebrowser-command-filter (words commands)
+  "Filter BOOKMARKS to find those matching WORDS.
+Both bookmark name and URLs are used for matching."
+  (seq-filter
+   (lambda (command)
+     ;; All search words matching
+     (seq-every-p (lambda (word)
+                    (let* ((desc (plist-get command :description))
+                           (title (car (string-lines desc)))
+                           (cmd (concat ":" (plist-get command :command))))
+                      (or (cl-search word title)
+                          (cl-search word cmd))))
+                  words))
+   commands))
+
 (defun qutebrowser-bookmark-search (&optional input)
   "Return a propertized list of Qutebrowser bookmarks matching INPUT."
   (let* ((words (string-split (or input "")))
@@ -659,6 +674,22 @@ Both bookmark name and URLs are used for matching."
                             'title title
                             'buffer buffer)))
             matching-buffers)))
+
+
+(defun qutebrowser-command-search (input)
+  "Return a propertized list of Qutebrowser commands matching INPUT."
+  (when (string-prefix-p ":" input)
+    (let* ((words (string-split (or input "")))
+           (all-commands (seq-into (qutebrowser-rpc-request :list-commands) 'list))
+           (matching-commands (qutebrowser-command-filter words all-commands)))
+      (setq qutebrowser-heading-command--with-count
+            (format qutebrowser-heading-command (length matching-commands)))
+      (mapcar
+       (lambda (cmd)
+         (let ((name (concat ":" (plist-get cmd :command)))
+               (desc (car (string-lines (plist-get cmd :description)))))
+           (propertize (consult--tofu-append name ?c) 'title desc 'url name)))
+       matching-commands))))
 
 (defun qutebrowser-highlight-matches (input str)
   "Highlight all occurrences of words in INPUT in STR."
@@ -707,6 +738,8 @@ than `qutebrowser-url-display-length'."
 (defvar qutebrowser-heading-bookmark--with-count nil)
 (defvar qutebrowser-heading-history "History (%s)")
 (defvar qutebrowser-heading-history--with-count nil)
+(defvar qutebrowser-heading-command "Command (%s)")
+(defvar qutebrowser-heading-command--with-count nil)
 
 (defun qutebrowser-launcher--group-entries (entry transform)
   (if transform
@@ -714,18 +747,23 @@ than `qutebrowser-url-display-length'."
     (pcase (consult--tofu-get entry)
      (?b qutebrowser-heading-buffer--with-count)
      (?m qutebrowser-heading-bookmark--with-count)
-     (t qutebrowser-heading-history--with-count))))
+     (?c qutebrowser-heading-command--with-count)
+     (_ qutebrowser-heading-history--with-count))))
+
+(defvar qutebrowser-current-launcher-input "")
 
 ;; TODO: Duplicate URL buffers seem to only show once
 (defun qutebrowser-select-url (&optional initial)
-  "Dynamically select a URL from Qutebrowser history.
+  "Dynamically select a URL, buffer, or command.
 INITIAL sets the initial input in the minibuffer."
-  (let ((consult-async-min-input 0))
+  (let ((consult-async-min-input 0)
+        (consult-async-split-style nil))
     (consult--read
      (consult--dynamic-collection
       (lambda (input)
         (setq qutebrowser-current-launcher-input input)
         (append
+         (qutebrowser-command-search input)
          (qutebrowser-exwm-buffer-search input)
          (qutebrowser-bookmark-search input)
          (qutebrowser--history-search input qutebrowser-dynamic-results))))
@@ -777,10 +815,13 @@ default target if nil."
     ;; with :action functions.
     (let ((source-id (consult--tofu-get selected))
           (url (qutebrowser--strip-tofus selected)))
-    (if (eq ?b source-id)
+      (cond
+       ((eq ?b source-id)
         (let ((buffer (qutebrowser-exwm-find-buffer url)))
-         (switch-to-buffer buffer))
-      (qutebrowser-open-url url)))))
+          (switch-to-buffer buffer)))
+       ((eq ?c source-id)
+        (qutebrowser-send-commands url))
+       (t (qutebrowser-open-url url))))))
 
 ;;;###autoload
 (defun qutebrowser-launcher-tab (&optional initial)
