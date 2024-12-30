@@ -926,11 +926,14 @@ containing keyword arguments.
 SUCCESS-FN, ERROR-FN and TIMEOUT-FN as in `jsonrpc-async-request'."
   (let ((conn (qutebrowser-rpc-get-connection))
         (params (qutebrowser-rpc--format-params params)))
-    (jsonrpc-async-request conn method params
-                           :timeout 1
-                           :timeout-fn timeout-fn
-                           :success-fn success-fn
-                           :error-fn error-fn)))
+    (if (process-live-p (jsonrpc--process conn))
+        (jsonrpc-async-request conn method params
+                               :timeout 1
+                               :timeout-fn timeout-fn
+                               :success-fn success-fn
+                               :error-fn error-fn)
+      (when error-fn
+        (funcall error-fn)))))
 
 (defun qutebrowser-rpc-notify (method &optional params)
   "Send an RPC notification and do not expect a response.
@@ -988,7 +991,7 @@ PARAMS are the parameters given."
    (or (getenv "XDG_RUNTIME_DIR")
        (format "/run/user/%d" (user-real-uid)))))
 
-(defun qutebrowser-ipc-send (&rest commands)
+(defun qutebrowser-ipc-send (commands &optional start)
   "Send COMMANDS to Qutebrowser via IPC.
 Falls back to sending over commandline if IPC fails."
   (condition-case err
@@ -1002,22 +1005,25 @@ Falls back to sending over commandline if IPC fails."
                                             :coding 'utf-8)))
         (process-send-string process (concat data "\n"))
         (delete-process process))
-    (file-error
-     (progn
-       (message "Error connecting to Qutebrowser IPC socket: %s" (error-message-string err))
-       (message "Starting new Qutebrowser instance.")
-       (apply #'qutebrowser-commandline-send commands)))
     (error
-     (message "Unexpected error in qutebrowser-ipc-send: %s" (error-message-string err)))))
+     (progn
+       (message "IPC failed sending commands. Fallback to commandline.")
+       (funcall #'qutebrowser-commandline-send commands start)))))
 
-(defun qutebrowser-commandline-send (&rest commands)
+(defun qutebrowser-commandline-send (commands &optional start)
   "Send COMMANDS to Qutebrowser via commandline."
-  (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
+  (let ((running (qutebrowser-is-running-p)))
+    (if (or start running)
+        (progn
+          (unless running
+            (message "Starting new Qutebrowser instance."))
+          (apply #'start-process "qutebrowser" nil "qutebrowser" commands))
+      (message "Qutebrowser is not running, not going to send commands via commandline."))))
 
 (defvar qutebrowser-fifo nil
   "Holds the path of the Qutebrowser FIFO when called as a userscript.")
 
-(defun qutebrowser-fifo-send (&rest commands)
+(defun qutebrowser-fifo-send (commands &optional _)
   "Send COMMANDS to Qutebrowser via FIFO.
 Expects to be called from Qutebrowser through a userscript that
 let-binds the path to the Qutebrowser FIFO to the variable
@@ -1025,8 +1031,9 @@ let-binds the path to the Qutebrowser FIFO to the variable
   (dolist (cmd commands)
     (write-region (concat cmd "\n") nil qutebrowser-fifo t 'novisit)))
 
-(defun qutebrowser-rpc-send-commands (&rest commands)
+(defun qutebrowser-rpc-send-commands (commands &optional start)
   "Send COMMANDS to Qutebrowser via RPC.
+If START is non-nil, start Qutebrowser if it is not running.
 
 Supports `with-current-buffer', such that any commands are executed in
 the Qutebrowser window associated with the current buffer.  Otherwise the
@@ -1037,15 +1044,24 @@ last visible window."
       (plist-put params :count current-prefix-arg))
     (when qutebrowser-exwm-win-id
       (plist-put params :win-id qutebrowser-exwm-win-id))
-    (qutebrowser-rpc-async-request :command params :timeout-fn
-                                   (lambda ()
-                                     (message "RPC timed out sending commands. Fallback to IPC.")
-                                     (qutebrowser-ipc-send commands)))))
+    (qutebrowser-rpc-async-request
+     :command params
+     :error-fn
+     (lambda ()
+       (message "RPC failed sending commands. Fallback to IPC.")
+       (funcall 'qutebrowser-ipc-send commands start))
+     :timeout-fn
+     (lambda ()
+       (message "RPC timed out sending commands. Fallback to IPC.")
+       (funcall 'qutebrowser-ipc-send commands start)))))
 
 (defun qutebrowser-send-commands (&rest commands)
   "Send COMMANDS to Qutebrowser via the selected backend."
-  (apply qutebrowser-command-backend commands))
+  (funcall qutebrowser-command-backend commands))
 
+(defun qutebrowser-send-commands-or-start (&rest commands)
+  "Send COMMANDS to running Qutebrowser instance, or start a new one."
+  (funcall qutebrowser-command-backend commands t))
 
 ;;;; Qutebrowser command wrappers
 
@@ -1055,15 +1071,12 @@ TARGET specifies where to open it, or `qutebrowser-default-open-target'
 if nil."
   (let* ((target (or target qutebrowser-default-open-target))
          (flag (qutebrowser--target-to-flag target)))
-    (qutebrowser-send-commands (format ":open %s %s" flag url))))
+    (qutebrowser-send-commands-or-start (format ":open %s %s" flag url))))
 
-(defun qutebrowser-config-source (&optional config-file start-if-not-running)
-  "Source CONFIG-FILE in running Qutebrowser instance.
-If START-IF-NOT-RUNNING is non-nil, start Qutebrowser if it is not running."
+(defun qutebrowser-config-source (&optional config-file)
+  "Source CONFIG-FILE in running Qutebrowser instance."
   (interactive)
-  (when (or (qutebrowser-is-running-p)
-            start-if-not-running)
-    (qutebrowser-send-commands (concat ":config-source " config-file))))
+  (qutebrowser-send-commands (concat ":config-source " config-file)))
 
 (defun qutebrowser-fake-keys--escape (text)
   "Escape any special characters from TEXT to be sent to :fake-keys."
