@@ -202,7 +202,7 @@ query is built, see `qutebrowser--history-search'."
   :type '(repeat string)
   :group 'qutebrowser)
 
-(defcustom qutebrowser-title-display-length 100
+(defcustom qutebrowser-title-display-length 97
   "Max display length of Qutebrowser titles in completion lists."
   :type 'integer
   :group 'qutebrowser)
@@ -507,7 +507,7 @@ Return up to LIMIT results."
                          WHERE %s AND NOT (%s)
                          ORDER BY %s
                          %s"
-                        (1- qutebrowser-title-display-length)
+                        qutebrowser-title-display-length
                         inclusion
                         exclusion
                         qutebrowser-history-order-by
