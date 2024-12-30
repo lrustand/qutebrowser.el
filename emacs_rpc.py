@@ -34,8 +34,8 @@ class rpcmethod():
     function.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, interactive=None):
+        self.interactive = interactive
 
     def _convert_name(self, name):
         return name.lower().replace('_', '-')
@@ -46,7 +46,6 @@ class rpcmethod():
         self.func = func
         self.desc = inspect.getdoc(func)
         self.takes_count = None
-        self.interactive = None
         self.args = []
 
         for arg in inspect.signature(func).parameters.keys():
