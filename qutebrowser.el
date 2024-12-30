@@ -1009,7 +1009,7 @@ SUCCESS-FN, ERROR-FN and TIMEOUT-FN as in `jsonrpc-async-request'."
                                :success-fn success-fn
                                :error-fn error-fn)
       (when error-fn
-        (funcall error-fn)))))
+        (funcall error-fn nil)))))
 
 (defun qutebrowser-rpc-notify (method &optional params)
   "Send an RPC notification and do not expect a response.
@@ -1123,7 +1123,7 @@ last visible window."
     (qutebrowser-rpc-async-request
      :command params
      :error-fn
-     (lambda ()
+     (lambda (_)
        (message "RPC failed sending commands. Fallback to IPC.")
        (funcall 'qutebrowser-ipc-send commands start))
      :timeout-fn
