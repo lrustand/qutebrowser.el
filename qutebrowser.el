@@ -1241,7 +1241,7 @@ of the command in Qutebrowser."
               (func-args '(&rest args))
               (func-body `((interactive nil qutebrowser-exwm-mode)
                            (let ((args (qutebrowser-cmd--parse-args args)))
-                             (qutebrowser-send-commands (concat ":" ,name args)))))
+                             (qutebrowser-send-commands (format ":%s %s" ,name args)))))
               (doc-string
                (string-join
                 (list desc "\n\n"
