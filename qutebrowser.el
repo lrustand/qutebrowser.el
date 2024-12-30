@@ -906,7 +906,7 @@ Tries to accept as many different types of parameter lists."
    ((json-alist-p params) (cl--alist-to-plist params))
    ((json-plist-p params) params)
    ((listp params) (apply #'vector params))
-   (t param)))
+   (t params)))
 
 (defun qutebrowser-rpc-request (method &optional params)
   "Send an RPC request synchronously and wait for a response.
