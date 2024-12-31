@@ -41,10 +41,9 @@
               (buffer (exwm--id->buffer x11-win-id)))
     (with-current-buffer buffer
       (qutebrowser--with-plist-key mode window-info
-        (if-let ((func (alist-get mode qutebrowser-evil-state-mappings
-				  nil nil 'string-equal)))
-	    (funcall func)
-	  (evil-operator-state))))))
+        (let ((func (alist-get mode qutebrowser-evil-state-mappings
+                               'evil-operator-state nil 'string-equal)))
+          (funcall func))))))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-evil-state-mode
