@@ -375,7 +375,7 @@ This list is used to identify running Qutebrowser processes.")
 (defvar-local qutebrowser-exwm-win-id nil
   "Contains the internal Qutebrowser window ID.")
 
-(defvar-local qutebrowser-exwm-keymode "KeyMode.normal")
+(defvar-local qutebrowser-exwm-keymode nil)
 
 (defvar-local qutebrowser-exwm-hovered-url nil
   "Contains the URL of the link currently hovered in Qutebrowser.")
