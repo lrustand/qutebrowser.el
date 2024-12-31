@@ -1287,12 +1287,12 @@ ARGS is the list of arguments where each element has the form
  (:name NAME :description DESCRIPTION)."
   (unless (seq-empty-p args)
     (format
-     "%s:\n%s\n"
+     "%s:\n\n%s\n"
      heading
      (mapconcat (lambda (arg)
-                  (format "  - `:%s':  %s\n"
-                          (plist-get arg :name)
-                          (or (plist-get arg :description) "")))
+                  (let* ((arg-name (plist-get arg :name))
+                         (arg-desc (string-replace "\n" "\n    " (or (plist-get arg :description) ""))))
+                    (format " - `:%s':  %s\n" arg-name arg-desc)))
                 args))))
 
 (defun qutebrowser-populate-commands ()
