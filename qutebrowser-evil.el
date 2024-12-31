@@ -33,9 +33,7 @@
     ("KeyMode.hint" . evil-motion-state)
     ("KeyMode.command" . evil-emacs-state)
     ("KeyMode.normal" . evil-normal-state)
-    ("KeyMode.passthrough" . evil-emacs-state)
-    ("KeyMode.yesno" . evil-operator-state)
-    ("KeyMode.prompt" . evil-operator-state)))
+    ("KeyMode.passthrough" . evil-emacs-state)))
 
 (defun qutebrowser-evil-update-state (window-info)
   "Set evil state to match Qutebrowser keymode from WINDOW-INFO."
@@ -43,9 +41,10 @@
               (buffer (exwm--id->buffer x11-win-id)))
     (with-current-buffer buffer
       (qutebrowser--with-plist-key mode window-info
-        (when-let ((func (alist-get mode qutebrowser-evil-state-mappings
-				    nil nil 'string-equal)))
-	  (funcall func))))))
+        (if-let ((func (alist-get mode qutebrowser-evil-state-mappings
+				  nil nil 'string-equal)))
+	    (funcall func)
+	  (evil-operator-state))))))
 
 ;;;###autoload
 (define-minor-mode qutebrowser-evil-state-mode
