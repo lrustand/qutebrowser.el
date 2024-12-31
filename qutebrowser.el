@@ -1002,7 +1002,9 @@ containing keyword arguments.
 SUCCESS-FN, ERROR-FN and TIMEOUT-FN as in `jsonrpc-async-request'."
   (let ((conn (qutebrowser-rpc-get-connection))
         (params (qutebrowser-rpc--format-params params)))
-    (if (process-live-p (jsonrpc--process conn))
+    (if (and conn
+             (qutebrowser-jsonrpc-process-connection-p conn)
+             (process-live-p (jsonrpc--process conn)))
         (jsonrpc-async-request conn method params
                                :timeout 1
                                :timeout-fn timeout-fn
