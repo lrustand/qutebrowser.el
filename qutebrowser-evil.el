@@ -32,7 +32,10 @@
     ("KeyMode.caret" . evil-visual-char)
     ("KeyMode.hint" . evil-motion-state)
     ("KeyMode.command" . evil-emacs-state)
-    ("KeyMode.normal" . evil-normal-state)))
+    ("KeyMode.normal" . evil-normal-state)
+    ("KeyMode.passthrough" . evil-emacs-state)
+    ("KeyMode.yesno" . evil-operator-state)
+    ("KeyMode.prompt" . evil-operator-state)))
 
 (defun qutebrowser-evil-update-state (window-info)
   "Set evil state to match Qutebrowser keymode from WINDOW-INFO."
