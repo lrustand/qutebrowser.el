@@ -1203,6 +1203,11 @@ Creates a temporary file and sources it in Qutebrowser using the
   "Execute JS-CODE in running Qutebrowser instance."
   (qutebrowser-send-commands (format ":jseval -w main %s" js-code)))
 
+(defun qutebrowser-undo-window ()
+  "Undo closing Qutebrowser window."
+  (interactive)
+  (qutebrowser-send-commands ":undo --window"))
+
 
 (defun qutebrowser-cmd--parse-args (args)
   "Parse keyword arguments given to qutebrowser-cmd-*.
