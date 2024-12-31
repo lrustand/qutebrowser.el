@@ -246,25 +246,28 @@ def get_command_arguments(command):
 
 
 @rpcmethod()
-def list_commands():
+def list_commands(name_only=False):
     """Return a list of Qutebrowser commands."""
 
     response = []
 
     for name, cmd in objects.commands.items():
-        description = cmd.docparser.short_desc
+        if name_only:
+            response.append(name)
+        else:
+            description = cmd.docparser.short_desc
 
-        if cmd.docparser.long_desc:
-            description += "\n" + cmd.docparser.long_desc
+            if cmd.docparser.long_desc:
+                description += "\n" + cmd.docparser.long_desc
 
-        takes_count = cmd.docparser.arg_descs.get("count")
+            takes_count = cmd.docparser.arg_descs.get("count")
 
-        cmd_info = {"command": name,
-                    "description": description,
-                    "takes-count": takes_count}
+            cmd_info = {"command": name,
+                        "description": description,
+                        "takes-count": takes_count}
 
-        cmd_info.update(get_command_arguments(name))
-        response.append(cmd_info)
+            cmd_info.update(get_command_arguments(name))
+            response.append(cmd_info)
 
     return response
 
