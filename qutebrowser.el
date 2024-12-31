@@ -774,6 +774,30 @@ INITIAL sets the initial input in the minibuffer."
      :initial initial
      :require-match nil)))
 
+
+(defun qutebrowser-completion-table (string predicate action)
+  (if (eq action 'metadata)
+      `(metadata . ((category . url)
+                    (display-sort-function . identity)
+                    (annotation-function . ,(lambda (entry)
+                                              (qutebrowser-annotate entry t)))
+                    (group-function . qutebrowser-launcher--group-entries)))
+    ;; FIXME: This looks like an Emacs bug. Should probably report.
+    ;; The bug is: the collection function is called with the
+    ;; 'all-completions' action twice for every input. Once with the
+    ;; actual search string and once with an empty search string. Then
+    ;; it seems to do a union of these two result sets, ignoring
+    ;; anything not present in both. To avoid this we keep a copy of
+    ;; the input string and swap it in when 'string' is empty.
+    (if (string-empty-p string)
+        (setq string qutebrowser-current-launcher-input)
+      (setq qutebrowser-current-launcher-input string))
+    (append
+     (qutebrowser-command-search string)
+     (qutebrowser-exwm-buffer-search string)
+     (qutebrowser-bookmark-search string)
+     (qutebrowser--history-search string 100))))
+
 ;;;; Static consult buffer sources
 
 ;; These buffer sources are not in use anymore by the launcher after
