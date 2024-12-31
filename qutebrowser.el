@@ -806,9 +806,7 @@ INITIAL sets the initial input in the minibuffer."
 Set initial completion input to INITIAL.  Open the URL in TARGET or the
 default target if nil."
   (interactive)
-  (when-let* ((qutebrowser-default-open-target
-               (or target qutebrowser-default-open-target))
-              (selected (qutebrowser-select-url initial)))
+  (when-let* ((selected (qutebrowser-select-url initial)))
     ;; FIXME: This way of dispatching is a temporary workaround
     ;; because consult currently doesn't support mixing dynamic and
     ;; static sources, so we can't set up individual consult sources
@@ -821,7 +819,7 @@ default target if nil."
           (switch-to-buffer buffer)))
        ((eq ?c source-id)
         (qutebrowser-send-commands url))
-       (t (qutebrowser-open-url url))))))
+       (t (qutebrowser-open-url url target))))))
 
 ;;;###autoload
 (defun qutebrowser-launcher-tab (&optional initial)
