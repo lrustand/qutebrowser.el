@@ -630,8 +630,8 @@ Both bookmark name and URLs are used for matching."
    bookmarks))
 
 (defun qutebrowser-command-filter (words commands)
-  "Filter BOOKMARKS to find those matching WORDS.
-Both bookmark name and URLs are used for matching."
+  "Filter COMMANDS to find those matching WORDS.
+Both command names and descriptions are used for matching."
   (seq-filter
    (lambda (command)
      ;; All search words matching
