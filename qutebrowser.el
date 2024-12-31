@@ -1149,7 +1149,18 @@ last visible window."
   "Open URL in Qutebrowser.
 TARGET specifies where to open it, or `qutebrowser-default-open-target'
 if nil."
-  (let* ((target (or target qutebrowser-default-open-target))
+  (let* ((target (cond
+                  (target target)
+                  ((qutebrowser-exwm-p) qutebrowser-default-open-target)
+                  ;; We don't want to accidentally replace an existing
+                  ;; window/tab when opening a URL in 'auto target
+                  ;; when the current buffer is not a Qutebrowser
+                  ;; window. We use 'tab as the default in this case,
+                  ;; since it is most likely to do the right
+                  ;; thing. When the 'tabs_are_windows' option is set
+                  ;; in Qutebrowser it will open windows as expected.
+                  ((eq 'auto qutebrowser-default-open-target) 'tab)
+                  (t qutebrowser-default-open-target)))
          (flag (qutebrowser--target-to-flag target)))
     (qutebrowser-send-commands-or-start (format ":open %s %s" flag url))))
 
