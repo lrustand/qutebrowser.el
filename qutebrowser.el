@@ -598,10 +598,10 @@ than `qutebrowser--tofu-range'."
              (propertize id 'invisible t))
            id-list)))
 
-(defsubst qutebrowser--tofu-get (cand)
+(defsubst qutebrowser--tofu-get (cand &optional pos)
   "Extract tofu-encoded ID from CAND.
 See `qutebrowser--tofu-append'."
-  (- (aref cand (1- (length cand))) qutebrowser--tofu-char))
+  (- (aref cand (- (length cand) (+ 1 (or pos 0)))) qutebrowser--tofu-char))
 
 (defun qutebrowser--tofu-strip (str)
   "Return STR stripped of any qutebrowser tofus."
@@ -609,6 +609,12 @@ See `qutebrowser--tofu-append'."
     (while (and (> end 0) (qutebrowser--tofu-p (aref str (1- end))))
       (cl-decf end))
     (substring str 0 end)))
+
+(defun qutebrowser--tofu-get-buffer (cand)
+  "Extract tofu-encoded Qutebrowser buffer from CAND."
+  (when (eq ?b (qutebrowser--tofu-get cand))
+    (let ((win-id (qutebrowser--tofu-get cand 1)))
+      (qutebrowser-exwm--win-id->buffer win-id))))
 
 
 ;;;; Bookmark functions
@@ -693,10 +699,12 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
           (format qutebrowser-heading-buffer matches))
     (mapcar (lambda (buffer)
               (let* ((title (substring-no-properties (buffer-name buffer)))
-                     (url (qutebrowser-exwm-buffer-url buffer)))
-                (propertize (qutebrowser--tofu-append url ?b)
-                            'title title
-                            'buffer buffer)))
+                     (url (qutebrowser-exwm-buffer-url buffer))
+                     (win-id (buffer-local-value 'qutebrowser-exwm-win-id buffer))
+                     (url-with-tofus
+                      (qutebrowser--tofu-append url win-id ?b)))
+                (propertize url-with-tofus
+                            'title title)))
             matching-buffers)))
 
 
@@ -780,7 +788,6 @@ than `qutebrowser-url-display-length'."
 
 (defvar qutebrowser-current-launcher-input "")
 
-;; TODO: Duplicate URL buffers seem to only show once
 (defun qutebrowser-select-url (&optional initial)
   "Dynamically select a URL, buffer, or command.
 INITIAL sets the initial input in the minibuffer."
@@ -846,7 +853,7 @@ INITIAL sets the initial input in the minibuffer."
         :history nil
         :category 'other
         :action (lambda (entry)
-                  (switch-to-buffer (get-text-property 0 'buffer entry)))
+                  (switch-to-buffer (qutebrowser--tofu-get-buffer entry)))
         :annotate #'qutebrowser-annotate
         :items #'qutebrowser-exwm-buffer-search)
   "`consult-buffer' source for open Qutebrowser windows.")
@@ -879,7 +886,7 @@ default target if nil."
           (url (qutebrowser--tofu-strip selected)))
       (cond
        ((eq ?b source-id)
-        (let ((buffer (qutebrowser-exwm-find-buffer url)))
+        (let ((buffer (qutebrowser--tofu-get-buffer selected)))
           (switch-to-buffer buffer)))
        ((eq ?c source-id)
         (qutebrowser-send-commands url))
