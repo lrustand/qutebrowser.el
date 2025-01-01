@@ -490,18 +490,18 @@ and BODY is one or more forms to execute if KEY is in PLIST."
     (setq qutebrowser--db-object (sqlite-open qutebrowser-history-database)))
   qutebrowser--db-object)
 
-(defun qutebrowser--history-search (&optional input limit)
-  "Search the sqlite database for INPUT.
+(defun qutebrowser--history-search (&optional words limit)
+  "Search the sqlite database for entries matching WORDS.
 Return up to LIMIT results."
   (let* ((db (qutebrowser--get-db))
          ;; Safeguarding to avoid nil value
-         (words (or (string-split (or input "")) '("")))
+         (words (or words '("")))
          (inclusion (string-join (make-list (length words)
                                             qutebrowser-history-matching-pattern)
                                  " AND "))
          (exclusion (mapconcat (apply-partially 'format " url LIKE '%s'")
                                qutebrowser-history-exclusion-patterns " OR "))
-         (limit (if limit (format "LIMIT %s" limit) ""))
+         (limit (if limit (format "LIMIT %d" limit) ""))
          (query (format "SELECT url,substr(title,0,%d)
                          FROM CompletionHistory
                          WHERE %s AND NOT (%s)
@@ -516,12 +516,11 @@ Return up to LIMIT results."
          (matches (length rows)))
     (setq qutebrowser-heading-history--with-count
           (format qutebrowser-heading-history matches))
-    ;; Return list of URLs propertized with input and title
+    ;; Return list of URLs propertized with title
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
                 (propertize (qutebrowser--tofu-append url ?h)
-                            'input input
                             'title title)))
             rows)))
 
@@ -661,10 +660,9 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
       words))
    list))
 
-(defun qutebrowser-bookmark-search (&optional input)
-  "Return a propertized list of Qutebrowser bookmarks matching INPUT."
-  (let* ((words (string-split (or input "")))
-         (bookmarks (qutebrowser-bookmarks-list))
+(defun qutebrowser-bookmark-search (&optional words)
+  "Return a propertized list of Qutebrowser bookmarks matching WORDS."
+  (let* ((bookmarks (qutebrowser-bookmarks-list))
          (matching-bookmarks
           (qutebrowser--filter-list words
                                     bookmarks
@@ -676,14 +674,12 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
                 (propertize (qutebrowser--tofu-append url ?m)
-                            'title bookmark
-                            'bookmark t)))
+                            'title bookmark)))
             matching-bookmarks)))
 
-(defun qutebrowser-exwm-buffer-search (&optional input)
-  "Return a propertized list of Qutebrowser buffers matching INPUT."
-  (let* ((words (string-split (or input "")))
-         (buffers (qutebrowser-exwm-buffer-list))
+(defun qutebrowser-exwm-buffer-search (&optional words)
+  "Return a propertized list of Qutebrowser buffers matching WORDS."
+  (let* ((buffers (qutebrowser-exwm-buffer-list))
          (matching-buffers
           (qutebrowser--filter-list words
                                     buffers
@@ -701,11 +697,10 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
             matching-buffers)))
 
 
-(defun qutebrowser-command-search (input)
-  "Return a propertized list of Qutebrowser commands matching INPUT."
-  (when (string-prefix-p ":" input)
-    (let* ((words (string-split (or input "")))
-           (all-commands (seq-into (qutebrowser-rpc-request :list-commands) 'list))
+(defun qutebrowser-command-search (words)
+  "Return a propertized list of Qutebrowser commands matching WORDS."
+  (when (string-prefix-p ":" (car words))
+    (let* ((all-commands (seq-into (qutebrowser-rpc-request :list-commands) 'list))
            (matching-commands
             (qutebrowser--filter-list words
                                       all-commands
@@ -722,9 +717,9 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
            (propertize (qutebrowser--tofu-append name ?c) 'title desc 'url name)))
        matching-commands))))
 
-(defun qutebrowser-highlight-matches (input str)
-  "Highlight all occurrences of words in INPUT in STR."
-  (dolist (word (string-split input))
+(defun qutebrowser-highlight-matches (words str)
+  "Highlight all occurrences of words in WORDS in STR."
+  (dolist (word words)
     (let ((pos 0))
       (while-let ((start (cl-search word str :start2 pos :test #'char-equal))
                   (end (+ start (length word))))
@@ -734,29 +729,27 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
 (defun qutebrowser-annotate (entry &optional pad)
   "Return annotation for ENTRY.
 
-ENTRY can be a bookmark, a buffer, or a history item.  ENTRY should be a
-string containing a URL, and it should be propertized with at least some
-of `input', `url', and/or `title'.
+ENTRY can be a bookmark, a buffer, a history item, or a command.  ENTRY
+should be a string containing a URL/command, and it should be
+propertized with `title'.
 
-ENTRY will be modified to highlight any words contained in the `input'
-property, and the end of the string will be hidden by setting the
-`invisible' property.
+ENTRY will be modified to highlight any words contained in
+`qutebrowser-current-launcher-input', and the end of the string will be
+hidden by setting the `invisible' property.
 
 If PAD is non-nil, add padding to the annotation if ENTRY is shorter
 than `qutebrowser-url-display-length'."
   (let ((input qutebrowser-current-launcher-input)
-        (url (substring-no-properties entry))
         (title (get-text-property 0 'title entry)))
     ;; Set main face of annotation (title)
     (put-text-property 0 (length title) 'face 'completions-annotations title)
     ;; Highlight all matching words (both in url and title)
     (when input
-      (qutebrowser-highlight-matches input entry)
-      (qutebrowser-highlight-matches input title))
+      (qutebrowser-highlight-matches (string-split input) entry)
+      (qutebrowser-highlight-matches (string-split input) title))
     (qutebrowser--shorten-display-url entry)
     (let* ((pad-length (max 0 (- qutebrowser-url-display-length
-                                 ;; -1 because of appended tofus
-                                 (1- (length url)))))
+                                 (length (qutebrowser--tofu-strip entry)))))
            ;; When used in the dynamic qutebrowser-select-url, we need
            ;; to pad the annotations for alignment. This is not needed
            ;; when the annotations are used in non-dynamic buffer
@@ -794,11 +787,12 @@ INITIAL sets the initial input in the minibuffer."
      (consult--dynamic-collection
       (lambda (input)
         (setq qutebrowser-current-launcher-input input)
-        (append
-         (qutebrowser-command-search input)
-         (qutebrowser-exwm-buffer-search input)
-         (qutebrowser-bookmark-search input)
-         (qutebrowser--history-search input qutebrowser-dynamic-results))))
+        (let ((words (string-split (or input ""))))
+          (append
+           (qutebrowser-command-search words)
+           (qutebrowser-exwm-buffer-search words)
+           (qutebrowser-bookmark-search words)
+           (qutebrowser--history-search words qutebrowser-dynamic-results)))))
      :group #'qutebrowser-launcher--group-entries
      :sort nil
      :annotate (lambda (entry) (qutebrowser-annotate entry t))
@@ -823,11 +817,12 @@ INITIAL sets the initial input in the minibuffer."
     (if (string-empty-p string)
         (setq string qutebrowser-current-launcher-input)
       (setq qutebrowser-current-launcher-input string))
-    (append
-     (qutebrowser-command-search string)
-     (qutebrowser-exwm-buffer-search string)
-     (qutebrowser-bookmark-search string)
-     (qutebrowser--history-search string 100))))
+    (let ((words (string-split (or string ""))))
+      (append
+       (qutebrowser-command-search words)
+       (qutebrowser-exwm-buffer-search words)
+       (qutebrowser-bookmark-search words)
+       (qutebrowser--history-search words 100)))))
 
 ;;;; Static consult buffer sources
 
