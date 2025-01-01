@@ -872,25 +872,56 @@ INITIAL sets the initial input in the minibuffer."
 ;;;; Launcher functions
 
 ;;;###autoload
+(defun qutebrowser (thing &optional target count)
+  "Do THING in Qutebrowser.
+
+THING can be one of: a URL, a Qutebrowser buffer, a Qutebrowser command
+with colon prefix, or any string which will be searched with the default
+search engine.
+
+TARGET is where to do the thing, and can be one of: 'auto, 'tab,
+'window, 'private-window. If not specified, defaults to
+`qutebrowser-default-open-target'. When THING is a buffer or a command,
+TARGET is ignored.
+
+If THING is a Qutebrowser command, COUNT is passed directly to the
+command. Otherwise THING is done COUNT times.
+
+If called interactively, prompts for input with dynamic completion from
+Qutebrowser history, open Qutebrowser buffers, Qutebrowser bookmarks,
+and, if input starts with a colon, known Qutebrowser commands.
+
+With one universal argument, set TARGET to 'tab.
+With two universal arguments, set TARGET to 'private-window.
+With a numeric prefix argument N, set COUNT to N."
+  (interactive (list (qutebrowser-select-url)
+                     (pcase current-prefix-arg
+                       ('(4) 'tab)
+                       ('(16) 'private-window)
+                       (_ nil))
+                     (and (numberp current-prefix-arg)
+                          current-prefix-arg)))
+  ;; FIXME: This way of dispatching is a temporary workaround
+  ;; because consult currently doesn't support mixing dynamic and
+  ;; static sources, so we can't set up individual consult sources
+  ;; with :action functions.
+  (let ((source-id (qutebrowser--tofu-get thing))
+        (url (qutebrowser--tofu-strip thing)))
+    (cond
+     ((eq ?b source-id)
+      (let ((buffer (qutebrowser--tofu-get-buffer thing)))
+        (switch-to-buffer buffer)))
+     ((eq ?c source-id) (qutebrowser-send-commands url))
+     (t (qutebrowser-open-url url target)))))
+
+;;;###autoload
 (defun qutebrowser-launcher (&optional initial target)
   "Select a URL to open in Qutebrowser.
 Set initial completion input to INITIAL.  Open the URL in TARGET or the
 default target if nil."
   (interactive)
-  (when-let* ((selected (qutebrowser-select-url initial)))
-    ;; FIXME: This way of dispatching is a temporary workaround
-    ;; because consult currently doesn't support mixing dynamic and
-    ;; static sources, so we can't set up individual consult sources
-    ;; with :action functions.
-    (let ((source-id (qutebrowser--tofu-get selected))
-          (url (qutebrowser--tofu-strip selected)))
-      (cond
-       ((eq ?b source-id)
-        (let ((buffer (qutebrowser--tofu-get-buffer selected)))
-          (switch-to-buffer buffer)))
-       ((eq ?c source-id)
-        (qutebrowser-send-commands url))
-       (t (qutebrowser-open-url url target))))))
+  (let ((selected (qutebrowser-select-url initial)))
+    (qutebrowser selected target)))
 
 ;;;###autoload
 (defun qutebrowser-launcher-tab (&optional initial)
