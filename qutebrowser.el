@@ -325,7 +325,7 @@ RECENTLY-AUDIBLE."
   :type 'hook)
 
 (defcustom qutebrowser-update-window-info-functions
-  '(qutebrowser-exwm-update-window-info)
+  '(qutebrowser-exwm--update-window-info)
   "Functions to run with updated information about windows.
 These functions should not be considered as hooks for any kind of event,
 and can be triggered both manually and automatically by various functions
@@ -416,7 +416,7 @@ This list is used to identify running Qutebrowser processes.")
                                                                   buffer-file-name)))
 ;;;; Hook functions
 
-(defun qutebrowser-exwm-update-favicon (icon-file)
+(defun qutebrowser-exwm--update-favicon (icon-file)
   "Update the favicon.
 ICON-FILE is a temp-file containing the favicon.  Any previous ICON-FILE
 will be deleted."
@@ -431,12 +431,12 @@ will be deleted."
     ;; Delete invalid/empty icon files
     (delete-file icon-file)))
 
-(defun qutebrowser-exwm-delete-favicon-tempfile ()
+(defun qutebrowser-exwm--delete-favicon-tempfile ()
   "Deletes the tempfile associated with the favicon of current buffer."
   (when-let ((icon-file (image-property qutebrowser-exwm-favicon :file)))
     (delete-file icon-file)))
 
-(add-hook 'kill-buffer-hook #'qutebrowser-exwm-delete-favicon-tempfile)
+(add-hook 'kill-buffer-hook #'qutebrowser-exwm--delete-favicon-tempfile)
 
 (defmacro qutebrowser--with-plist-key (key plist &rest body)
   "Execute BODY if KEY exists in PLIST, with KEY's value bound.
@@ -463,7 +463,7 @@ and BODY is one or more forms to execute if KEY is in PLIST."
                       ,@body)))
                clauses)))
 
-(defun qutebrowser-exwm-update-window-info (window-info)
+(defun qutebrowser-exwm--update-window-info (window-info)
   "Update buffer-local variables from WINDOW-INFO."
   (when-let* ((x11-win-id (plist-get window-info :x11-win-id))
               (buffer (exwm--id->buffer x11-win-id)))
@@ -471,7 +471,7 @@ and BODY is one or more forms to execute if KEY is in PLIST."
       (qutebrowser--with-plist window-info
         (win-id (setq-local qutebrowser-exwm-win-id win-id))
         (mode (setq-local qutebrowser-exwm-keymode mode))
-        (icon-file (qutebrowser-exwm-update-favicon icon-file))
+        (icon-file (qutebrowser-exwm--update-favicon icon-file))
         (search (setq-local qutebrowser-exwm-current-search search))
         (hover (when (string= hover "") (setq hover nil))
                (setq-local qutebrowser-exwm-hovered-url hover))
@@ -728,7 +728,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
            (propertize (qutebrowser--tofu-append name ?c) 'title desc 'url name)))
        matching-commands))))
 
-(defun qutebrowser-highlight-matches (words str)
+(defun qutebrowser--highlight-matches (words str)
   "Highlight all occurrences of words in WORDS in STR."
   (dolist (word words)
     (let ((pos 0))
@@ -745,19 +745,19 @@ should be a string containing a URL/command, and it should be
 propertized with `title'.
 
 ENTRY will be modified to highlight any words contained in
-`qutebrowser-current-launcher-input', and the end of the string will be
+`qutebrowser-launcher--current-input', and the end of the string will be
 hidden by setting the `invisible' property.
 
 If PAD is non-nil, add padding to the annotation if ENTRY is shorter
 than `qutebrowser-url-display-length'."
-  (let ((input qutebrowser-current-launcher-input)
+  (let ((input qutebrowser-launcher--current-input)
         (title (get-text-property 0 'title entry)))
     ;; Set main face of annotation (title)
     (put-text-property 0 (length title) 'face 'completions-annotations title)
     ;; Highlight all matching words (both in url and title)
     (when input
-      (qutebrowser-highlight-matches (string-split input) entry)
-      (qutebrowser-highlight-matches (string-split input) title))
+      (qutebrowser--highlight-matches (string-split input) entry)
+      (qutebrowser--highlight-matches (string-split input) title))
     (qutebrowser--shorten-display-url entry)
     (let* ((pad-length (max 0 (- qutebrowser-url-display-length
                                  (length (qutebrowser--tofu-strip entry)))))
@@ -786,7 +786,7 @@ than `qutebrowser-url-display-length'."
      (?c qutebrowser-heading-command--with-count)
      (_ qutebrowser-heading-history--with-count))))
 
-(defvar qutebrowser-current-launcher-input "")
+(defvar qutebrowser-launcher--current-input "")
 
 (defun qutebrowser-consult-select-url (&optional initial)
   "Dynamically select a URL, buffer, or command using consult.
@@ -796,7 +796,7 @@ INITIAL sets the initial input in the minibuffer."
     (consult--read
      (consult--dynamic-collection
       (lambda (input)
-        (setq qutebrowser-current-launcher-input input)
+        (setq qutebrowser-launcher--current-input input)
         (let ((words (string-split (or input ""))))
           (append
            (qutebrowser-command-search words)
@@ -810,7 +810,7 @@ INITIAL sets the initial input in the minibuffer."
      :require-match nil)))
 
 
-(defun qutebrowser-completion-table (string predicate action)
+(defun qutebrowser--completion-table (string predicate action)
   (if (eq action 'metadata)
       `(metadata . ((category . url)
                     (display-sort-function . identity)
@@ -825,8 +825,8 @@ INITIAL sets the initial input in the minibuffer."
     ;; anything not present in both. To avoid this we keep a copy of
     ;; the input string and swap it in when 'string' is empty.
     (if (string-empty-p string)
-        (setq string qutebrowser-current-launcher-input)
-      (setq qutebrowser-current-launcher-input string))
+        (setq string qutebrowser-launcher--current-input)
+      (setq qutebrowser-launcher--current-input string))
     (let ((words (string-split (or string ""))))
       (append
        (qutebrowser-command-search words)
@@ -837,8 +837,8 @@ INITIAL sets the initial input in the minibuffer."
 (defun qutebrowser-select-url (&optional initial)
   "Dynamically select a URL, buffer, or command.
 INITIAL sets the initial input in the minibuffer."
-  (setq qutebrowser-current-launcher-input "")
-  (completing-read "Select: " #'qutebrowser-completion-table nil nil initial))
+  (setq qutebrowser-launcher--current-input "")
+  (completing-read "Select: " #'qutebrowser--completion-table nil nil initial))
 
 
 ;;;; Static consult buffer sources
@@ -954,7 +954,7 @@ Set initial completion input to INITIAL."
 ;;;; Advice
 
 ;; Prevent Prescient history from being clogged up by web pages.
-(defun qutebrowser-advice-vertico-prescient (orig-fun &rest args)
+(defun qutebrowser--advice-vertico-prescient (orig-fun &rest args)
   "Exclude Qutebrowser buffer names and URLs from prescient history.
 The ORIG-FUN takes ARGS."
   (let* ((selected-candidate (qutebrowser--tofu-strip
@@ -966,7 +966,7 @@ The ORIG-FUN takes ARGS."
 
 (with-eval-after-load 'vertico-prescient
   (advice-add 'vertico-prescient--remember-minibuffer-contents :around
-              #'qutebrowser-advice-vertico-prescient))
+              #'qutebrowser--advice-vertico-prescient))
 
 ;;;; RPC functions
 
@@ -1000,15 +1000,15 @@ The ORIG-FUN takes ARGS."
                    (when (string= event "connection broken by remote peer\n")
                      (delete-process proc)))))))
 
-(defvar qutebrowser-rpc-connection nil)
+(defvar qutebrowser-rpc--connection nil)
 (defvar qutebrowser-rpc-should-reconnect t)
-(defvar qutebrowser-rpc-reconnect-timer nil)
+(defvar qutebrowser-rpc--reconnect-timer nil)
 
 (defun qutebrowser-rpc-maybe-reconnect (&rest _)
   (when qutebrowser-rpc-should-reconnect
-    (when (timerp qutebrowser-rpc-reconnect-timer)
-      (cancel-timer qutebrowser-rpc-reconnect-timer))
-    (setq qutebrowser-rpc-reconnect-timer
+    (when (timerp qutebrowser-rpc--reconnect-timer)
+      (cancel-timer qutebrowser-rpc--reconnect-timer))
+    (setq qutebrowser-rpc--reconnect-timer
           (run-with-timer 1 10 #'qutebrowser-rpc-connect))))
 
 (defun qutebrowser-rpc-connect (&optional flush)
@@ -1022,7 +1022,7 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
     (unless (qutebrowser-rpc-connected-p)
       (condition-case err
           (when-let ((proc (qutebrowser-rpc--make-network-process)))
-            (setq qutebrowser-rpc-connection
+            (setq qutebrowser-rpc--connection
                   (qutebrowser-jsonrpc-process-connection
                    :name "qutebrowser-jsonrpc"
                    :process proc
@@ -1032,8 +1032,8 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
             (qutebrowser-rpc-request-window-info)
             (qutebrowser-populate-commands)
             (qutebrowser-populate-rpcmethods)
-            (when (timerp qutebrowser-rpc-reconnect-timer)
-              (cancel-timer qutebrowser-rpc-reconnect-timer)))
+            (when (timerp qutebrowser-rpc--reconnect-timer)
+              (cancel-timer qutebrowser-rpc--reconnect-timer)))
         (file-error
          (message "Error connecting to Qutebrowser RPC socket: %s" (error-message-string err)))
         (error
@@ -1043,7 +1043,7 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
   "Return a `jsonrpc-connection' to the RPC socket."
     (unless (qutebrowser-rpc-connected-p)
       (qutebrowser-rpc-connect))
-    qutebrowser-rpc-connection)
+    qutebrowser-rpc--connection)
 
 (defclass qutebrowser-jsonrpc-process-connection (jsonrpc-process-connection)
   nil)
@@ -1068,8 +1068,8 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
 
 (defun qutebrowser-rpc-connected-p ()
   "Check if connected to the Qutebrowser RPC."
-  (and (qutebrowser-jsonrpc-process-connection-p qutebrowser-rpc-connection)
-       (jsonrpc-running-p qutebrowser-rpc-connection)))
+  (and (qutebrowser-jsonrpc-process-connection-p qutebrowser-rpc--connection)
+       (jsonrpc-running-p qutebrowser-rpc--connection)))
 
 (defun qutebrowser-rpc-ensure-installed ()
   "Ensure that the Python backend files for RPC and hooks are installed.

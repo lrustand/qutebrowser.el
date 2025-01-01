@@ -35,7 +35,7 @@
     ("KeyMode.normal" . evil-normal-state)
     ("KeyMode.passthrough" . evil-emacs-state)))
 
-(defun qutebrowser-evil-update-state (window-info)
+(defun qutebrowser-evil--update-state (window-info)
   "Set evil state to match Qutebrowser keymode from WINDOW-INFO."
   (when-let* ((x11-win-id (plist-get window-info :x11-win-id))
               (buffer (exwm--id->buffer x11-win-id)))
@@ -52,9 +52,9 @@
   :global t
   (if qutebrowser-evil-state-mode
       (add-hook 'qutebrowser-update-window-info-functions
-                #'qutebrowser-evil-update-state)
+                #'qutebrowser-evil--update-state)
     (remove-hook 'qutebrowser-update-window-info-functions
-                 #'qutebrowser-evil-update-state)))
+                 #'qutebrowser-evil--update-state)))
 
 
 (provide 'qutebrowser-evil)
