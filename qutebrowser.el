@@ -520,7 +520,7 @@ Return up to LIMIT results."
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
-                (propertize (consult--tofu-append url ?h)
+                (propertize (qutebrowser--tofu-append url ?h)
                             'input input
                             'title title)))
             rows)))
@@ -566,10 +566,40 @@ Return up to LIMIT results."
       (put-text-property max-length url-length 'invisible t url))
     url))
 
-(defun qutebrowser--strip-tofus (str)
-  "Return STR stripped of any consult tofus."
+;; The following group of tofu functions are adopted from
+;; consult. These are copied verbatim (except for renaming) and
+;; inlined here to avoid directly depending on internal consult
+;; mechanisms.
+
+(defconst qutebrowser--tofu-char #x200000
+  "Special character used to encode line prefixes for disambiguation.
+We use invalid characters outside the Unicode range.")
+
+(defconst qutebrowser--tofu-range #x100000
+  "Special character range.")
+
+
+(defsubst qutebrowser--tofu-p (char)
+  "Return non-nil if CHAR is a tofu."
+  (<= qutebrowser--tofu-char char (+ qutebrowser--tofu-char qutebrowser--tofu-range -1)))
+
+(defsubst qutebrowser--tofu-append (cand id)
+  "Append tofu-encoded ID to CAND.
+The ID must fit within a single character.  It must be smaller
+than `qutebrowser--tofu-range'."
+  (setq id (char-to-string (+ qutebrowser--tofu-char id)))
+  (add-text-properties 0 1 '(invisible t) id)
+  (concat cand id))
+
+(defsubst qutebrowser--tofu-get (cand)
+  "Extract tofu-encoded ID from CAND.
+See `qutebrowser--tofu-append'."
+  (- (aref cand (1- (length cand))) qutebrowser--tofu-char))
+
+(defun qutebrowser--tofu-strip (str)
+  "Return STR stripped of any qutebrowser tofus."
   (let* ((end (length str)))
-    (while (and (> end 0) (consult--tofu-p (aref str (1- end))))
+    (while (and (> end 0) (qutebrowser--tofu-p (aref str (1- end))))
       (cl-decf end))
     (substring str 0 end)))
 
@@ -640,7 +670,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
           (format qutebrowser-heading-bookmark matches))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
-                (propertize (consult--tofu-append url ?m)
+                (propertize (qutebrowser--tofu-append url ?m)
                             'title bookmark
                             'bookmark t)))
             matching-bookmarks)))
@@ -660,7 +690,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
     (mapcar (lambda (buffer)
               (let* ((title (substring-no-properties (buffer-name buffer)))
                      (url (qutebrowser-exwm-buffer-url buffer)))
-                (propertize (consult--tofu-append url ?b)
+                (propertize (qutebrowser--tofu-append url ?b)
                             'title title
                             'buffer buffer)))
             matching-buffers)))
@@ -684,7 +714,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
        (lambda (cmd)
          (let ((name (concat ":" (plist-get cmd :command)))
                (desc (car (string-lines (plist-get cmd :description)))))
-           (propertize (consult--tofu-append name ?c) 'title desc 'url name)))
+           (propertize (qutebrowser--tofu-append name ?c) 'title desc 'url name)))
        matching-commands))))
 
 (defun qutebrowser-highlight-matches (input str)
@@ -741,7 +771,7 @@ than `qutebrowser-url-display-length'."
 (defun qutebrowser-launcher--group-entries (entry transform)
   (if transform
       entry
-    (pcase (consult--tofu-get entry)
+    (pcase (qutebrowser--tofu-get entry)
      (?b qutebrowser-heading-buffer--with-count)
      (?m qutebrowser-heading-bookmark--with-count)
      (?c qutebrowser-heading-command--with-count)
@@ -842,8 +872,8 @@ default target if nil."
     ;; because consult currently doesn't support mixing dynamic and
     ;; static sources, so we can't set up individual consult sources
     ;; with :action functions.
-    (let ((source-id (consult--tofu-get selected))
-          (url (qutebrowser--strip-tofus selected)))
+    (let ((source-id (qutebrowser--tofu-get selected))
+          (url (qutebrowser--tofu-strip selected)))
       (cond
        ((eq ?b source-id)
         (let ((buffer (qutebrowser-exwm-find-buffer url)))
@@ -879,7 +909,7 @@ Set initial completion input to INITIAL."
 (defun qutebrowser-advice-vertico-prescient (orig-fun &rest args)
   "Exclude Qutebrowser buffer names and URLs from prescient history.
 The ORIG-FUN takes ARGS."
-  (let* ((selected-candidate (qutebrowser--strip-tofus
+  (let* ((selected-candidate (qutebrowser--tofu-strip
                               (minibuffer-contents-no-properties)))
          (selected-buffer (get-buffer selected-candidate)))
     (unless (or (qutebrowser-exwm-p selected-buffer)
