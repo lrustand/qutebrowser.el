@@ -587,13 +587,16 @@ We use invalid characters outside the Unicode range.")
   "Return non-nil if CHAR is a tofu."
   (<= qutebrowser--tofu-char char (+ qutebrowser--tofu-char qutebrowser--tofu-range -1)))
 
-(defsubst qutebrowser--tofu-append (cand id)
-  "Append tofu-encoded ID to CAND.
+(defsubst qutebrowser--tofu-append (cand &rest id-list)
+  "Append tofu-encoded IDs from ID-LIST to CAND.
 The ID must fit within a single character.  It must be smaller
 than `qutebrowser--tofu-range'."
-  (setq id (char-to-string (+ qutebrowser--tofu-char id)))
-  (add-text-properties 0 1 '(invisible t) id)
-  (concat cand id))
+  (concat cand
+          (mapconcat
+           (lambda (id)
+             (setq id (char-to-string (+ qutebrowser--tofu-char id)))
+             (propertize id 'invisible t))
+           id-list)))
 
 (defsubst qutebrowser--tofu-get (cand)
   "Extract tofu-encoded ID from CAND.
