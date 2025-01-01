@@ -541,6 +541,11 @@ Return up to LIMIT results."
               (string= url (qutebrowser-exwm-buffer-url buffer)))
             (qutebrowser-exwm-buffer-list)))
 
+(defun qutebrowser-exwm--win-id->buffer (win-id)
+  (seq-find (lambda (buffer)
+              (eq win-id (buffer-local-value 'qutebrowser-exwm-win-id buffer)))
+            (qutebrowser-exwm-buffer-list)))
+
 (defun qutebrowser-exwm-p (&optional buffer)
   "Return t if BUFFER is a Qutebrowser EXWM buffer."
   (with-current-buffer (or buffer (current-buffer))
