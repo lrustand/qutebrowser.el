@@ -788,8 +788,8 @@ than `qutebrowser-url-display-length'."
 
 (defvar qutebrowser-current-launcher-input "")
 
-(defun qutebrowser-select-url (&optional initial)
-  "Dynamically select a URL, buffer, or command.
+(defun qutebrowser-consult-select-url (&optional initial)
+  "Dynamically select a URL, buffer, or command using consult.
 INITIAL sets the initial input in the minibuffer."
   (let ((consult-async-min-input 0)
         (consult-async-split-style nil))
@@ -832,7 +832,14 @@ INITIAL sets the initial input in the minibuffer."
        (qutebrowser-command-search words)
        (qutebrowser-exwm-buffer-search words)
        (qutebrowser-bookmark-search words)
-       (qutebrowser--history-search words 100)))))
+       (qutebrowser--history-search words qutebrowser-dynamic-results)))))
+
+(defun qutebrowser-select-url (&optional initial)
+  "Dynamically select a URL, buffer, or command.
+INITIAL sets the initial input in the minibuffer."
+  (setq qutebrowser-current-launcher-input "")
+  (completing-read "Select: " #'qutebrowser-completion-table nil nil initial))
+
 
 ;;;; Static consult buffer sources
 
