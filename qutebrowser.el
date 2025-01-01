@@ -440,7 +440,7 @@ will be deleted."
 
 (defmacro qutebrowser--with-plist-key (key plist &rest body)
   "Execute BODY if KEY exists in PLIST, with KEY's value bound.
-KEY should be the name of a plist key without he colon.
+KEY should be the name of a plist key without the colon.
 PLIST is the property list to check.
 BODY is one or more forms to execute if KEY is found in PLIST."
   (declare (indent defun))
