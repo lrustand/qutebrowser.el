@@ -603,52 +603,38 @@ Return up to LIMIT results."
 
 ;;;; Dynamic consult source
 
-(defun qutebrowser-exwm-buffer-filter (words buffers)
-  "Filter BUFFERS to find those matching WORDS.
-Both buffer names and URLs are used for matching."
-  (seq-filter
-   (lambda (buffer)
-     ;; All search words matching
-     (seq-every-p (lambda (word)
-                    (let ((title (or (buffer-name buffer) ""))
-                          (url (or (qutebrowser-exwm-buffer-url buffer) "")))
-                      (or (cl-search word title)
-                          (cl-search word url))))
-                  words))
-   buffers))
+(defun qutebrowser--filter-list (words list &rest field-getters)
+  "Generalized list filtering function.
+WORDS is a list of words to search for.
+LIST is the list to be filtered.
+FIELD-GETTERS is a list of functions for getting the fields from each
+that should be matched against WORDS. The function is called with the
+element to filter.
 
-(defun qutebrowser-bookmark-filter (words bookmarks)
-  "Filter BOOKMARKS to find those matching WORDS.
-Both bookmark name and URLs are used for matching."
+The elements in LIST are filtered to contain only elements that match
+all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
   (seq-filter
-   (lambda (bookmark)
+   (lambda (elem)
      ;; All search words matching
-     (seq-every-p (lambda (word)
-                    (or (cl-search word bookmark)
-                        (cl-search word (qutebrowser-bookmark-url bookmark))))
-                  words))
-   bookmarks))
-
-(defun qutebrowser-command-filter (words commands)
-  "Filter COMMANDS to find those matching WORDS.
-Both command names and descriptions are used for matching."
-  (seq-filter
-   (lambda (command)
-     ;; All search words matching
-     (seq-every-p (lambda (word)
-                    (let* ((desc (plist-get command :description))
-                           (title (car (string-lines desc)))
-                           (cmd (concat ":" (plist-get command :command))))
-                      (or (cl-search word title)
-                          (cl-search word cmd))))
-                  words))
-   commands))
+     (seq-every-p
+      (lambda (word)
+        ;; At least one field matches each word
+        (seq-some
+         (lambda (field)
+           (cl-search word (funcall field elem)))
+         field-getters))
+      words))
+   list))
 
 (defun qutebrowser-bookmark-search (&optional input)
   "Return a propertized list of Qutebrowser bookmarks matching INPUT."
   (let* ((words (string-split (or input "")))
          (bookmarks (qutebrowser-bookmarks-list))
-         (matching-bookmarks (qutebrowser-bookmark-filter words bookmarks))
+         (matching-bookmarks
+          (qutebrowser--filter-list words
+                                    bookmarks
+                                    #'identity
+                                    #'qutebrowser-bookmark-url))
          (matches (length matching-bookmarks)))
     (setq qutebrowser-heading-bookmark--with-count
           (format qutebrowser-heading-bookmark matches))
@@ -663,7 +649,11 @@ Both command names and descriptions are used for matching."
   "Return a propertized list of Qutebrowser buffers matching INPUT."
   (let* ((words (string-split (or input "")))
          (buffers (qutebrowser-exwm-buffer-list))
-         (matching-buffers (qutebrowser-exwm-buffer-filter words buffers))
+         (matching-buffers
+          (qutebrowser--filter-list words
+                                    buffers
+                                    #'buffer-name
+                                    #'qutebrowser-exwm-buffer-url))
          (matches (length matching-buffers)))
     (setq qutebrowser-heading-buffer--with-count
           (format qutebrowser-heading-buffer matches))
@@ -681,7 +671,13 @@ Both command names and descriptions are used for matching."
   (when (string-prefix-p ":" input)
     (let* ((words (string-split (or input "")))
            (all-commands (seq-into (qutebrowser-rpc-request :list-commands) 'list))
-           (matching-commands (qutebrowser-command-filter words all-commands)))
+           (matching-commands
+            (qutebrowser--filter-list words
+                                      all-commands
+                                      (lambda (cmd)
+                                        (concat ":" (plist-get cmd :command)))
+                                      (lambda (cmd)
+                                        (car (string-lines (plist-get cmd :description)))))))
       (setq qutebrowser-heading-command--with-count
             (format qutebrowser-heading-command (length matching-commands)))
       (mapcar
