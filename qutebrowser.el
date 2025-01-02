@@ -798,7 +798,7 @@ than `qutebrowser-url-display-length'."
 
 (defvar qutebrowser-launcher--current-input "")
 
-(defun qutebrowser-consult-select-url (&optional initial)
+(defun qutebrowser-consult-select-url (&optional initial default)
   "Dynamically select a URL, buffer, or command using consult.
 INITIAL sets the initial input in the minibuffer."
   (let ((consult-async-min-input 0)
@@ -813,6 +813,10 @@ INITIAL sets the initial input in the minibuffer."
            (qutebrowser-exwm-buffer-search words)
            (qutebrowser-bookmark-search words)
            (qutebrowser--history-search words qutebrowser-dynamic-results)))))
+     :prompt (if default
+                 (format "Select (default %s): " default)
+               "Select: ")
+     :default default
      :group #'qutebrowser-launcher--group-entries
      :sort nil
      :annotate (lambda (entry) (qutebrowser-annotate entry t))
@@ -844,11 +848,14 @@ INITIAL sets the initial input in the minibuffer."
        (qutebrowser-bookmark-search words)
        (qutebrowser--history-search words qutebrowser-dynamic-results)))))
 
-(defun qutebrowser-select-url (&optional initial)
+(defun qutebrowser-select-url (&optional initial default)
   "Dynamically select a URL, buffer, or command.
 INITIAL sets the initial input in the minibuffer."
   (setq qutebrowser-launcher--current-input "")
-  (completing-read "Select: " #'qutebrowser--completion-table nil nil initial))
+  (let ((prompt (if default
+                    (format "Select (default %s): " default)
+                  "Select: ")))
+    (completing-read prompt #'qutebrowser--completion-table nil nil initial nil default)))
 
 
 ;;;; Static consult buffer sources
@@ -911,7 +918,15 @@ and, if input starts with a colon, known Qutebrowser commands.
 With one universal argument, set TARGET to 'tab.
 With two universal arguments, set TARGET to 'private-window.
 With a numeric prefix argument N, set COUNT to N."
-  (interactive (list (qutebrowser-select-url)
+  (interactive (list (let ((default
+                            (or (and (region-active-p)
+                                     (filter-buffer-substring
+                                      (region-beginning)
+                                      (region-end)))
+                                (thing-at-point 'url t)
+                                (thing-at-point 'symbol t)
+                                (thing-at-point 'word t))))
+                       (qutebrowser-select-url nil default))
                      (pcase current-prefix-arg
                        ('(4) 'tab)
                        ('(16) 'private-window)
