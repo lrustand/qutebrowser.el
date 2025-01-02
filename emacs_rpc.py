@@ -18,6 +18,7 @@ from qutebrowser.misc.ipc import IPCServer
 from qutebrowser.utils import objreg
 import json
 from tempfile import mkstemp
+from typing import Sequence, Callable
 import os
 import traceback
 import inspect
