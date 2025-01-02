@@ -946,6 +946,23 @@ With a numeric prefix argument N, set COUNT to N."
      ((eq ?c source-id) (qutebrowser-send-commands url))
      (t (qutebrowser-open-url url target)))))
 
+(defun qutebrowser-dwim (thing &optional target count)
+  (interactive (list (or (and (region-active-p)
+                              (filter-buffer-substring
+                               (region-beginning)
+                               (region-end)))
+                         (thing-at-point 'url t)
+                         (thing-at-point 'symbol t)
+                         (thing-at-point 'word t)
+                         (qutebrowser-select-url))
+                     (pcase current-prefix-arg
+                       ('(4) 'tab)
+                       ('(16) 'private-window)
+                       (_ nil))
+                     (and (numberp current-prefix-arg)
+                          current-prefix-arg)))
+  (qutebrowser thing target count))
+
 ;;;###autoload
 (defun qutebrowser-launcher (&optional initial target)
   "Select a URL to open in Qutebrowser.
