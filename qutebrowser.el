@@ -212,6 +212,11 @@ query is built, see `qutebrowser--history-search'."
   :type 'integer
   :group 'qutebrowser)
 
+(defcustom qutebrowser-launcher-show-icons t
+  "Show favicons of Qutebrowser buffers in launcher."
+  :type 'boolean
+  :group 'qutebrowser)
+
 (defcustom qutebrowser-history-order-by "last_atime DESC"
   "How to sort the history entries in the completion lists."
   :type '(choice
@@ -701,10 +706,15 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
               (let* ((title (substring-no-properties (buffer-name buffer)))
                      (url (qutebrowser-exwm-buffer-url buffer))
                      (win-id (buffer-local-value 'qutebrowser-exwm-win-id buffer))
+                     (icon (buffer-local-value 'qutebrowser-exwm-favicon buffer))
+
+                     (icon-string (propertize "" 'display icon))
                      (url-with-tofus
                       (qutebrowser--tofu-append url win-id ?b)))
                 (propertize url-with-tofus
-                            'title title)))
+                            'title (if qutebrowser-launcher-show-icons
+                                       (concat icon-string " " title)
+                                     title))))
             matching-buffers)))
 
 
