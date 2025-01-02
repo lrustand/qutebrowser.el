@@ -2,10 +2,14 @@
 
 """Manager for Emacs hooks."""
 
+from PyQt6.QtCore import pyqtSlot
 from qutebrowser.api import message
+from qutebrowser.browser.browsertab import AbstractTab
 from qutebrowser.keyinput import modeman
+from qutebrowser.mainwindow.mainwindow import MainWindow
 from qutebrowser.misc import objects
-from qutebrowser.utils import objreg
+from qutebrowser.utils import objreg, usertypes
+from qutebrowser.qt.core import QUrl
 from functools import partial
 from tempfile import mkstemp
 import os
@@ -20,7 +24,7 @@ class EmacsHookManager:
     """
 
     # TODO: Delete old favicon tempfiles on init
-    def __init__(self):
+    def __init__(self) -> None:
 
         old_manager = objreg.get("emacs-hook-manager", None)
 
@@ -41,7 +45,7 @@ class EmacsHookManager:
                 objects.qapp.new_window.disconnect(old_manager.on_new_window)
             objects.qapp.new_window.connect(self.on_new_window)
 
-    def on_url_changed(self, window, url):
+    def on_url_changed(self, window: MainWindow, url: QUrl) -> None:
         """Called when the URL changed.
 
         Args:
@@ -57,7 +61,7 @@ class EmacsHookManager:
 
         self.send_signal("url-changed", data)
 
-    def on_link_hovered(self, window, url):
+    def on_link_hovered(self, window: MainWindow, url: QUrl) -> None:
         """Called when a link is hover or unhovered.
 
         Args:
@@ -73,7 +77,7 @@ class EmacsHookManager:
 
         self.send_signal("link-hovered", data)
 
-    def on_icon_changed(self, tab):
+    def on_icon_changed(self, tab: AbstractTab) -> None:
         """Called when the favicon changes.
 
         Saves the new favicon to a tempfile and sends the filename and
@@ -94,7 +98,10 @@ class EmacsHookManager:
 
         self.send_signal("icon-changed", data)
 
-    def on_scroll_perc_changed(self, window, x_perc, y_perc):
+    def on_scroll_perc_changed(self,
+                               window: MainWindow,
+                               x_perc: int,
+                               y_perc: int):
         """Called when the scroll position changes.
 
         Args:
@@ -111,7 +118,7 @@ class EmacsHookManager:
 
         self.send_signal("scroll-perc-changed", data)
 
-    def on_recently_audible_changed(self, tab):
+    def on_recently_audible_changed(self, tab: AbstractTab) -> None:
         """Called when the audible state changes.
 
         Args:
@@ -127,7 +134,7 @@ class EmacsHookManager:
 
         self.send_signal("recently-audible-changed", data)
 
-    def on_search(self, window, search):
+    def on_search(self, window: MainWindow, search: str) -> None:
         """Called when a search is performed.
 
         Args:
@@ -142,7 +149,9 @@ class EmacsHookManager:
 
         self.send_signal("got-search", data)
 
-    def on_enter_mode(self, window, mode):
+    def on_enter_mode(self,
+                      window: MainWindow,
+                      mode: usertypes.KeyMode):
         """Called when a mode is entered.
 
         Args:
@@ -157,7 +166,9 @@ class EmacsHookManager:
 
         self.send_signal("entered-mode", data)
 
-    def on_leave_mode(self, window, mode):
+    def on_leave_mode(self,
+                      window: MainWindow,
+                      mode: usertypes.KeyMode):
         """Called when a mode is left.
 
         Args:
@@ -174,7 +185,7 @@ class EmacsHookManager:
 
         self.send_signal("left-mode", data)
 
-    def on_load_started(self, window):
+    def on_load_started(self, window: MainWindow) -> None:
         """Called when starting to load a new webpage.
 
         Args:
@@ -184,7 +195,7 @@ class EmacsHookManager:
         self.send_signal("load-started", {"x11-win-id": window_id,
                                           "win-id": window.win_id})
 
-    def on_load_finished(self, window):
+    def on_load_finished(self, window: MainWindow) -> None:
         """Called when finished loading a new webpage.
 
         Args:
@@ -194,7 +205,7 @@ class EmacsHookManager:
         self.send_signal("load-finished", {"x11-win-id": window_id,
                                            "win-id": window.win_id})
 
-    def enable_tab_hooks(self, tab, _):
+    def enable_tab_hooks(self, tab: AbstractTab, _) -> None:
         """Enable tab local hooks.
 
         Args:
@@ -204,7 +215,7 @@ class EmacsHookManager:
         tab.audio.recently_audible_changed.connect(
             partial(self.on_recently_audible_changed, tab))
 
-    def enable_window_hooks(self, window):
+    def enable_window_hooks(self, window: MainWindow) -> None:
         """Enable window local hooks.
 
         Args:
@@ -230,7 +241,7 @@ class EmacsHookManager:
             partial(self.on_scroll_perc_changed, window))
         status.cmd.got_search.connect(partial(self.on_search, window))
 
-    def on_new_window(self, window):
+    def on_new_window(self, window: MainWindow) -> None:
         """Called when a new window is created.
 
         Responsible for setting up all window local hooks in new windows.
@@ -242,7 +253,7 @@ class EmacsHookManager:
                                         "win-id": window.win_id})
         self.enable_window_hooks(window)
 
-    def send_signal(self, signal, args={}):
+    def send_signal(self, signal: str, args: dict[str, object] = {}) -> None:
         """Send a signal to Emacs.
 
         Args:

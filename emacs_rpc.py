@@ -9,6 +9,8 @@ the context of the running Qutebrowser instance.
 
 from PyQt6.QtCore import QByteArray, pyqtSlot
 from qutebrowser.api import message, cmdutils
+from qutebrowser.browser.browsertab import AbstractTab
+from qutebrowser.mainwindow.mainwindow import MainWindow
 from qutebrowser.commands import runners
 from qutebrowser.keyinput import modeman
 from qutebrowser.misc import objects
@@ -34,10 +36,10 @@ class rpcmethod():
     function.
     """
 
-    def __init__(self, interactive=None):
+    def __init__(self, interactive: bool = None):
         self.interactive = interactive
 
-    def _convert_name(self, name):
+    def _convert_name(self, name: str) -> str:
         return name.lower().replace('_', '-')
 
     def __call__(self, func):
@@ -64,15 +66,14 @@ class rpcmethod():
 
 
 
-
-def get_tabs(window):
+def get_tabs(window: MainWindow) -> list[AbstractTab]:
     """Get a list of tab objects belonging to window."""
     tab_registry = objreg._get_window_registry(window.win_id)["tab-registry"]
     tabs = list(tab_registry.values())
     return tabs
 
 
-def get_window(win_id):
+def get_window(win_id: int) -> MainWindow:
     """Return window."""
 
     window = objreg.window_registry.get(win_id)
@@ -83,7 +84,7 @@ def get_window(win_id):
     return window
 
 
-def find_window(x11_win_id):
+def find_window(x11_win_id: int) -> MainWindow:
     """Find window from X11 window ID."""
 
     for win in objreg.window_registry.values():
@@ -94,7 +95,7 @@ def find_window(x11_win_id):
 
 
 @rpcmethod()
-def EVAL(code):
+def EVAL(code: str, repl: bool = False) -> str:
     """Evaluate or execute code.
 
     Will first try to evaluate as an expression to return a value.
@@ -109,7 +110,9 @@ def EVAL(code):
 
 
 @rpcmethod()
-def command(commands, win_id=None, count=None):
+def command(commands: (Sequence[str] | str),
+            win_id: int = None,
+            count: int = None) -> bool:
     """Run interactive commands.
 
     Args:
@@ -136,19 +139,19 @@ def command(commands, win_id=None, count=None):
 
 
 @rpcmethod()
-def x11_win_id_to_win_id(x11_win_id):
+def x11_win_id_to_win_id(x11_win_id: int) -> int:
     """Return the win_id corresponding to x11_win_id."""
     return find_window(x11_win_id).win_id
 
 
 @rpcmethod()
-def win_id_to_x11_win_id(win_id):
+def win_id_to_x11_win_id(win_id: int) -> int:
     """Return the x11_win_id corresponding to win_id."""
     return int(get_window(win_id).winId())
 
 
 @rpcmethod()
-def get_window_url(win_id):
+def get_window_url(win_id: int) -> str:
     """Return the URL of window."""
     window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
@@ -160,14 +163,14 @@ def get_window_url(win_id):
 
 
 @rpcmethod()
-def get_window_title(win_id):
+def get_window_title(win_id: int) -> str:
     """Return the title of window."""
     window = get_window(win_id)
     return window.windowTitle()
 
 
 @rpcmethod()
-def get_window_icon(win_id):
+def get_window_icon(win_id: int) -> str:
     """Return the favicon of window."""
     window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
@@ -180,7 +183,7 @@ def get_window_icon(win_id):
 
 
 @rpcmethod()
-def get_window_search(win_id):
+def get_window_search(win_id: int) -> str:
     """Return the search term of window."""
     window = get_window(win_id)
     tabbed_browser = window.tabbed_browser
@@ -189,7 +192,7 @@ def get_window_search(win_id):
 
 
 @rpcmethod()
-def is_window_private(win_id):
+def is_window_private(win_id: int) -> bool:
     """Return a boolean indicating the private status of window."""
     window = get_window(win_id)
 
@@ -197,7 +200,7 @@ def is_window_private(win_id):
 
 
 @rpcmethod()
-def get_window_mode(win_id):
+def get_window_mode(win_id: int) -> str:
     """Return the mode of window."""
     mode_manager = modeman.instance(win_id)
 
@@ -205,7 +208,7 @@ def get_window_mode(win_id):
 
 
 @rpcmethod()
-def is_window_audible(win_id):
+def is_window_audible(win_id: int) -> bool:
     """Return a boolean indicating the audible status of window."""
     window = get_window(win_id)
 
@@ -217,7 +220,7 @@ def is_window_audible(win_id):
 
 
 @rpcmethod()
-def get_window_scroll(win_id):
+def get_window_scroll(win_id: int) -> tuple[int]:
     """Return the X and Y scroll percentages of window."""
     window = get_window(win_id)
     tab = window.tabbed_browser.widget.currentWidget()
@@ -225,7 +228,8 @@ def get_window_scroll(win_id):
     return (x_scroll, y_scroll)
 
 
-def get_command_arguments(command):
+@rpcmethod()
+def get_command_arguments(command: str) -> dict[str, str]:
     cmd = objects.commands.get(command)
     args = []
     keywords = []
@@ -246,7 +250,7 @@ def get_command_arguments(command):
 
 
 @rpcmethod()
-def list_commands(name_only=False):
+def list_commands(name_only: bool = False) -> list[dict[str, str]]:
     """Return a list of Qutebrowser commands."""
 
     response = []
@@ -273,7 +277,7 @@ def list_commands(name_only=False):
 
 
 @rpcmethod()
-def list_rpc_methods():
+def list_rpc_methods() -> list[dict[str, str]]:
     """Return a list of RPC methods."""
 
     methods = []
@@ -290,7 +294,7 @@ def list_rpc_methods():
 
 
 @rpcmethod()
-def get_window_info():
+def get_window_info() -> list[dict[str, str]]:
     """Get a list of window information.
 
     Return a list of window information for each window in
@@ -376,12 +380,12 @@ class EmacsRPCServer(IPCServer):
                         update=True)
         self.listen()
 
-    def _request_id(self):
+    def _request_id(self) -> int:
         self._req_id += 1
         return self._req_id
 
     @pyqtSlot()
-    def on_timeout(self):
+    def on_timeout(self) -> None:
         """Disable the timeout function of IPCServer."""
         # this needs to be adjusted
         # message.debug("Ignoring timeout")
@@ -429,7 +433,7 @@ class EmacsRPCServer(IPCServer):
         else:
             return function(params)
 
-    def _handle_data(self, data):
+    def _handle_data(self, data: bytes) -> None:
         """Handle data received from Emacs.
 
         Override the _handle_data function from the superclass IPCServer.
@@ -608,7 +612,8 @@ class redefinable_command(cmdutils.register):
 
 
 @redefinable_command()
-def emacs(code, print=False):
+def emacs(code: str,
+          print: bool = False) -> None:
     """Evaluate lisp code in Emacs.
 
     Args:
