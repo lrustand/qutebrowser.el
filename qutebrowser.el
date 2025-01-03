@@ -599,8 +599,9 @@ than `qutebrowser--tofu-range'."
   (concat cand
           (mapconcat
            (lambda (id)
-             (setq id (char-to-string (+ qutebrowser--tofu-char id)))
-             (propertize id 'invisible t))
+             (when id
+               (setq id (char-to-string (+ qutebrowser--tofu-char id)))
+               (propertize id 'invisible t)))
            id-list)))
 
 (defsubst qutebrowser--tofu-get (cand &optional pos)
