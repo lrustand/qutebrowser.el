@@ -1048,9 +1048,9 @@ The ORIG-FUN takes ARGS."
 (defvar qutebrowser-rpc--reconnect-timer nil)
 
 (defun qutebrowser-rpc-maybe-reconnect (&rest _)
+  (when (timerp qutebrowser-rpc--reconnect-timer)
+    (cancel-timer qutebrowser-rpc--reconnect-timer))
   (when qutebrowser-rpc-should-reconnect
-    (when (timerp qutebrowser-rpc--reconnect-timer)
-      (cancel-timer qutebrowser-rpc--reconnect-timer))
     (setq qutebrowser-rpc--reconnect-timer
           (run-with-timer 1 10 #'qutebrowser-rpc-connect))))
 
