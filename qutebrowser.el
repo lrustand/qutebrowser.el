@@ -1308,8 +1308,9 @@ last visible window."
 TARGET specifies where to open it, or `qutebrowser-default-open-target'
 if nil."
   (let* ((target (cond
-                  (target target)
+                  (target)
                   ((qutebrowser-exwm-p) qutebrowser-default-open-target)
+                  (qutebrowser-fifo qutebrowser-default-open-target)
                   ;; We don't want to accidentally replace an existing
                   ;; window/tab when opening a URL in 'auto target
                   ;; when the current buffer is not a Qutebrowser
