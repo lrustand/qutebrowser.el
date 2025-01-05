@@ -1585,7 +1585,8 @@ It runs the `%s' RPC method in Qutebrowser.\n\n" method-name)
 (defun qutebrowser-is-running-p ()
   "Return non-nil if Qutebrowser is running."
   (when (or (qutebrowser-rpc-connected-p)
-            (qutebrowser--get-process-pid))
+            (qutebrowser--get-process-pid)
+            (qutebrowser-exwm-buffer-list))
     t))
 
 ;;;; Config mode
