@@ -481,7 +481,10 @@ and BODY is one or more forms to execute if KEY is in PLIST."
         (hover (when (string= hover "") (setq hover nil))
                (setq-local qutebrowser-exwm-hovered-url hover))
         (url (setq-local qutebrowser-exwm-current-url
-                         (unless (string-empty-p url) url)))
+                         (unless (string-empty-p url) url))
+             (setq-local buffer-file-name
+                         (when (string-prefix-p "file://" url)
+                           (string-replace "file://" "" url))))
         (x-scroll-perc (setq-local qutebrowser-exwm-x-scroll-perc x-scroll-perc))
         (y-scroll-perc (setq-local qutebrowser-exwm-y-scroll-perc y-scroll-perc))
         (recently-audible (setq-local qutebrowser-exwm-recently-audible recently-audible))))))
