@@ -24,6 +24,15 @@ import traceback
 import inspect
 
 
+class AsyncReturn:
+    """Return value for asynchronous RPC methods.
+
+    Returning this class from an RPC method tells the RPC request
+    handler that the RPC method handles returns asynchronously, so the
+    handler should not send a result to the client.
+    """
+
+
 class rpcmethod():
     """Decorator for registering an RPC method.
 
@@ -37,9 +46,12 @@ class rpcmethod():
     function.
     """
 
-    def __init__(self, interactive: bool = None):
-        self.interactive = interactive
+    def __init__(self, *,
+                 interactive: bool = False,
+                 asynchronous: bool = False) -> None:
 
+        self.interactive: bool = interactive
+        self.asynchronous: bool = asynchronous
     def _convert_name(self, name: str) -> str:
         return name.lower().replace('_', '-')
 
@@ -423,6 +435,8 @@ class EmacsRPCServer(IPCServer):
             for key, value in params.items():
                 key = key.lower().replace("-", "_")
                 converted_params[key] = value
+            if method.asynchronous:
+                converted_params["req_id"] = req_id
             return function(**converted_params)
 
         elif isinstance(params, (list, tuple)):
@@ -503,8 +517,11 @@ class EmacsRPCServer(IPCServer):
 
     def handle_request(self, method, params, req_id):
         """Handle a received request."""
-        result = self.call_method(method, params)
-        self.send_result(result, req_id)
+
+        result = self.call_method(method, params, req_id)
+
+        if result is not AsyncReturn:
+            self.send_result(result, req_id)
 
     def handle_result(self, result, req_id):
         """Handle a received response."""
