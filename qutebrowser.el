@@ -852,6 +852,14 @@ INITIAL sets the initial input in the minibuffer."
        (qutebrowser-bookmark-search words)
        (qutebrowser--history-search words qutebrowser-dynamic-results)))))
 
+;;;###autoload
+(defun qutebrowser-delete-from-history (url)
+  (interactive (list (qutebrowser-select-url)))
+  (let ((query "DELETE FROM %s WHERE url=?;")
+        (url (qutebrowser--tofu-strip url)))
+    (dolist (table '("CompletionHistory" "History"))
+      (sqlite-execute qutebrowser--db-object (format query table) (list url)))))
+
 (defun qutebrowser-select-url (&optional initial default)
   "Dynamically select a URL, buffer, or command.
 INITIAL sets the initial input in the minibuffer."
