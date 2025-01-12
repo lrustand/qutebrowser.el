@@ -2,7 +2,6 @@
 
 """Manager for Emacs hooks."""
 
-from functools import partial
 from tempfile import mkstemp
 import os
 
@@ -49,175 +48,44 @@ class EmacsHookManager:
                     pass
             objects.qapp.new_window.connect(self.on_new_window)
 
-    def on_url_changed(self, window: MainWindow, url: QUrl) -> None:
-        """Called when the URL changed.
-
-        Args:
-            window: The window that the change happened in.
-            url: The new URL.
-        """
-        url = url.toString()
-        window_id = int(window.winId())
-
-        data = {"x11-win-id": window_id,
-                "win-id": window.win_id,
-                "url": url}
-
-        self.send_signal("url-changed", data)
-
-    def on_link_hovered(self, window: MainWindow, url: QUrl) -> None:
-        """Called when a link is hover or unhovered.
-
-        Args:
-            window: The window that the link was hovered in.
-            url: The URL of the link that was hovered. If the event
-                 was an unhovering, the URL is ''.
-        """
-        window_id = int(window.winId())
-
-        data = {"x11-win-id": window_id,
-                "win-id": window.win_id,
-                "hover": url}
-
-        self.send_signal("link-hovered", data)
-
-    def on_icon_changed(self, tab: AbstractTab) -> None:
-        """Called when the favicon changes.
-
-        Saves the new favicon to a tempfile and sends the filename and
-        X11 window ID to Emacs.
-
-        Args:
-            tab: The tab that the favicon changed in.
-        """
-        window = tab.window()
-        window_id = int(window.winId())
-        fd, path = mkstemp(prefix="qutebrowser-favicon-", suffix=".png")
-        os.close(fd)
-        window.windowIcon().pixmap(16, 16).save(path)
-
-        data = {"x11-win-id": window_id,
-                "win-id": window.win_id,
-                "icon-file": path}
-
-        self.send_signal("icon-changed", data)
-
-    def on_scroll_perc_changed(self,
-                               window: MainWindow,
-                               x_perc: int,
-                               y_perc: int):
-        """Called when the scroll position changes.
-
-        Args:
-            window: The window that the scroll position changed in.
-            x_perc: X scroll position in percentage.
-            y_perc: Y scroll position in percentage.
-        """
-        window_id = int(window.winId())
-
-        data = {"x11-win-id": window_id,
-                "win-id": window.win_id,
-                "x-scroll-perc": x_perc,
-                "y-scroll-perc": y_perc}
-
-        self.send_signal("scroll-perc-changed", data)
-
-    def on_recently_audible_changed(self, tab: AbstractTab) -> None:
-        """Called when the audible state changes.
-
-        Args:
-            tab: The tab that the audible state changed in.
-        """
-        window = tab.window()
-        window_id = int(window.winId())
-        recently_audible = tab.audio.is_recently_audible()
-
-        data = {"x11-win-id": window_id,
-                "win-id": window.win_id,
-                "recently-audible": recently_audible}
-
-        self.send_signal("recently-audible-changed", data)
-
-    def on_search(self, window: MainWindow, search: str) -> None:
-        """Called when a search is performed.
-
-        Args:
-            window: The window that search was performed in.
-            search: The entered search term.
-        """
-        window_id = int(window.winId())
-
-        data = {"x11-win-id": window_id,
-                "win-id": window.win_id,
-                "search": search}
-
-        self.send_signal("got-search", data)
-
-    def on_enter_mode(self,
-                      window: MainWindow,
-                      mode: usertypes.KeyMode):
-        """Called when a mode is entered.
-
-        Args:
-            window: The window that entered a mode.
-            mode: The mode that was entered.
-        """
-        window_id = int(window.winId())
-
-        data = {"x11-win-id": window_id,
-                "win-id": window.win_id,
-                "mode": str(mode)}
-
-        self.send_signal("entered-mode", data)
-
-    def on_leave_mode(self,
-                      window: MainWindow,
-                      mode: usertypes.KeyMode):
-        """Called when a mode is left.
-
-        Args:
-            window: The window that left a mode.
-            left-mode: The mode that was left.
-            mode: The new mode.
-        """
-        window_id = int(window.winId())
-
-        data = {"x11-win-id": window_id,
-                "win-id": window.win_id,
-                "left-mode": str(mode),
-                "mode": "KeyMode.normal"}
-
-        self.send_signal("left-mode", data)
-
-    def on_load_started(self, window: MainWindow) -> None:
-        """Called when starting to load a new webpage.
-
-        Args:
-            window: The window that started loading.
-        """
-        window_id = int(window.winId())
-        self.send_signal("load-started", {"x11-win-id": window_id,
-                                          "win-id": window.win_id})
-
-    def on_load_finished(self, window: MainWindow) -> None:
-        """Called when finished loading a new webpage.
-
-        Args:
-            window: The window that finished loading.
-        """
-        window_id = int(window.winId())
-        self.send_signal("load-finished", {"x11-win-id": window_id,
-                                           "win-id": window.win_id})
-
-    def enable_tab_hooks(self, tab: AbstractTab, _) -> None:
+    #@pyqtSlot(AbstractTab, int)
+    def enable_tab_hooks(self, tab: AbstractTab, _: int) -> None:
         """Enable tab local hooks.
 
         Args:
             tab: The tab to enable hooks for.
         """
-        tab.icon_changed.connect(partial(self.on_icon_changed, tab))
-        tab.audio.recently_audible_changed.connect(
-            partial(self.on_recently_audible_changed, tab))
+        window: MainWindow = tab.window()
+        window_x11_id: int = int(window.winId())
+
+        data = {"x11-win-id": window_x11_id,
+                "win-id": window.win_id}
+
+        def on_icon_changed() -> None:
+            """Called when the favicon changes.
+
+            Saves the new favicon to a tempfile and sends the filename and
+            X11 window ID to Emacs.
+            """
+            fd, path = mkstemp(prefix="qutebrowser-favicon-", suffix=".png")
+            os.close(fd)
+            window.windowIcon().pixmap(16, 16).save(path)
+
+            data["icon-file"] = path
+
+            self.send_signal("icon-changed", data)
+
+        @pyqtSlot()
+        def on_recently_audible_changed() -> None:
+            """Called when the audible state changes."""
+            recently_audible = tab.audio.is_recently_audible()
+
+            data["recently-audible"] = recently_audible
+
+            self.send_signal("recently-audible-changed", data)
+
+        tab.icon_changed.connect(on_icon_changed)
+        tab.audio.recently_audible_changed.connect(on_recently_audible_changed)
 
     def enable_window_hooks(self, window: MainWindow) -> None:
         """Enable window local hooks.
@@ -225,26 +93,99 @@ class EmacsHookManager:
         Args:
             window: The window to enable hooks for.
         """
-
         mode_manager = modeman.instance(window.win_id)
         tabbed_browser = window.tabbed_browser
         status = window.status
 
-        mode_manager.entered.connect(partial(self.on_enter_mode, window))
-        mode_manager.left.connect(partial(self.on_leave_mode, window))
-        tabbed_browser.cur_url_changed.connect(
-            partial(self.on_url_changed, window))
-        tabbed_browser.cur_link_hovered.connect(
-            partial(self.on_link_hovered, window))
-        tabbed_browser.new_tab.connect(self.enable_tab_hooks)
-        tabbed_browser.cur_load_started.connect(
-            partial(self.on_load_started, window))
-        tabbed_browser.cur_load_finished.connect(
-            partial(self.on_load_finished, window))
-        tabbed_browser.cur_scroll_perc_changed.connect(
-            partial(self.on_scroll_perc_changed, window))
-        status.cmd.got_search.connect(partial(self.on_search, window))
+        # We use this function to wrap the window data, since the X11
+        # window ID changes sometime after the window is createad,
+        # probably because EXWM "reparents" it.
+        def send_window_signal(signal: str, data: dict = {}) -> None:
+            window_data = {"x11-win-id": int(window.winId()),
+                           "win-id": window.win_id}
+            self.send_signal(signal, window_data | data)
 
+
+        def on_url_changed(url: QUrl) -> None:
+            """Called when the URL changed.
+
+            Args:
+                url: The new URL.
+            """
+            send_window_signal("url-changed", {"url": url.toString()})
+
+        @pyqtSlot(str)
+        def on_link_hovered(url: str) -> None:
+            """Called when a link is hover or unhovered.
+
+            Args:
+                url: The URL of the link that was hovered. If the event
+                     was an unhovering, the URL is ''.
+            """
+            send_window_signal("link-hovered", {"hover": url})
+
+        @pyqtSlot()
+        def on_load_started() -> None:
+            """Called when starting to load a new webpage."""
+            send_window_signal("load-started")
+
+        @pyqtSlot()
+        def on_load_finished() -> None:
+            """Called when finished loading a new webpage."""
+            send_window_signal("load-finished")
+
+        @pyqtSlot(usertypes.KeyMode)
+        def on_enter_mode(mode: usertypes.KeyMode) -> None:
+            """Called when a mode is entered.
+
+            Args:
+                mode: The mode that was entered.
+            """
+            send_window_signal("entered-mode", {"mode": str(mode)})
+
+        @pyqtSlot(usertypes.KeyMode)
+        def on_leave_mode(mode: usertypes.KeyMode) -> None:
+            """Called when a mode is left.
+
+            Args:
+                left-mode: The mode that was left.
+                mode: The new mode.
+            """
+            send_window_signal("left-mode", {"left-mode": str(mode),
+                                             "mode": "KeyMode.normal"})
+
+        @pyqtSlot(int, int)
+        def on_scroll_perc_changed(x_perc: int,
+                                   y_perc: int) -> None:
+            """Called when the scroll position changes.
+
+            Args:
+                x_perc: X scroll position in percentage.
+                y_perc: Y scroll position in percentage.
+            """
+            send_window_signal("scroll-perc-changed", {"x-scroll-perc": x_perc,
+                                                       "y-scroll-perc": y_perc})
+
+        @pyqtSlot(str)
+        def on_search(search: str) -> None:
+            """Called when a search is performed.
+
+            Args:
+                search: The entered search term.
+            """
+            send_window_signal("got-search", {"search": search})
+
+        tabbed_browser.new_tab.connect(self.enable_tab_hooks)
+        tabbed_browser.cur_url_changed.connect(on_url_changed)
+        tabbed_browser.cur_link_hovered.connect(on_link_hovered)
+        tabbed_browser.cur_load_started.connect(on_load_started)
+        tabbed_browser.cur_load_finished.connect(on_load_finished)
+        tabbed_browser.cur_scroll_perc_changed.connect(on_scroll_perc_changed)
+        mode_manager.entered.connect(on_enter_mode)
+        mode_manager.left.connect(on_leave_mode)
+        status.cmd.got_search.connect(on_search)
+
+    #@pyqtSlot(MainWindow)
     def on_new_window(self, window: MainWindow) -> None:
         """Called when a new window is created.
 
