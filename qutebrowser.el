@@ -950,6 +950,7 @@ With a numeric prefix argument N, set COUNT to N."
      ((eq ?c source-id) (qutebrowser-send-commands url))
      (t (qutebrowser-open-url url target)))))
 
+;;;###autoload
 (defun qutebrowser-dwim (thing &optional target count)
   (interactive (list (or (and (region-active-p)
                               (filter-buffer-substring
@@ -1371,6 +1372,7 @@ Creates a temporary file and sources it in Qutebrowser using the
   "Execute JS-CODE in running Qutebrowser instance."
   (qutebrowser-send-commands (format ":jseval -w main %s" js-code)))
 
+;;;###autoload
 (defun qutebrowser-undo-window ()
   "Undo closing Qutebrowser window."
   (interactive)
@@ -1543,6 +1545,7 @@ It runs the `%s' RPC method in Qutebrowser.\n\n" method-name)
 
 ;;;; Theme export mode
 
+;;;###autoload
 (defun qutebrowser-theme-export ()
   "Export selected Emacs faces to Qutebrowser theme format."
   (interactive)
@@ -1559,6 +1562,7 @@ It runs the `%s' RPC method in Qutebrowser.\n\n" method-name)
                                (append (color-name-to-rgb color) '(2)))))
         (insert (format "c.colors.%s = '%s'\n" qute-face hex-color))))))
 
+;;;###autoload
 (defun qutebrowser-theme-export-and-apply (&rest _)
   "Export and apply theme to running Qutebrowser instance."
   (interactive)
