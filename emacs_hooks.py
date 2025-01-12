@@ -2,17 +2,17 @@
 
 """Manager for Emacs hooks."""
 
-from PyQt6.QtCore import pyqtSlot
+from functools import partial
+from tempfile import mkstemp
+import os
+
 from qutebrowser.api import message
 from qutebrowser.browser.browsertab import AbstractTab
 from qutebrowser.keyinput import modeman
 from qutebrowser.mainwindow.mainwindow import MainWindow
 from qutebrowser.misc import objects
 from qutebrowser.utils import objreg, usertypes
-from qutebrowser.qt.core import QUrl
-from functools import partial
-from tempfile import mkstemp
-import os
+from qutebrowser.qt.core import QUrl, pyqtSlot
 
 
 class EmacsHookManager:

@@ -7,21 +7,25 @@ Emacs, and implements a RPC scheme for executing Python code inside
 the context of the running Qutebrowser instance.
 """
 
+import inspect
+import json
+import os
+import traceback
+
+from dataclasses import dataclass
+from tempfile import mkstemp
+from typing import Sequence, Callable, Optional, Union
+
 from PyQt6.QtCore import QByteArray, pyqtSlot
 from qutebrowser.api import message, cmdutils
 from qutebrowser.browser.browsertab import AbstractTab
-from qutebrowser.mainwindow.mainwindow import MainWindow
 from qutebrowser.commands import runners
 from qutebrowser.keyinput import modeman
+from qutebrowser.mainwindow.mainwindow import MainWindow
 from qutebrowser.misc import objects
 from qutebrowser.misc.ipc import IPCServer
-from qutebrowser.utils import objreg
-import json
-from tempfile import mkstemp
-from typing import Sequence, Callable
-import os
-import traceback
-import inspect
+from qutebrowser.utils import objreg, qtutils
+from qutebrowser.utils.usertypes import JsWorld
 
 
 class AsyncReturn:
