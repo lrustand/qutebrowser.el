@@ -27,7 +27,13 @@ from qutebrowser.misc.ipc import IPCServer
 from qutebrowser.utils import objreg, qtutils
 from qutebrowser.utils.usertypes import JsWorld
 
+_JsonValue = Union[str, int, float, bool]
+_JsonObject = dict[str, "_JsonType"]
+_JsonArray = Sequence["_JsonType"]
+_JsonType = Union[_JsonObject, _JsonArray, _JsonValue]
 
+
+# pylint: disable=R0903
 class AsyncReturn:
     """Return value for asynchronous RPC methods.
 
@@ -37,6 +43,7 @@ class AsyncReturn:
     """
 
 
+# pylint: disable=C0103
 class rpcmethod():
     """Decorator for registering an RPC method.
 
@@ -51,21 +58,28 @@ class rpcmethod():
     """
 
     def __init__(self, *,
+                 name: Optional[str] = None,
                  interactive: bool = False,
                  asynchronous: bool = False) -> None:
 
         self.interactive: bool = interactive
         self.asynchronous: bool = asynchronous
+        self.name: Optional[str] = name
+        self.func: Callable
+        self.desc: Optional[str]
+        self.takes_count: bool = None
+        self.args: list[str] = []
+
     def _convert_name(self, name: str) -> str:
         return name.lower().replace('_', '-')
 
-    def __call__(self, func):
+    def __call__(self, func: Callable) -> Callable:
 
-        self.name = self._convert_name(func.__name__)
         self.func = func
         self.desc = inspect.getdoc(func)
-        self.takes_count = None
-        self.args = []
+
+        if self.name is None:
+            self.name = self._convert_name(func.__name__)
 
         for arg in inspect.signature(func).parameters.keys():
             self.args.append(self._convert_name(arg))
@@ -85,6 +99,7 @@ class rpcmethod():
 
 def get_tabs(window: MainWindow) -> list[AbstractTab]:
     """Get a list of tab objects belonging to window."""
+    # pylint: disable=W0212
     tab_registry = objreg._get_window_registry(window.win_id)["tab-registry"]
     tabs = list(tab_registry.values())
     return tabs
@@ -111,6 +126,7 @@ def find_window(x11_win_id: int) -> MainWindow:
     raise Exception(f"Could not find window with X11 ID {x11_win_id}")
 
 
+# pylint: disable=C0103, W0122, W0123
 @rpcmethod()
 def EVAL(code: str, repl: bool = False) -> str:
     """Evaluate or execute code.
@@ -127,9 +143,9 @@ def EVAL(code: str, repl: bool = False) -> str:
 
 
 @rpcmethod()
-def command(commands: (Sequence[str] | str),
-            win_id: int = None,
-            count: int = None) -> bool:
+def command(commands: Union[Sequence[str], str],
+            win_id: Optional[int] = None,
+            count: Optional[int] = None) -> bool:
     """Run interactive commands.
 
     Args:
@@ -237,7 +253,7 @@ def is_window_audible(win_id: int) -> bool:
 
 
 @rpcmethod()
-def get_window_scroll(win_id: int) -> tuple[int]:
+def get_window_scroll(win_id: int) -> tuple[int, int]:
     """Return the X and Y scroll percentages of window."""
     window = get_window(win_id)
     tab = window.tabbed_browser.widget.currentWidget()
@@ -300,7 +316,7 @@ def list_rpc_methods() -> list[dict[str, str]]:
     methods = []
 
     for name, method in objreg.get("rpcmethods", {}).items():
-        method_info = {"method": method.name,
+        method_info = {"method": name,
                        "description": method.desc,
                        "arguments": method.args,
                        "interactive": method.interactive,
@@ -310,6 +326,7 @@ def list_rpc_methods() -> list[dict[str, str]]:
     return methods
 
 
+# pylint: disable=R0914
 @rpcmethod()
 def get_window_info() -> list[dict[str, str]]:
     """Get a list of window information.
@@ -333,7 +350,8 @@ def get_window_info() -> list[dict[str, str]]:
         y-scroll-perc: The scroll percentage in the y direction.
     """
 
-    window_info_list = []
+    window_info_list: list[dict[str, str]] = []
+    window: MainWindow
 
     for window in objreg.window_registry.values():
         tabbed_browser = window.tabbed_browser
@@ -344,7 +362,7 @@ def get_window_info() -> list[dict[str, str]]:
         try:
             # This can fail if the url is empty
             url = tabbed_browser.current_url().toString()
-        except Exception:
+        except qtutils.QtValueError:
             url = None
 
         title = window.windowTitle()
@@ -375,21 +393,31 @@ def get_window_info() -> list[dict[str, str]]:
     return window_info_list
 
 
+def nop(*_args, **_kwargs) -> None:
+    """No-op function used as default callback in continuations."""
+
+
+@dataclass
+class RPCContinuation:
+    """Continuation for an RPC request sent from us."""
+    result_callback: Callable = nop
+    error_callback: Callable = nop
+
+
 class EmacsRPCServer(IPCServer):
     """RPC server for Emacs."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize RPC server instance."""
 
-        self._req_id = 0
-        self.continuations = {}
-        old_server = objreg.get("emacs-rpc", None)
+        self._req_id: int = 0
+        self.continuations: dict[int, RPCContinuation]
+        old_server: EmacsRPCServer = objreg.get("emacs-rpc", None)
 
         if old_server:
             message.info("Shutting down old server")
             old_server.shutdown()
             self._req_id = getattr(old_server, "_req_id", 0)
-            self.continuations = getattr(old_server, "continuations", {})
 
         super().__init__("/tmp/emacs-rpc")
         objreg.register(name="emacs-rpc",
@@ -408,7 +436,10 @@ class EmacsRPCServer(IPCServer):
         # message.debug("Ignoring timeout")
         return
 
-    def call_method(self, method, params):
+    def call_method(self,
+                    method_name: str,
+                    params: _JsonType,
+                    req_id: Optional[int] = None) -> _JsonType:
         """Call an RPC method registered with @rpcmethod.
 
         Used to dispatch RPC calls to the correct function. Functions can be
@@ -424,14 +455,16 @@ class EmacsRPCServer(IPCServer):
                     field of the JSON-RPC message. Should be a dictionary
                     containing parameter names and values and will be mapped
                     onto the function parameters of the method.
+            req_id: The request ID of the request we are processing.
         """
 
-        rpcmethods = objreg.get("rpcmethods", {})
+        rpcmethods: dict[str, rpcmethod]  = objreg.get("rpcmethods", {})
 
         try:
-            function = rpcmethods[method].func
+            method: rpcmethod = rpcmethods[method_name]
+            function: Callable = method.func
         except KeyError:
-            raise Exception(f"Unknown RPC method {method}")
+            raise Exception(f"Unknown RPC method {method_name}")
 
         if isinstance(params, dict):
             # Convert parameter names
@@ -443,14 +476,13 @@ class EmacsRPCServer(IPCServer):
                 converted_params["req_id"] = req_id
             return function(**converted_params)
 
-        elif isinstance(params, (list, tuple)):
+        if isinstance(params, (list, tuple)):
             return function(*params)
 
-        elif params is None:
+        if params is None:
             return function()
 
-        else:
-            return function(params)
+        return function(params)
 
     def _handle_data(self, data: bytes) -> None:
         """Handle data received from Emacs.
@@ -471,14 +503,17 @@ class EmacsRPCServer(IPCServer):
         Args:
             data: The data received from Emacs.
         """
-        try:
-            json_data = json.loads(data.decode("utf-8"))
 
-            method = json_data.get("method", None)
-            params = json_data.get("params", None)
-            result = json_data.get("result", None)
-            error = json_data.get("error", None)
-            req_id = json_data.get("id", None)
+        message_type: Optional[str] = None
+
+        try:
+            json_data: _JsonObject = json.loads(data.decode("utf-8"))
+
+            method: Optional[str] = json_data.get("method", None)
+            params: Optional[_JsonType] = json_data.get("params", None)
+            result: Optional[_JsonType] = json_data.get("result", None)
+            error: Optional[_JsonType] = json_data.get("error", None)
+            req_id: Optional[int] = json_data.get("id", None)
 
             if "jsonrpc" not in json_data:
                 raise Exception(f"Invalid JSON-RPC message: {json_data}")
@@ -500,7 +535,7 @@ class EmacsRPCServer(IPCServer):
 
             # Notifications contain "method" but not "id"
             elif method is not None:
-                message_type = "request"
+                message_type = "notification"
                 self.handle_notification(method, params)
 
             # Anything else is not a valid JSON-RPC message
@@ -508,6 +543,7 @@ class EmacsRPCServer(IPCServer):
                 message_type = "invalid"
                 raise Exception(f"Invalid JSON-RPC message: {json_data}")
 
+        # pylint: disable=W0718
         except Exception as err:
             # Only respond to requests
             if message_type in ("request", "invalid"):
@@ -515,11 +551,16 @@ class EmacsRPCServer(IPCServer):
                                 message=f"{err.__class__.__name__}: {err}",
                                 data={"traceback": traceback.format_exc()})
 
-    def handle_notification(self, method, params):
+    def handle_notification(self,
+                            method: str,
+                            params: Optional[_JsonType]) -> None:
         """Handle a received notification."""
         self.call_method(method, params)
 
-    def handle_request(self, method, params, req_id):
+    def handle_request(self,
+                       method: str,
+                       params: Optional[_JsonType],
+                       req_id: int) -> None:
         """Handle a received request."""
 
         result = self.call_method(method, params, req_id)
@@ -527,27 +568,29 @@ class EmacsRPCServer(IPCServer):
         if result is not AsyncReturn:
             self.send_result(result, req_id)
 
-    def handle_result(self, result, req_id):
+    def handle_result(self, result: _JsonType, req_id: Optional[int]) -> None:
         """Handle a received response."""
         cont = self.continuations.pop(req_id, None)
 
-        kwargs = {"result": result,
-                  "id": req_id}
-
         if cont is not None:
-            cont[0](**kwargs)
+            kwargs = {"result": result,
+                      "id": req_id}
+            cont.result_callback(**kwargs)
 
-    def handle_error(self, error, req_id):
+    def handle_error(self, error: _JsonType, req_id: Optional[int]) -> None:
         """Handle a received error response."""
         cont = self.continuations.pop(req_id, None)
 
-        kwargs = {"error": error,
-                  "id": req_id}
-
         if cont is not None:
-            cont[1](**kwargs)
+            kwargs = {"error": error,
+                      "id": req_id}
+            cont.error_callback(**kwargs)
 
-    def send_error(self, code=-1, message=None, data=None, req_id=None):
+    def send_error(self,
+                   code: int = -1,
+                   message: str = None,
+                   data: _JsonType = None,
+                   req_id: int = None) -> None:
         """Send an error response to a received request."""
 
         error = {"code": code,
@@ -558,12 +601,16 @@ class EmacsRPCServer(IPCServer):
 
         self.send_data({"id": req_id, "error": error})
 
-    def send_result(self, result, req_id=None):
+    def send_result(self,
+                    result: _JsonType,
+                    req_id: Optional[int] = None) -> None:
         """Send a result response to a received request."""
         self.send_data({"id": req_id,
                         "result": result})
 
-    def send_notification(self, method, params=None):
+    def send_notification(self,
+                          method: str,
+                          params: Optional[_JsonType] = None) -> None:
         """Send a JSON-RPC notification.
 
         Does not expect a response.
@@ -576,12 +623,11 @@ class EmacsRPCServer(IPCServer):
         self.send_data(data)
 
     def send_request(self,
-                     method,
-                     params=None,
-                     result_callback=None,
-                     error_callback=None):
-        """Send a JSON-RPC request.
-        """
+                     method: str,
+                     params: Optional[_JsonType] = None,
+                     result_callback: Callable = nop,
+                     error_callback: Callable = nop) -> None:
+        """Send a JSON-RPC request."""
         req_id = self._request_id()
         data = {"id": req_id,
                 "method": method}
@@ -589,12 +635,12 @@ class EmacsRPCServer(IPCServer):
         if params is not None:
             data["params"] = params
 
-        if (result_callback is not None) or (error_callback is not None):
-            self.continuations[req_id] = (result_callback, error_callback)
+        if (result_callback is not nop) or (error_callback is not nop):
+            self.continuations[req_id] = RPCContinuation(result_callback, error_callback)
 
         self.send_data(data)
 
-    def send_data(self, data):
+    def send_data(self, data: _JsonObject) -> None:
         """Send data over JSON-RPC.
 
         The data is prepended with some HTTP style headers as expected
@@ -608,20 +654,27 @@ class EmacsRPCServer(IPCServer):
         """
         data["jsonrpc"] = data.get("jsonrpc", "2.0")
         json_data = json.dumps(data)
-        message = f"Content-Length: {len(json_data)}\r\n\r\n{json_data}\r\n"
+        content_length = len(json_data)
+        msg = f"Content-Length: {content_length}\r\n\r\n{json_data}\r\n"
         socket = self._get_socket()
 
         if socket and socket.isOpen():
-            socket.write(QByteArray(message.encode("utf-8")))
+            socket.write(QByteArray(msg.encode("utf-8")))
             socket.flush()
 
 
-def print_result(result, id):
+def print_result(result: _JsonType, req_id: int) -> None:
     """Print the result of a request as an info message."""
     message.info(f"Result args: {result}")
 
 
 class redefinable_command(cmdutils.register):
+    """Redefinable Qutebrowser commands.
+
+    Subclassing the Qutebrowser command decorator to allow redefining
+    a command without restarting Qutebrowser. Using cmdutils.register
+    directly causes an error if re-sourcing this file again.
+    """
 
     def __call__(self, func: cmdutils._CmdHandlerFunc) -> cmdutils._CmdHandlerType:
         if self._name is None:
@@ -635,15 +688,15 @@ class redefinable_command(cmdutils.register):
 
 @redefinable_command()
 def emacs(code: str,
-          print: bool = False) -> None:
+          show: bool = False) -> None:
     """Evaluate lisp code in Emacs.
 
     Args:
         code: The code to evaluate.
-        print: Whether to show the result in an info message.
+        show: Whether to show the result in an info message.
     """
 
-    callback = print_result if print else None
+    callback = print_result if show else nop
     objreg.get("emacs-rpc").send_request("eval", {"code": code},
                                          result_callback=callback)
 
