@@ -142,6 +142,26 @@ def EVAL(code: str, repl: bool = False) -> str:
         return ""
 
 
+@rpcmethod(asynchronous=True)
+def js(js_code: str,
+       win_id: Optional[int] = None,
+       req_id: Optional[int] = None) -> None:
+    """Evaluate JS and return the result."""
+
+    if win_id is None:
+        window = objreg.last_visible_window()
+    else:
+        window = get_window(win_id)
+
+    def js_response(res):
+        objreg.get("emacs-rpc").send_result(res, req_id)
+
+    tab = window.tabbed_browser.widget.currentWidget()
+    tab.run_js_async(js_code, js_response, world=JsWorld.main)
+
+    return AsyncReturn
+
+
 @rpcmethod()
 def command(commands: Union[Sequence[str], str],
             win_id: Optional[int] = None,
