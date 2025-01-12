@@ -41,8 +41,12 @@ class EmacsHookManager:
 
         # Enable new window hook
         if objects.qapp:
-            if old_manager:
-                objects.qapp.new_window.disconnect(old_manager.on_new_window)
+            if old_manager is not None:
+                try:
+                    objects.qapp.new_window.disconnect(old_manager.on_new_window)
+                # Previous manager was not connected
+                except TypeError:
+                    pass
             objects.qapp.new_window.connect(self.on_new_window)
 
     def on_url_changed(self, window: MainWindow, url: QUrl) -> None:
