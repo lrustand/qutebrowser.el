@@ -55,12 +55,17 @@ class EmacsHookManager:
         Args:
             tab: The tab to enable hooks for.
         """
-        window: MainWindow = tab.window()
-        window_x11_id: int = int(window.winId())
 
-        data = {"x11-win-id": window_x11_id,
-                "win-id": window.win_id}
+        def send_tab_signal(signal: str, data: dict) -> None:
+            window: MainWindow = tab.window()
+            window_x11_id: int = int(window.winId())
 
+            tab_data = {"x11-win-id": window_x11_id,
+                        "win-id": window.win_id}
+
+            self.send_signal(signal, tab_data | data)
+
+        @pyqtSlot()
         def on_icon_changed() -> None:
             """Called when the favicon changes.
 
@@ -69,20 +74,18 @@ class EmacsHookManager:
             """
             fd, path = mkstemp(prefix="qutebrowser-favicon-", suffix=".png")
             os.close(fd)
+            window: MainWindow = tab.window()
             window.windowIcon().pixmap(16, 16).save(path)
 
-            data["icon-file"] = path
-
-            self.send_signal("icon-changed", data)
+            send_tab_signal("icon-changed", {"icon-file": path})
 
         @pyqtSlot()
         def on_recently_audible_changed() -> None:
             """Called when the audible state changes."""
             recently_audible = tab.audio.is_recently_audible()
 
-            data["recently-audible"] = recently_audible
-
-            self.send_signal("recently-audible-changed", data)
+            send_tab_signal("recently-audible-changed",
+                            {"recently-audible": recently_audible})
 
         tab.icon_changed.connect(on_icon_changed)
         tab.audio.recently_audible_changed.connect(on_recently_audible_changed)
