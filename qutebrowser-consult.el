@@ -128,10 +128,10 @@ Set initial completion input to INITIAL."
 
 ;;;; `qutebrowser-launcher' replacement
 (defvar qutebrowser-consult-launcher-sources
-  (list qutebrowser-consult--command-source
-	qutebrowser-consult--exwm-buffer-source
-	qutebrowser-consult--bookmark-source
-	qutebrowser-consult--history-source)
+  '(qutebrowser-consult--command-source
+    qutebrowser-consult--exwm-buffer-source
+    qutebrowser-consult--bookmark-source
+    qutebrowser-consult--history-source)
   "Sources used by `qutebrowser-launcher' and family.")
 
 (defun qutebrowser-consult--shorten-source-name (source)
@@ -182,7 +182,7 @@ are included."
 	 (qutebrowser-default-open-target (or target qutebrowser-default-open-target))
 	 (selected (consult--multi
 		    (mapcar #'qutebrowser-consult--shorten-source-name
-			    qutebrowser-consult-launcher-sources)
+			    (mapcar #'eval qutebrowser-consult-launcher-sources))
 		    :initial initial
 		    :sort nil)))
     (unless (plist-get (cdr selected) :match)
