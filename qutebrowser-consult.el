@@ -35,10 +35,9 @@
   :prefix "qutebrowser-consult")
 
 ;;;; Helper functions
-(defun qutebrowser-consult--transform (lines)
-  "Modify LINES for presentation."
-  (mapcar #'qutebrowser--shorten-display-url
-	  (mapcar #'qutebrowser--tofu-strip lines)))
+(defun qutebrowser-consult--format-entry (entry)
+  "Modify ENTRY for presentation."
+  (qutebrowser--shorten-display-url (qutebrowser--tofu-strip entry)))
 
 (defun qutebrowser-consult--annotate (entry)
   "Return annotation for ENTRY."
@@ -89,7 +88,7 @@
 	  :min-input 0
 	  :throttle 0
 	  :debounce 0
-	  :transform (consult--async-transform #'qutebrowser-consult--transform)))
+	  :transform (consult--async-map #'qutebrowser-consult--format-entry)))
   "Consult source for Qutebrowser commands.")
 
 ;;;###autoload
@@ -124,7 +123,7 @@ Set initial completion input to INITIAL."
 	  :throttle 0
 	  :debounce 0
 	  :highlight t
-	  :transform (consult--async-transform #'qutebrowser-consult--transform)))
+	  :transform (consult--async-map #'qutebrowser-consult--format-entry)))
   "Consult source for Qutebrowser history.")
 
 ;;;; `qutebrowser-launcher' replacement
