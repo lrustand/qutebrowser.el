@@ -124,10 +124,10 @@ Set initial completion input to INITIAL."
 
 ;;;; `qutebrowser-launcher' replacement
 (defvar qutebrowser-consult-launcher-sources
-  '(qutebrowser-consult--command-source
-    qutebrowser-consult--exwm-buffer-source
+  '(qutebrowser-consult--exwm-buffer-source
     qutebrowser-consult--bookmark-source
-    qutebrowser-consult--history-source)
+    qutebrowser-consult--history-source
+    qutebrowser-consult--command-source)
   "Sources used by `qutebrowser-launcher' and family.")
 
 (defun qutebrowser-consult--suppress-action (source)
@@ -141,10 +141,10 @@ Set initial completion input to INITIAL."
 INITIAL sets the initial input in the minibuffer."
   (let ((consult-async-min-input 0)
         (consult-async-split-style nil)
-	(sources (list qutebrowser-consult--command-source
-		       qutebrowser-consult--exwm-buffer-source
+	(sources (list qutebrowser-consult--exwm-buffer-source
 		       qutebrowser-consult--bookmark-source
-		       qutebrowser-consult--history-source)))
+		       qutebrowser-consult--history-source
+		       qutebrowser-consult--command-source)))
     (consult--multi (mapcar #'qutebrowser-consult--suppress-action sources))
     :prompt (if default
                 (format "Select (default %s): " default)
