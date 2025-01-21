@@ -113,6 +113,7 @@ Set initial completion input to INITIAL."
 	:history nil
 	:category 'url
 	:action #'qutebrowser-open-url
+	:new #'qutebrowser-open-url
 	:annotate #'qutebrowser-consult--annotate
 	:async
 	(consult--dynamic-collection
