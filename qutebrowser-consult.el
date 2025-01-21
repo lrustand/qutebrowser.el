@@ -19,7 +19,9 @@
 ;;; Commentary:
 
 ;; Consult-based completion for Qutebrowser buffers, history,
-;; commands, and bookmarks.
+;; commands, and bookmarks. The sources provided in this file can be
+;; added as additional sources to 'consult-buffer' or similar. See
+;; 'consult-buffer-sources' and 'consult--multi'.
 
 ;;; Change Log:
 
@@ -27,21 +29,33 @@
 (require 'qutebrowser)
 (require 'consult)
 
-;;;; Helper functions
-(defun qutebrowser-consult--tofu-strip-lines (lines)
-  "Strip tofus from LINES."
-  (mapcar #'qutebrowser--tofu-strip lines))
+(defgroup qutebrowser-consult nil
+  "Consult completion for Qutebrowser."
+  :group 'qutebrowser
+  :prefix "qutebrowser-consult")
 
-;;;; Buffer source
+;;;; Helper functions
+(defun qutebrowser-consult--transform (lines)
+  "Modify LINES for presentation."
+  (mapcar #'qutebrowser--shorten-display-url
+	  (mapcar #'qutebrowser--tofu-strip lines)))
+
+(defun qutebrowser-consult--annotate (entry)
+  "Return annotation for ENTRY."
+  (qutebrowser--shorten-display-url entry)
+  (propertize (get-text-property 0 'title entry)
+	      'face 'completions-annotations))
+
+;;;; buffer source
 (defvar qutebrowser-consult--exwm-buffer-source
   (list :name "Qutebrowser buffers"
         :hidden nil
         :narrow ?q
         :history nil
-        :category 'other
+        :category 'url
         :action (lambda (entry)
 		  (switch-to-buffer (qutebrowser--tofu-get-buffer entry)))
-        :annotate #'qutebrowser-annotate
+        :annotate #'qutebrowser-consult--annotate
         :items #'qutebrowser-exwm-buffer-search)
   "Consult source for open Qutebrowser windows.")
 
@@ -67,27 +81,158 @@
 	:history nil
 	:category 'other
 	:action #'qutebrowser-send-commands
+        :annotate #'qutebrowser-consult--annotate
 	:async
-	(consult--async-pipeline
-	 (consult--async-min-input 0)
-	 (consult--async-throttle)
-	 (consult--async-dynamic (lambda (input)
-				   (let ((words (string-split (or input ""))))
-				     (qutebrowser-command-search words))))
-	 (consult--async-transform #'qutebrowser-consult--tofu-strip-lines)))
+	(consult--dynamic-collection
+	    (lambda (input)
+	      (qutebrowser-command-search (string-split (or input ""))))
+	  :min-input 0
+	  :throttle 0
+	  :debounce 0
+	  :transform (consult--async-transform #'qutebrowser-consult--transform)))
   "Consult source for Qutebrowser commands.")
 
-(defun qutebrowser-consult-command ()
-  "Command entry for Qutebrowser based on Consult."
+;;;###autoload
+(defun qutebrowser-consult-command (&optional initial)
+  "Command entry for Qutebrowser based on Consult.
+Set initial completion input to INITIAL."
   (interactive)
   (let* ((consult-async-min-input 0)
 	 (consult-async-split-style nil)
-	 (selected (consult--multi '(qutebrowser-consult--command-source)
-				   :prompt "Command: "
-				   :initial ":"
-				   :history 'qutebrowser-consult--command-history)))
+	 (selected
+	  (consult--read (plist-get qutebrowser-consult--command-source :async)
+			 :prompt "Command: "
+			 :initial (or initial ":")
+			 :history 'qutebrowser-consult--command-history)))
+    (qutebrowser-send-commands selected)))
+
+;;;; History source
+(defvar qutebrowser-consult--history-source
+  (list :name "Qutebrowser history"
+	:hidden nil
+	:narrow ?h
+	:history nil
+	:category 'url
+	:action #'qutebrowser
+	:annotate #'qutebrowser-consult--annotate
+	:async
+	(consult--dynamic-collection
+	    (lambda (input)
+	      (qutebrowser--history-search (string-split (or input ""))
+					   qutebrowser-dynamic-results))
+	  :min-input 0
+	  :throttle 0
+	  :debounce 0
+	  :highlight t
+	  :transform (consult--async-transform #'qutebrowser-consult--transform)))
+  "Consult source for Qutebrowser history.")
+
+;;;; `qutebrowser-launcher' replacement
+(defvar qutebrowser-consult-launcher-sources
+  (list qutebrowser-consult--command-source
+	qutebrowser-consult--exwm-buffer-source
+	qutebrowser-consult--bookmark-source
+	qutebrowser-consult--history-source)
+  "Sources used by `qutebrowser-launcher' and family.")
+
+(defun qutebrowser-consult--shorten-source-name (source)
+  "Return SOURCE with shortened name.
+
+'Qutebrowser' is stripped from the front and the remaining first letter is capitalized."
+  (let ((new-source (seq-copy source))
+	(new-name (string-remove-prefix "Qutebrowser " (plist-get source :name))))
+    (plist-put new-source :name (capitalize new-name))))
+
+(defun qutebrowser-consult--suppress-action (source)
+  "Return SOURCE with no action."
+  (let ((new-source (seq-copy source)))
+    (plist-put new-source :action nil)))
+
+;; NOTE does this still need to exist?
+(defun qutebrowser-consult-select-url (&optional initial default)
+  "Dynamically select a URL, buffer, or command using consult.
+INITIAL sets the initial input in the minibuffer."
+  (let ((consult-async-min-input 0)
+        (consult-async-split-style nil)
+	(sources (list qutebrowser-consult--command-source
+		       qutebrowser-consult--exwm-buffer-source
+		       qutebrowser-consult--bookmark-source
+		       qutebrowser-consult--history-source)))
+    (consult--multi
+     (mapcar #'qutebrowser-consult--shorten-source-name
+	     (mapcar #'qutebrowser-consult--suppress-action sources))
+     :prompt (if default
+                 (format "Select (default %s): " default)
+               "Select: ")
+     :default default
+     :sort nil
+     :initial initial
+     :require-match nil)))
+
+;;;###autoload
+(defun qutebrowser-consult-launcher (&optional initial target)
+  "Select a URL to open in Qutebrowser using Consult.
+
+Set initial completion input to INITIAL. Open the URL in TARGET or the
+default target if nil.
+
+Modify `qutebrowser-consult-launcher-sources' to change which sources
+are included."
+  (interactive)
+  (let* ((consult-async-split-style nil)
+	 (qutebrowser-default-open-target (or target qutebrowser-default-open-target))
+	 (selected (consult--multi
+		    (mapcar #'qutebrowser-consult--shorten-source-name
+			    qutebrowser-consult-launcher-sources)
+		    :initial initial
+		    :sort nil)))
     (unless (plist-get (cdr selected) :match)
-      (qutebrowser-send-commands (car selected)))))
+      (qutebrowser (car selected)))))
+
+;;;###autoload
+(defun qutebrowser-consult-launcher-tab (&optional initial)
+  "Select a URL to open in a new tab using Consult.
+
+Set initial completion input to INITIAL.
+Modify `qutebrowser-consult-launcher-sources' to change which sources
+are included."
+  (interactive)
+  (qutebrowser-consult-launcher initial 'tab))
+
+;;;###autoload
+(defun qutebrowser-consult-launcher-window (&optional initial)
+  "Select a URL to open in a new window using Consult.
+
+Set initial completion input to INITIAL.
+Modify `qutebrowser-consult-launcher-sources' to change which sources
+are included."
+  (interactive)
+  (qutebrowser-consult-launcher initial 'window))
+
+;;;###autoload
+(defun qutebrowser-consult-launcher-private (&optional initial)
+  "Select a URL to open in a private window using Consult.
+
+Set initial completion input to INITIAL.
+Modify `qutebrowser-consult-launcher-sources' to change which sources
+are included."
+  (interactive)
+  (qutebrowser-consult-launcher initial 'private-window))
+
+(define-minor-mode qutebrowser-consult-mode
+  "Use Consult for Qutebrowser completion."
+  :lighter nil
+  :global t
+  (if qutebrowser-consult-mode
+      (progn
+	(advice-add 'qutebrowser-launcher :override #'qutebrowser-consult-launcher)
+	(advice-add 'qutebrowser-launcher-tab :override #'qutebrowser-consult-launcher)
+	(advice-add 'qutebrowser-launcher-window :override #'qutebrowser-consult-launcher-window)
+	(advice-add 'qutebrowser-launcher-private :override #'qutebrowser-consult-launcher-private))
+    (advice-remove 'qutebrowser-launcher #'qutebrowser-consult-launcher)
+    (advice-remove 'qutebrowser-launcher-tab #'qutebrowser-consult-launcher)-tab
+    (advice-remove 'qutebrowser-launcher-window #'qutebrowser-consult-launcher-window)
+    (advice-remove 'qutebrowser-launcher-private #'qutebrowser-consult-launcher-private)))
 
 (provide 'qutebrowser-consult)
 

@@ -802,32 +802,6 @@ than `qutebrowser-url-display-length'."
 
 (defvar qutebrowser-launcher--current-input "")
 
-(defun qutebrowser-consult-select-url (&optional initial default)
-  "Dynamically select a URL, buffer, or command using consult.
-INITIAL sets the initial input in the minibuffer."
-  (let ((consult-async-min-input 0)
-        (consult-async-split-style nil))
-    (consult--read
-     (consult--dynamic-collection
-      (lambda (input)
-        (setq qutebrowser-launcher--current-input input)
-        (let ((words (string-split (or input ""))))
-          (append
-           (qutebrowser-command-search words)
-           (qutebrowser-exwm-buffer-search words)
-           (qutebrowser-bookmark-search words)
-           (qutebrowser--history-search words qutebrowser-dynamic-results)))))
-     :prompt (if default
-                 (format "Select (default %s): " default)
-               "Select: ")
-     :default default
-     :group #'qutebrowser-launcher--group-entries
-     :sort nil
-     :annotate (lambda (entry) (qutebrowser-annotate entry t))
-     :initial initial
-     :require-match nil)))
-
-
 (defun qutebrowser--completion-table (string predicate action)
   (if (eq action 'metadata)
       `(metadata . ((category . url)
