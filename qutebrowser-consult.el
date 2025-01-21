@@ -136,14 +136,6 @@ Set initial completion input to INITIAL."
     qutebrowser-consult--history-source)
   "Sources used by `qutebrowser-launcher' and family.")
 
-(defun qutebrowser-consult--shorten-source-name (source)
-  "Return SOURCE with shortened name.
-
-'Qutebrowser' is stripped from the front and the remaining first letter is capitalized."
-  (let ((new-source (seq-copy source))
-	(new-name (string-remove-prefix "Qutebrowser " (plist-get source :name))))
-    (plist-put new-source :name (capitalize new-name))))
-
 (defun qutebrowser-consult--suppress-action (source)
   "Return SOURCE with no action."
   (let ((new-source (seq-copy source)))
@@ -159,16 +151,14 @@ INITIAL sets the initial input in the minibuffer."
 		       qutebrowser-consult--exwm-buffer-source
 		       qutebrowser-consult--bookmark-source
 		       qutebrowser-consult--history-source)))
-    (consult--multi
-     (mapcar #'qutebrowser-consult--shorten-source-name
-	     (mapcar #'qutebrowser-consult--suppress-action sources))
-     :prompt (if default
-                 (format "Select (default %s): " default)
-               "Select: ")
-     :default default
-     :sort nil
-     :initial initial
-     :require-match nil)))
+    (consult--multi (mapcar #'qutebrowser-consult--suppress-action sources))
+    :prompt (if default
+                (format "Select (default %s): " default)
+              "Select: ")
+    :default default
+    :sort nil
+    :initial initial
+    :require-match nil)))
 
 ;;;###autoload
 (defun qutebrowser-consult-launcher (&optional initial target)
@@ -182,11 +172,9 @@ are included."
   (interactive)
   (let* ((consult-async-split-style nil)
 	 (qutebrowser-default-open-target (or target qutebrowser-default-open-target))
-	 (selected (consult--multi
-		    (mapcar #'qutebrowser-consult--shorten-source-name
-			    (mapcar #'eval qutebrowser-consult-launcher-sources))
-		    :initial initial
-		    :sort nil)))
+	 (selected (consult--multi qutebrowser-consult-launcher-sources
+				   :initial initial
+				   :sort nil)))
     (unless (plist-get (cdr selected) :match)
       (qutebrowser-open-url (car selected)))))
 
