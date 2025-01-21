@@ -93,8 +93,8 @@ Set initial completion input to INITIAL."
   (let* ((consult-async-min-input 0)
 	 (consult-async-split-style nil)
 	 (selected
-	  (consult--multi `(,(plist-put (seq-copy qutebrowser-consult--command-source)
-					:name nil))
+	  (consult--multi '(qutebrowser-consult--command-source)
+                          :group nil
 			  :prompt "Command: "
 			  :initial (or initial ":")
 			  :history 'qutebrowser-consult--command-history)))
