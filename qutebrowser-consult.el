@@ -188,7 +188,7 @@ are included."
 		    :initial initial
 		    :sort nil)))
     (unless (plist-get (cdr selected) :match)
-      (qutebrowser (car selected)))))
+      (qutebrowser-open-url (car selected)))))
 
 ;;;###autoload
 (defun qutebrowser-consult-launcher-tab (&optional initial)
