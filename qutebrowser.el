@@ -869,42 +869,6 @@ INITIAL sets the initial input in the minibuffer."
                   "Select: ")))
     (completing-read prompt #'qutebrowser--completion-table nil nil initial nil default)))
 
-
-;;;; Static consult buffer sources
-
-;; These buffer sources are not in use anymore by the launcher after
-;; it was rewritten as a dynamic consult source. However, these
-;; sources can still be used in various consult commands, and can be
-;; added as additional sources to 'consult-buffer' or similar.
-;; See 'consult-buffer-sources' and 'consult--multi'.
-
-;; The naming of these sources might indicate that they are for
-;; internal use, but that is not the case. They simply follow the
-;; naming pattern used by the official consult sources.
-
-(defvar qutebrowser--exwm-buffer-source
-  (list :name "Qutebrowser buffers"
-        :hidden nil
-        :narrow ?q
-        :history nil
-        :category 'other
-        :action (lambda (entry)
-                  (switch-to-buffer (qutebrowser--tofu-get-buffer entry)))
-        :annotate #'qutebrowser-annotate
-        :items #'qutebrowser-exwm-buffer-search)
-  "`consult-buffer' source for open Qutebrowser windows.")
-
-(defvar qutebrowser--bookmark-source
-  (list :name "Qutebrowser bookmarks"
-        :hidden nil
-        :narrow ?m
-        :history nil
-        :category 'other
-        :face 'consult-bookmark
-        :action #'qutebrowser-bookmark-jump
-        :items #'qutebrowser-bookmarks-list)
-  "`consult-buffer' source for Qutebrowser bookmarks.")
-
 ;;;; Launcher functions
 
 ;;;###autoload
