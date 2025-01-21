@@ -81,15 +81,9 @@
 	:category 'other
 	:action #'qutebrowser-send-commands
         :annotate #'qutebrowser-consult--annotate
-	:async
-	(consult--dynamic-collection
-	    (lambda (input)
-	      (qutebrowser-command-search (string-split (or input ""))))
-	  :min-input 0
-	  :throttle 0
-	  :debounce 0
-	  :transform (consult--async-map #'qutebrowser-consult--format-entry)))
-  "Consult source for Qutebrowser commands.")
+	:items (lambda () (mapcar #'qutebrowser--tofu-strip
+				  (qutebrowser-command-search '(":"))))
+	"Consult source for Qutebrowser commands."))
 
 ;;;###autoload
 (defun qutebrowser-consult-command (&optional initial)
