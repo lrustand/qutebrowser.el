@@ -225,11 +225,11 @@ are included."
   (if qutebrowser-consult-mode
       (progn
 	(advice-add 'qutebrowser-launcher :override #'qutebrowser-consult-launcher)
-	(advice-add 'qutebrowser-launcher-tab :override #'qutebrowser-consult-launcher)
+	(advice-add 'qutebrowser-launcher-tab :override #'qutebrowser-consult-launcher-tab)
 	(advice-add 'qutebrowser-launcher-window :override #'qutebrowser-consult-launcher-window)
 	(advice-add 'qutebrowser-launcher-private :override #'qutebrowser-consult-launcher-private))
     (advice-remove 'qutebrowser-launcher #'qutebrowser-consult-launcher)
-    (advice-remove 'qutebrowser-launcher-tab #'qutebrowser-consult-launcher)-tab
+    (advice-remove 'qutebrowser-launcher-tab #'qutebrowser-consult-launcher-tab)
     (advice-remove 'qutebrowser-launcher-window #'qutebrowser-consult-launcher-window)
     (advice-remove 'qutebrowser-launcher-private #'qutebrowser-consult-launcher-private)))
 
