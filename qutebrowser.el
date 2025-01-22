@@ -528,8 +528,7 @@ Return up to LIMIT results."
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
-                (propertize (qutebrowser--tofu-append url ?h)
-                            'title title)))
+                (propertize url 'title title)))
             rows)))
 
 ;;;; Utility functions
@@ -606,6 +605,12 @@ than `qutebrowser--tofu-range'."
                (setq id (char-to-string (+ qutebrowser--tofu-char id)))
                (propertize id 'invisible t)))
            id-list)))
+
+(defsubst qutebrowser--tofu-append-to-list (cands &rest id-list)
+  "Append tofu-encoded IDs from ID-LIST to CANDS.
+See `qutebrowser--tofu-append'."
+  (mapcar (lambda (cand) (apply #'qutebrowser--tofu-append cand id-list))
+	  cands))
 
 (defsubst qutebrowser--tofu-get (cand &optional pos)
   "Extract tofu-encoded ID from CAND.
@@ -691,8 +696,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
           (format qutebrowser-heading-bookmark matches))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
-                (propertize (qutebrowser--tofu-append url ?m)
-                            'title bookmark)))
+                (propertize url 'title bookmark)))
             matching-bookmarks)))
 
 (defun qutebrowser-exwm-buffer-search (&optional words)
@@ -739,7 +743,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
        (lambda (cmd)
          (let ((name (concat ":" (plist-get cmd :command)))
                (desc (car (string-lines (plist-get cmd :description)))))
-           (propertize (qutebrowser--tofu-append name ?c) 'title desc 'url name)))
+           (propertize name 'title desc 'url name)))
        matching-commands))))
 
 (defun qutebrowser--highlight-matches (words str)
@@ -821,10 +825,11 @@ than `qutebrowser-url-display-length'."
       (setq qutebrowser-launcher--current-input string))
     (let ((words (string-split (or string ""))))
       (append
-       (qutebrowser-command-search words)
+       (qutebrowser--tofu-append-to-list (qutebrowser-command-search words) ?c)
        (qutebrowser-exwm-buffer-search words)
-       (qutebrowser-bookmark-search words)
-       (qutebrowser--history-search words qutebrowser-dynamic-results)))))
+       (qutebrowser--tofu-append-to-list (qutebrowser-bookmark-search words) ?m)
+       (qutebrowser--tofu-append-to-list
+	(qutebrowser--history-search words qutebrowser-dynamic-results) ?h)))))
 
 ;;;###autoload
 (defun qutebrowser-delete-from-history (url)
