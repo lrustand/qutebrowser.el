@@ -152,7 +152,7 @@ INITIAL sets the initial input in the minibuffer."
     :default default
     :sort nil
     :initial initial
-    :require-match nil)))
+    :require-match nil))
 
 ;;;###autoload
 (defun qutebrowser-consult-launcher (&optional initial target)
