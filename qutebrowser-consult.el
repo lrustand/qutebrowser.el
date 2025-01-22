@@ -56,7 +56,7 @@
         :history nil
         :category 'url
         :action (lambda (entry)
-		  (switch-to-buffer (qutebrowser--tofu-get-buffer entry)))
+		  (switch-to-buffer (get-text-property 0 'qb-buffer entry)))
         :annotate #'qutebrowser-consult--annotate
         :items #'qutebrowser-exwm-buffer-search)
   "Consult source for open Qutebrowser windows.")
@@ -70,8 +70,8 @@
         :category 'bookmark
         :face 'consult-bookmark
         :action #'qutebrowser-bookmark-jump
-        :items #'qutebrowser-bookmarks-list
-	:qb-tofu ?m)
+	:annotate #'qutebrowser-consult--annotate
+        :items #'qutebrowser-bookmark-search)
   "Consult source for Qutebrowser bookmarks.")
 
 ;;;; Command source
@@ -85,8 +85,7 @@
 	:category 'other
 	:action #'qutebrowser-send-commands
         :annotate #'qutebrowser-consult--annotate
-	:items (apply-partially #'qutebrowser-command-search '(":"))
-	:qb-tofu ?c)
+	:items (apply-partially #'qutebrowser-command-search '(":")))
   "Consult source for Qutebrowser commands.")
 
 ;;;###autoload
@@ -158,8 +157,7 @@ Set initial completion input to INITIAL."
 		     :initial initial
 		     :require-match nil)))
     ;; Because `qutebrowser' still needs tofus for dispatching, we have to add them here.
-    (qutebrowser--tofu-append (car selection)
-			      (plist-get (cdr selection) :qb-tofu))))
+    (car selection)))
 
 (provide 'qutebrowser-consult)
 
