@@ -144,14 +144,14 @@ INITIAL sets the initial input in the minibuffer."
 		       qutebrowser-consult--bookmark-source
 		       qutebrowser-consult--history-source
 		       qutebrowser-consult--command-source)))
-    (consult--multi (mapcar #'qutebrowser-consult--suppress-action sources))
-    :prompt (if default
-                (format "Select (default %s): " default)
-              "Select: ")
-    :default default
-    :sort nil
-    :initial initial
-    :require-match nil))
+    (consult--multi (mapcar #'qutebrowser-consult--suppress-action sources)
+		    :prompt (if default
+				(format "Select (default %s): " default)
+			      "Select: ")
+		    :default default
+		    :sort nil
+		    :initial initial
+		    :require-match nil)))
 
 ;;;###autoload
 (defun qutebrowser-consult-launcher (&optional initial target)
