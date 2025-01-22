@@ -217,6 +217,13 @@ query is built, see `qutebrowser--history-search'."
   :type 'boolean
   :group 'qutebrowser)
 
+(defcustom qutebrowser-selection-function #'qutebrowser-select-url-completing-read
+  "The default function to use when selecting a URL, buffer, bookmark, or command."
+  :type '(choice (const :tag "Built-in" qutebrowser-select-url-completing-read)
+		 (const :tag "Consult" qutebrowser-consult-select-url)
+		 (function :tag "Custom command"))
+  :group 'qutebrowser)
+
 (defcustom qutebrowser-history-order-by "last_atime DESC"
   "How to sort the history entries in the completion lists."
   :type '(choice
@@ -839,14 +846,18 @@ than `qutebrowser-url-display-length'."
     (dolist (table '("CompletionHistory" "History"))
       (sqlite-execute qutebrowser--db-object (format query table) (list url)))))
 
-(defun qutebrowser-select-url (&optional initial default)
-  "Dynamically select a URL, buffer, or command.
-INITIAL sets the initial input in the minibuffer."
+(defun qutebrowser-select-url-completing-read (&optional initial default)
+  "Backend for `qutebrowser-select-url' based on `completing-read'."
   (setq qutebrowser-launcher--current-input "")
   (let ((prompt (if default
                     (format "Select (default %s): " default)
                   "Select: ")))
     (completing-read prompt #'qutebrowser--completion-table nil nil initial nil default)))
+
+(defun qutebrowser-select-url (&optional initial default)
+  "Dynamically select a URL, buffer, or command.
+INITIAL sets the initial input in the minibuffer."
+  (funcall qutebrowser-selection-function initial default))
 
 ;;;; Launcher functions
 
