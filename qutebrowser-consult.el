@@ -37,7 +37,7 @@
 ;;;; Helper functions
 (defun qutebrowser-consult--format-entry (entry)
   "Modify ENTRY for presentation."
-  (qutebrowser--shorten-display-url (qutebrowser--tofu-strip entry)))
+  (qutebrowser--shorten-display-url entry))
 
 (defun qutebrowser-consult--annotate (entry)
   "Return annotation for ENTRY."
@@ -81,9 +81,8 @@
 	:category 'other
 	:action #'qutebrowser-send-commands
         :annotate #'qutebrowser-consult--annotate
-	:items (lambda () (mapcar #'qutebrowser--tofu-strip
-				  (qutebrowser-command-search '(":"))))
-	"Consult source for Qutebrowser commands."))
+	:items (apply-partially #'qutebrowser-command-search '(":")))
+  "Consult source for Qutebrowser commands.")
 
 ;;;###autoload
 (defun qutebrowser-consult-command (&optional initial)
