@@ -807,7 +807,7 @@ INITIAL sets the initial input in the minibuffer."
 ;;;; Launcher functions
 
 ;;;###autoload
-(defun qutebrowser (thing &optional target count)
+(defun qutebrowser (thing &optional target)
   "Do THING in Qutebrowser.
 
 THING can be one of: a URL, a Qutebrowser buffer, a Qutebrowser command
@@ -819,16 +819,12 @@ TARGET is where to do the thing, and can be one of: 'auto, 'tab,
 `qutebrowser-default-open-target'. When THING is a buffer or a command,
 TARGET is ignored.
 
-If THING is a Qutebrowser command, COUNT is passed directly to the
-command. Otherwise THING is done COUNT times.
-
 If called interactively, prompts for input with dynamic completion from
 Qutebrowser history, open Qutebrowser buffers, Qutebrowser bookmarks,
 and, if input starts with a colon, known Qutebrowser commands.
 
 With one universal argument, set TARGET to 'tab.
-With two universal arguments, set TARGET to 'private-window.
-With a numeric prefix argument N, set COUNT to N."
+With two universal arguments, set TARGET to 'private-window."
   (interactive (list (let ((default
                             (or (and (region-active-p)
                                      (filter-buffer-substring
@@ -843,16 +839,10 @@ With a numeric prefix argument N, set COUNT to N."
                        ('(16) 'private-window)
                        (_ nil))
                      (and (numberp current-prefix-arg)
-                          current-prefix-arg)))
-  (let ((cand-type (get-text-property 0 'qutebrowser-candidate-type thing))
-        (buffer (get-text-property 0 'qutebrowser-buffer thing)))
-    (cond
-     ((eq 'buffer cand-type) (switch-to-buffer buffer))
-     ((eq 'command cand-type) (qutebrowser-send-commands thing))
-     (t (qutebrowser-open-url thing target)))))
+                          current-prefix-arg))))
 
 ;;;###autoload
-(defun qutebrowser-dwim (thing &optional target count)
+(defun qutebrowser-dwim (thing &optional target)
   (interactive (list (or (and (region-active-p)
                               (filter-buffer-substring
                                (region-beginning)
@@ -864,10 +854,8 @@ With a numeric prefix argument N, set COUNT to N."
                      (pcase current-prefix-arg
                        ('(4) 'tab)
                        ('(16) 'private-window)
-                       (_ nil))
-                     (and (numberp current-prefix-arg)
-                          current-prefix-arg)))
-  (qutebrowser thing target count))
+                       (_ nil))))
+  (qutebrowser thing target))
 
 ;;;###autoload
 (defun qutebrowser-launcher (&optional initial target)
