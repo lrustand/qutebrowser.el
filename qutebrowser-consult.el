@@ -106,6 +106,7 @@
 	:history nil
 	:category 'other
 	:action #'qutebrowser-send-commands
+	:new #'qutebrowser-send-commands
         :annotate #'qutebrowser-consult--annotate
 	:items (apply-partially #'qutebrowser-command-search '(":")))
   "Consult source for Qutebrowser commands.")
@@ -116,14 +117,12 @@
 Set initial completion input to INITIAL."
   (interactive)
   (let* ((consult-async-min-input 0)
-	 (consult-async-split-style nil)
-	 (selected
-	  (consult--multi '(qutebrowser-consult--command-source)
-                          :group nil
-			  :prompt "Command: "
-			  :initial (or initial ":")
-			  :history 'qutebrowser-consult--command-history)))
-    (qutebrowser-send-commands selected)))
+	 (consult-async-split-style nil))
+    (consult--multi '(qutebrowser-consult--command-source)
+                    :group nil
+		    :prompt "Command: "
+		    :initial (or initial ":")
+		    :history 'qutebrowser-consult--command-history)))
 
 ;;;; History source
 (defvar qutebrowser-consult--history-source
