@@ -625,18 +625,19 @@ element to filter.
 
 The elements in LIST are filtered to contain only elements that match
 all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
-  (seq-filter
-   (lambda (elem)
-     ;; All search words matching
-     (seq-every-p
-      (lambda (word)
-        ;; At least one field matches each word
-        (seq-some
-         (lambda (field)
-           (cl-search word (funcall field elem)))
-         field-getters))
-      words))
-   list))
+  (let ((case-fold-search t))
+    (seq-filter
+     (lambda (elem)
+       ;; All search words matching
+       (seq-every-p
+        (lambda (word)
+          ;; At least one field matches each word
+          (seq-some
+           (lambda (field)
+             (cl-search word (funcall field elem) :test #'char-equal))
+           field-getters))
+        words))
+     list)))
 
 (defun qutebrowser-bookmark-search (&optional words)
   "Return a propertized list of Qutebrowser bookmarks matching WORDS."
