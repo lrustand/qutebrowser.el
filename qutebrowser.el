@@ -535,7 +535,7 @@ Return up to LIMIT results."
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
-                (propertize url 'qb-type 'url 'title title)))
+                (propertize url 'qutebrowser-candidate-type 'url 'title title)))
             rows)))
 
 ;;;; Utility functions
@@ -649,7 +649,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
           (format qutebrowser-heading-bookmark matches))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
-                (propertize url 'qb-type 'bookmark 'title bookmark)))
+                (propertize url 'qutebrowser-candidate-type 'bookmark 'title bookmark)))
             matching-bookmarks)))
 
 (defun qutebrowser-exwm-buffer-search (&optional words)
@@ -671,8 +671,8 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
 
                      (icon-string (propertize "" 'display icon)))
                 (propertize url
-			    'qb-type 'buffer
-			    'qb-buffer buffer
+			    'qutebrowser-candidate-type 'buffer
+			    'qutebrowser-buffer buffer
                             'title (if qutebrowser-launcher-show-icons
                                        (concat icon-string " " title)
                                      title))))
@@ -696,7 +696,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
        (lambda (cmd)
          (let ((name (concat ":" (plist-get cmd :command)))
                (desc (car (string-lines (plist-get cmd :description)))))
-           (propertize name 'qb-type 'command 'title desc 'url name)))
+           (propertize name 'qutebrowser-candidate-type 'command 'title desc 'url name)))
        matching-commands))))
 
 (defun qutebrowser--highlight-matches (words str)
@@ -751,7 +751,7 @@ than `qutebrowser-url-display-length'."
 (defun qutebrowser-launcher--group-entries (entry transform)
   (if transform
       entry
-    (pcase (get-text-property 0 'qb-type entry)
+    (pcase (get-text-property 0 'qutebrowser-candidate-type entry)
       ('buffer qutebrowser-heading-buffer--with-count)
       ('bookmark qutebrowser-heading-bookmark--with-count)
       ('command qutebrowser-heading-command--with-count)
@@ -844,8 +844,8 @@ With a numeric prefix argument N, set COUNT to N."
                        (_ nil))
                      (and (numberp current-prefix-arg)
                           current-prefix-arg)))
-  (let ((cand-type (get-text-property 0 'qb-type thing))
-        (buffer (get-text-property 0 'qb-buffer thing)))
+  (let ((cand-type (get-text-property 0 'qutebrowser-candidate-type thing))
+        (buffer (get-text-property 0 'qutebrowser-buffer thing)))
     (cond
      ((eq 'buffer cand-type) (switch-to-buffer buffer))
      ((eq 'command cand-type) (qutebrowser-send-commands thing))
