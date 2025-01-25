@@ -54,7 +54,7 @@
         :action (lambda (entry)
 		  (switch-to-buffer (get-text-property 0 'qb-buffer entry)))
         :annotate #'qutebrowser-consult--annotate
-        :items #'qutebrowser-exwm-buffer-search)
+        :items (lambda () (mapcar #'qutebrowser--shorten-display-url (qutebrowser-exwm-buffer-search))))
   "Consult source for open Qutebrowser windows.")
 
 ;;;; Bookmark source
