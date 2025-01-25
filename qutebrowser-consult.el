@@ -53,7 +53,7 @@
   (propertize (get-text-property 0 'title entry)
 	      'face 'completions-annotations))
 
-;;;; buffer source
+;;;; Buffer source
 (defvar qutebrowser-consult--exwm-buffer-source
   (list :name "Qutebrowser buffers"
         :hidden nil
