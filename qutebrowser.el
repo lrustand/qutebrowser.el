@@ -567,10 +567,7 @@ Return up to LIMIT results."
 
 (defun qutebrowser-exwm-buffer-url (&optional buffer)
   "Return the URL of BUFFER or the current buffer."
-  (with-current-buffer (or buffer (current-buffer))
-    (or qutebrowser-exwm-current-url
-        ;; Keep backward compatibility for now
-        (get-text-property 0 'qutebrowser-url (buffer-name buffer)))))
+  (buffer-local-value 'qutebrowser-exwm-current-url (or buffer (current-buffer))))
 
 (defun qutebrowser-exwm-buffer-list ()
   "Return a list of all Qutebrowser buffers."
@@ -696,7 +693,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
        (lambda (cmd)
          (let ((name (concat ":" (plist-get cmd :command)))
                (desc (car (string-lines (plist-get cmd :description)))))
-           (propertize name 'qutebrowser-candidate-type 'command 'qutebrowser-title desc 'qutebrowser-url name)))
+           (propertize name 'qutebrowser-candidate-type 'command 'qutebrowser-title desc)))
        matching-commands))))
 
 (defun qutebrowser--highlight-matches (words str)
