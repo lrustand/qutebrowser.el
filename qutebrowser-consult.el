@@ -133,7 +133,8 @@ Set initial completion input to INITIAL."
 ;;;; `qutebrowser-launcher' replacement
 (defun qutebrowser-consult--suppress-action (source)
   "Return SOURCE with no action."
-  (let ((new-source (seq-copy source)))
+  (let* ((source (if (symbolp source) (symbol-value source) source))
+	 (new-source (seq-copy source)))
     (plist-put new-source :action nil)))
 
 ;;;###autoload
@@ -141,10 +142,7 @@ Set initial completion input to INITIAL."
   "Backend for `qutebrowser-select-url' based on Consult."
   (let* ((consult-async-min-input 0)
          (consult-async-split-style nil)
-	 (sources (list qutebrowser-consult--exwm-buffer-source
-			qutebrowser-consult--bookmark-source
-			qutebrowser-consult--history-source
-			qutebrowser-consult--command-source))
+	 (sources qutebrowser-consult-launcher-sources)
 	 (selection (consult--multi
 		     (mapcar #'qutebrowser-consult--suppress-action sources)
 		     :prompt (if default
