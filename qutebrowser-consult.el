@@ -38,10 +38,6 @@
   :prefix "qutebrowser-consult")
 
 ;;;; Helper functions
-(defun qutebrowser-consult--format-entry (entry)
-  "Modify ENTRY for presentation."
-  (qutebrowser--shorten-display-url entry))
-
 (defun qutebrowser-consult--annotate (entry)
   "Return annotation for ENTRY."
   (qutebrowser--shorten-display-url entry)
@@ -122,7 +118,7 @@ Set initial completion input to INITIAL."
 	  :throttle 0
 	  :debounce 0
 	  :highlight t
-	  :transform (consult--async-map #'qutebrowser-consult--format-entry)))
+	  :transform (consult--async-map #'qutebrowser--shorten-display-url)))
   "Consult source for Qutebrowser history.")
 
 ;;;; `qutebrowser-launcher' replacement
