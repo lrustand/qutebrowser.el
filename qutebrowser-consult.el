@@ -53,6 +53,12 @@
   (propertize (get-text-property 0 'title entry)
 	      'face 'completions-annotations))
 
+(defun qutebrowser-consult--format-buffer (entry)
+  "Format buffer ENTRY for completion."
+  (let ((title (get-text-property 0 'title entry)))
+    (concat (qutebrowser--shorten-display-url entry)
+	    (propertize title 'invisible t))))
+
 ;;;; Buffer source
 (defvar qutebrowser-consult--exwm-buffer-source
   (list :name "Qutebrowser buffers"
@@ -63,7 +69,7 @@
         :action (lambda (entry)
 		  (switch-to-buffer (get-text-property 0 'qutebrowser-buffer entry)))
         :annotate #'qutebrowser-consult--annotate
-        :items (lambda () (mapcar #'qutebrowser--shorten-display-url (qutebrowser-exwm-buffer-search))))
+        :items (lambda () (mapcar #'qutebrowser-consult--format-buffer (qutebrowser-exwm-buffer-search))))
   "Consult source for open Qutebrowser windows.")
 
 ;;;; Bookmark source
