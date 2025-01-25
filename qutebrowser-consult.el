@@ -39,7 +39,7 @@
 
 (defcustom qutebrowser-consult-launcher-sources
   '(qutebrowser-consult--exwm-buffer-source
-    qutebrowser-consult--bookmark-source
+    qutebrowser-consult--bookmark-url-source
     qutebrowser-consult--history-source
     qutebrowser-consult--command-source)
   "Sources used by `qutebrowser-launcher' and family."
@@ -75,6 +75,17 @@
         :category 'bookmark
         :face 'consult-bookmark
         :action #'qutebrowser-bookmark-jump
+	:annotate #'qutebrowser-consult--annotate
+        :items #'qutebrowser-bookmarks-list)
+  "Consult source for Qutebrowser bookmarks.")
+
+(defvar qutebrowser-consult--bookmark-url-source
+  (list :name "Qutebrowser bookmarks" ;; should this be named differently? it's unlikely that this source is used with the other one
+        :hidden nil
+        :narrow ?m
+        :history nil
+        :category 'url
+        :action #'qutebrowser-open-url
 	:annotate #'qutebrowser-consult--annotate
         :items #'qutebrowser-bookmark-search)
   "Consult source for Qutebrowser bookmarks.")
