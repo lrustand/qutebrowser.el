@@ -49,13 +49,12 @@
 ;;;; Helper functions
 (defun qutebrowser-consult--annotate (entry)
   "Return annotation for ENTRY."
-  (qutebrowser--shorten-display-url entry)
-  (propertize (get-text-property 0 'title entry)
+  (propertize (get-text-property 0 'qutebrowser-title entry)
 	      'face 'completions-annotations))
 
-(defun qutebrowser-consult--format-buffer (entry)
-  "Format buffer ENTRY for completion."
-  (let ((title (get-text-property 0 'title entry)))
+(defun qutebrowser-consult--format (entry)
+  "Format ENTRY for completion."
+  (let ((title (get-text-property 0 'qutebrowser-title entry)))
     (concat (qutebrowser--shorten-display-url entry)
 	    (propertize title 'invisible t))))
 
@@ -69,7 +68,7 @@
         :action (lambda (entry)
 		  (switch-to-buffer (get-text-property 0 'qutebrowser-buffer entry)))
         :annotate #'qutebrowser-consult--annotate
-        :items (lambda () (mapcar #'qutebrowser-consult--format-buffer (qutebrowser-exwm-buffer-search))))
+        :items (lambda () (mapcar #'qutebrowser-consult--format (qutebrowser-exwm-buffer-search))))
   "Consult source for open Qutebrowser windows.")
 
 ;;;; Bookmark source
@@ -93,8 +92,8 @@
         :category 'url
         :action #'qutebrowser-open-url
 	:annotate #'qutebrowser-consult--annotate
-        :items #'qutebrowser-bookmark-search)
-  "Consult source for Qutebrowser bookmarks.")
+        :items (lambda () (mapcar #'qutebrowser-consult--format (qutebrowser-bookmark-search))))
+  "Consult source for Qutebrowser bookmark URLs.")
 
 ;;;; Command source
 (defvar qutebrowser-consult--command-history nil)
