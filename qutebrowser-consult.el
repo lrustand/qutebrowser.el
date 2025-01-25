@@ -37,6 +37,15 @@
   :group 'qutebrowser
   :prefix "qutebrowser-consult")
 
+(defcustom qutebrowser-consult-launcher-sources
+  '(qutebrowser-consult--exwm-buffer-source
+    qutebrowser-consult--bookmark-source
+    qutebrowser-consult--history-source
+    qutebrowser-consult--command-source)
+  "Sources used by `qutebrowser-launcher' and family."
+  :type '(repeat symbol)
+  :group 'qutebrowser-consult)
+
 ;;;; Helper functions
 (defun qutebrowser-consult--annotate (entry)
   "Return annotation for ENTRY."
@@ -122,13 +131,6 @@ Set initial completion input to INITIAL."
   "Consult source for Qutebrowser history.")
 
 ;;;; `qutebrowser-launcher' replacement
-(defvar qutebrowser-consult-launcher-sources
-  '(qutebrowser-consult--exwm-buffer-source
-    qutebrowser-consult--bookmark-source
-    qutebrowser-consult--history-source
-    qutebrowser-consult--command-source)
-  "Sources used by `qutebrowser-launcher' and family.")
-
 (defun qutebrowser-consult--suppress-action (source)
   "Return SOURCE with no action."
   (let ((new-source (seq-copy source)))
