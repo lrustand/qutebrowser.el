@@ -535,7 +535,7 @@ Return up to LIMIT results."
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
-                (propertize url 'qutebrowser-candidate-type 'url 'title title)))
+                (propertize url 'qutebrowser-candidate-type 'url 'qutebrowser-title title)))
             rows)))
 
 ;;;; Utility functions
@@ -570,7 +570,7 @@ Return up to LIMIT results."
   (with-current-buffer (or buffer (current-buffer))
     (or qutebrowser-exwm-current-url
         ;; Keep backward compatibility for now
-        (get-text-property 0 'url (buffer-name buffer)))))
+        (get-text-property 0 'qutebrowser-url (buffer-name buffer)))))
 
 (defun qutebrowser-exwm-buffer-list ()
   "Return a list of all Qutebrowser buffers."
@@ -649,7 +649,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
           (format qutebrowser-heading-bookmark matches))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
-                (propertize url 'qutebrowser-candidate-type 'bookmark 'title bookmark)))
+                (propertize url 'qutebrowser-candidate-type 'bookmark 'qutebrowser-title bookmark)))
             matching-bookmarks)))
 
 (defun qutebrowser-exwm-buffer-search (&optional words)
@@ -673,9 +673,9 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
                 (propertize url
 			    'qutebrowser-candidate-type 'buffer
 			    'qutebrowser-buffer buffer
-                            'title (if qutebrowser-launcher-show-icons
-                                       (concat icon-string " " title)
-                                     title))))
+                            'qutebrowser-title (if qutebrowser-launcher-show-icons
+						   (concat icon-string " " title)
+						 title))))
             matching-buffers)))
 
 
@@ -696,7 +696,7 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
        (lambda (cmd)
          (let ((name (concat ":" (plist-get cmd :command)))
                (desc (car (string-lines (plist-get cmd :description)))))
-           (propertize name 'qutebrowser-candidate-type 'command 'title desc 'url name)))
+           (propertize name 'qutebrowser-candidate-type 'command 'qutebrowser-title desc 'qutebrowser-url name)))
        matching-commands))))
 
 (defun qutebrowser--highlight-matches (words str)
@@ -722,7 +722,7 @@ hidden by setting the `invisible' property.
 If PAD is non-nil, add padding to the annotation if ENTRY is shorter
 than `qutebrowser-url-display-length'."
   (let ((input qutebrowser-launcher--current-input)
-        (title (get-text-property 0 'title entry)))
+        (title (get-text-property 0 'qutebrowser-title entry)))
     ;; Set main face of annotation (title)
     (put-text-property 0 (length title) 'face 'completions-annotations title)
     ;; Highlight all matching words (both in url and title)
