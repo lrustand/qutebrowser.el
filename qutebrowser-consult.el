@@ -42,7 +42,7 @@
     qutebrowser-consult--bookmark-url-source
     qutebrowser-consult--history-source
     qutebrowser-consult--command-source)
-  "Sources used by `qutebrowser-launcher' and family."
+  "Sources used by `qutebrowser-consult-launcher'."
   :type '(repeat symbol)
   :group 'qutebrowser-consult)
 
@@ -85,7 +85,7 @@
   "Consult source for Qutebrowser bookmarks.")
 
 (defvar qutebrowser-consult--bookmark-url-source
-  (list :name "Qutebrowser bookmarks" ;; should this be named differently? it's unlikely that this source is used with the other one
+  (list :name "Qutebrowser bookmarks"
         :hidden nil
         :narrow ?m
         :history nil
@@ -145,21 +145,16 @@ Set initial completion input to INITIAL."
 	  :transform (consult--async-map #'qutebrowser--shorten-display-url)))
   "Consult source for Qutebrowser history.")
 
-;;;; `qutebrowser-launcher' replacement
-(defun qutebrowser-consult--suppress-action (source)
-  "Return SOURCE with no action."
-  (let* ((source (if (symbolp source) (symbol-value source) source))
-	 (new-source (seq-copy source)))
-    (plist-put new-source :action nil)))
-
+;;;; `qutebrowser-launcher' backend
 ;;;###autoload
-(defun qutebrowser-consult-select-url (&optional initial default)
-  "Backend for `qutebrowser-select-url' based on Consult."
+(defun qutebrowser-consult-launcher (&optional initial default target)
+  "Backend for `qutebrowser-launcher' based on Consult."
   (let* ((consult-async-min-input 0)
          (consult-async-split-style nil)
-	 (sources qutebrowser-consult-launcher-sources)
+	 (qutebrowser-default-open-target
+	  (or target qutebrowser-default-open-target))
 	 (selection (consult--multi
-		     (mapcar #'qutebrowser-consult--suppress-action sources)
+		     qutebrowser-consult-launcher-sources
 		     :prompt (if default
 				 (format "Select (default %s): " default)
 			       "Select: ")
@@ -167,7 +162,8 @@ Set initial completion input to INITIAL."
 		     :sort nil
 		     :initial initial
 		     :require-match nil)))
-    (car selection)))
+    (unless (plist-get (cdr selection) :match)
+      (qutebrowser-open-url (car selection)))))
 
 (provide 'qutebrowser-consult)
 

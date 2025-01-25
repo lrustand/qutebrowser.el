@@ -217,10 +217,10 @@ query is built, see `qutebrowser--history-search'."
   :type 'boolean
   :group 'qutebrowser)
 
-(defcustom qutebrowser-selection-function #'qutebrowser-select-url-completing-read
-  "The default function to use when selecting a URL, buffer, bookmark, or command."
-  :type '(choice (const :tag "Built-in" qutebrowser-select-url-completing-read)
-		 (const :tag "Consult" qutebrowser-consult-select-url)
+(defcustom qutebrowser-launcher-backend #'qutebrowser-completing-read-launcher
+  "Backend function for `qutebrowser-launcher'."
+  :type '(choice (const :tag "Built-in" qutebrowser-completing-read-launcher)
+		 (const :tag "Consult" qutebrowser-consult-launcher)
 		 (function :tag "Custom command"))
   :group 'qutebrowser)
 
@@ -236,6 +236,11 @@ query is built, see `qutebrowser--history-search'."
 (defcustom qutebrowser-dynamic-results 100
   "The amount of dynamic results to show from history."
   :type 'integer
+  :group 'qutebrowser)
+
+(defcustom qutebrowser-dwim-send-commands nil
+  "If non-nil, `qutebrowser-dwim' may send commands."
+  :type 'boolean
   :group 'qutebrowser)
 
 (defgroup qutebrowser-faces nil
@@ -782,24 +787,24 @@ than `qutebrowser-url-display-length'."
 
 ;;;###autoload
 (defun qutebrowser-delete-from-history (url)
-  (interactive (list (qutebrowser-select-url)))
   (let ((query "DELETE FROM %s WHERE url=?;"))
     (dolist (table '("CompletionHistory" "History"))
       (sqlite-execute qutebrowser--db-object (format query table) (list url)))))
 
-(defun qutebrowser-select-url-completing-read (&optional initial default)
-  "Backend for `qutebrowser-select-url' based on `completing-read'."
+(defun qutebrowser-completing-read-launcher (&optional initial default target)
+  "Backend for `qutebrowser-launcher' based on `completing-read'."
   (setq qutebrowser-launcher--current-input "")
-  (let ((prompt (if default
-                    (format "Select (default %s): " default)
-                  "Select: "))
-	(minibuffer-allow-text-properties t))
-    (completing-read prompt #'qutebrowser--completion-table nil nil initial nil default)))
-
-(defun qutebrowser-select-url (&optional initial default)
-  "Dynamically select a URL, buffer, or command.
-INITIAL sets the initial input in the minibuffer."
-  (funcall qutebrowser-selection-function initial default))
+  (let* ((prompt (if default
+		     (format "Select (default %s): " default)
+                   "Select: "))
+	 (minibuffer-allow-text-properties t)
+	 (selection (completing-read prompt #'qutebrowser--completion-table nil nil initial nil default))
+	 (cand-type (get-text-property 0 'qutebrowser-candidate-type selection))
+         (buffer (get-text-property 0 'qutebrowser-buffer selection)))
+    (cond
+     ((eq 'buffer cand-type) (switch-to-buffer buffer))
+     ((eq 'command cand-type) (qutebrowser-send-commands selection))
+     (t (qutebrowser-open-url selection target)))))
 
 ;;;; Launcher functions
 
@@ -807,9 +812,8 @@ INITIAL sets the initial input in the minibuffer."
 (defun qutebrowser (thing &optional target)
   "Do THING in Qutebrowser.
 
-THING can be one of: a URL, a Qutebrowser buffer, a Qutebrowser command
-with colon prefix, or any string which will be searched with the default
-search engine.
+THING can be one of: a URL, a Qutebrowser command with colon prefix,
+or any string which will be searched with the default search engine.
 
 TARGET is where to do the thing, and can be one of: 'auto, 'tab,
 'window, 'private-window. If not specified, defaults to
@@ -830,13 +834,15 @@ With two universal arguments, set TARGET to 'private-window."
                                 (thing-at-point 'url t)
                                 (thing-at-point 'symbol t)
                                 (thing-at-point 'word t))))
-                       (qutebrowser-select-url nil default))
+                       (qutebrowser-launcher nil default))
                      (pcase current-prefix-arg
                        ('(4) 'tab)
                        ('(16) 'private-window)
-                       (_ nil))
-                     (and (numberp current-prefix-arg)
-                          current-prefix-arg))))
+                       (_ nil))))
+  (unless (interactive-p)
+    (if (string-prefix-p ":" thing)
+	(qutebrowser-send-commands thing)
+      (qutebrowser-open-url thing target))))
 
 ;;;###autoload
 (defun qutebrowser-dwim (thing &optional target)
@@ -846,43 +852,46 @@ With two universal arguments, set TARGET to 'private-window."
                                (region-end)))
                          (thing-at-point 'url t)
                          (thing-at-point 'symbol t)
-                         (thing-at-point 'word t)
-                         (qutebrowser-select-url))
+                         (thing-at-point 'word t))
                      (pcase current-prefix-arg
                        ('(4) 'tab)
                        ('(16) 'private-window)
                        (_ nil))))
-  (qutebrowser thing target))
+  (if (and (interactive-p) (not thing))
+      (qutebrowser-launcher nil nil target)
+    (if (and qutebrowser-dwim-send-commands
+	     (string-prefix-p ":" thing))
+	(qutebrowser-send-commands thing)
+      (qutebrowser-open-url thing target))))
 
 ;;;###autoload
-(defun qutebrowser-launcher (&optional initial target)
+(defun qutebrowser-launcher (&optional initial default target)
   "Select a URL to open in Qutebrowser.
 Set initial completion input to INITIAL.  Open the URL in TARGET or the
 default target if nil."
   (interactive)
-  (let ((selected (qutebrowser-select-url initial)))
-    (qutebrowser selected target)))
+  (funcall qutebrowser-launcher-backend initial default target))
 
 ;;;###autoload
-(defun qutebrowser-launcher-tab (&optional initial)
+(defun qutebrowser-launcher-tab (&optional initial default)
   "Select a URL to open in a new tab.
 Set initial completion input to INITIAL."
   (interactive)
-  (qutebrowser-launcher initial 'tab))
+  (qutebrowser-launcher initial default 'tab))
 
 ;;;###autoload
-(defun qutebrowser-launcher-window (&optional initial)
+(defun qutebrowser-launcher-window (&optional initial default)
   "Select a URL to open in a new window.
 Set initial completion input to INITIAL."
   (interactive)
-  (qutebrowser-launcher initial 'window))
+  (qutebrowser-launcher initial default 'window))
 
 ;;;###autoload
-(defun qutebrowser-launcher-private (&optional initial)
+(defun qutebrowser-launcher-private (&optional initial default)
   "Select a URL to open in a private window.
 Set initial completion input to INITIAL."
   (interactive)
-  (qutebrowser-launcher initial 'private-window))
+  (qutebrowser-launcher initial default 'private-window))
 
 ;;;; Advice
 
