@@ -152,7 +152,6 @@ Set initial completion input to INITIAL."
 		     :sort nil
 		     :initial initial
 		     :require-match nil)))
-    ;; Because `qutebrowser' still needs tofus for dispatching, we have to add them here.
     (car selection)))
 
 (provide 'qutebrowser-consult)
