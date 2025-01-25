@@ -61,7 +61,7 @@
         :history nil
         :category 'url
         :action (lambda (entry)
-		  (switch-to-buffer (get-text-property 0 'qb-buffer entry)))
+		  (switch-to-buffer (get-text-property 0 'qutebrowser-buffer entry)))
         :annotate #'qutebrowser-consult--annotate
         :items (lambda () (mapcar #'qutebrowser--shorten-display-url (qutebrowser-exwm-buffer-search))))
   "Consult source for open Qutebrowser windows.")
