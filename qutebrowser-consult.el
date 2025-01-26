@@ -111,7 +111,7 @@
 	:action #'qutebrowser-send-commands
 	:new #'qutebrowser-send-commands
         :annotate #'qutebrowser-consult--annotate
-	:items (apply-partially #'qutebrowser-command-search '(":")))
+	:items (apply-partially #'qutebrowser-command-search ":"))
   "Consult source for Qutebrowser commands.")
 
 (defvar qutebrowser-consult--command-source-hidden
