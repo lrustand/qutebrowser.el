@@ -728,7 +728,7 @@ all the words in INPUT in any of the fields retrieved by FIELD-GETTERS."
         (setq pos end)
         (put-text-property start end 'face 'match str)))))
 
-(defun qutebrowser-annotate (entry &optional pad)
+(defun qutebrowser-annotate (entry)
   "Return annotation for ENTRY.
 
 ENTRY can be a bookmark, a buffer, a history item, or a command.  ENTRY
@@ -741,21 +741,15 @@ hidden by setting the `invisible' property.
 
 If PAD is non-nil, add padding to the annotation if ENTRY is shorter
 than `qutebrowser-url-display-length'."
-  (let ((title (get-text-property 0 'qutebrowser-title entry)))
-    ;; Set main face of annotation (title)
-    (put-text-property 0 (length title) 'face 'completions-annotations title)
-    ;; Highlight all matching words (both in url and title)
-    (when input
-      (qutebrowser--highlight-matches (string-split input) entry)
-      (qutebrowser--highlight-matches (string-split input) title))
-    (qutebrowser--shorten-display-url entry)
-    (let* ((pad-length (max 0 (- qutebrowser-url-display-length
-                                 (length entry))))
-           ;; When used in qutebrowser-completing-read-launcher, we need
-           ;; to pad the annotations for alignment. This is not needed
-           ;; when the annotations are used in qutebrowser-consult-launcher.
-           (padding (when pad (make-string pad-length ?\ ))))
-      (concat padding " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
+  (let* ((title (get-text-property 0 :qutebrowser-title entry))
+         (annotation (propertize title 'face 'completions-annotations))
+         ;; When used in qutebrowser-completing-read-launcher, we need
+         ;; to pad the annotations for alignment. This is not needed
+         ;; when the annotations are used in qutebrowser-consult-launcher.
+         (pad-length (max 0 (- qutebrowser-url-display-length
+                               (length entry))))
+         (padding (make-string pad-length ?\ )))
+    (concat padding " "  (qutebrowser--shorten-display-title title))))
 
 (defvar qutebrowser-heading-buffer "Buffer (%s)")
 (defvar qutebrowser-heading-buffer--with-count nil)
@@ -782,8 +776,7 @@ than `qutebrowser-url-display-length'."
       (if (eq action 'metadata)
           `(metadata . ((category . url)
                         (display-sort-function . identity)
-                        (annotation-function . ,(lambda (entry)
-                                                  (qutebrowser-annotate entry t)))
+                        (annotation-function . qutebrowser-annotate)
                         (group-function . qutebrowser-launcher--group-entries)))
         ;; Only compute the results once per input.  The 'boundaries
         ;; action seems to be the only one that is passed the input, so we
