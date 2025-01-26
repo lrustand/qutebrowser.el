@@ -65,11 +65,20 @@
         :narrow ?q
         :history nil
         :category 'url
-        :action (lambda (entry)
-		  (switch-to-buffer (get-text-property 0 'qutebrowser-buffer entry)))
+	:state #'qutebrowser-consult--exwm-buffer-state
         :annotate #'qutebrowser-consult--annotate
         :items (lambda () (mapcar #'qutebrowser-consult--format (qutebrowser-exwm-buffer-search))))
   "Consult source for open Qutebrowser windows.")
+
+(defun qutebrowser-consult--get-entry-buffer (entry)
+  "Return buffer referenced by ENTRY."
+  (get-text-property 0 'qutebrowser-buffer (or entry "")))
+
+(defun qutebrowser-consult--exwm-buffer-state ()
+  "State function for Qutebrowser buffers with preview."
+  (let ((state (consult--buffer-state)))
+    (lambda (action cand)
+      (funcall state action (qutebrowser-consult--get-entry-buffer cand)))))
 
 ;;;; Bookmark source
 (defvar qutebrowser-consult--bookmark-source
