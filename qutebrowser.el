@@ -797,14 +797,14 @@ than `qutebrowser-url-display-length'."
 
 (defun qutebrowser--candidate-type (item)
   "Return completion candidate type of ITEM."
-  (get-text-property 0 :qutebrowser-candidate-type item))
+  (get-text-property 0 :qutebrowser-candidate-type (or item "")))
 
 (defun qutebrowser--candidate-buffer (item)
   "Return buffer referenced by ITEM."
-  (get-text-property 0 :qutebrowser-buffer item))
+  (get-text-property 0 :qutebrowser-buffer (or item "")))
 
 (defun qutebrowser--switch-to-selected-buffer (item)
-  (switch-to-buffer (get-text-property 0 :qutebrowser-buffer item)))
+  (switch-to-buffer (get-text-property 0 :qutebrowser-buffer (or item ""))))
 
 (defun qutebrowser-completing-read-launcher (&optional initial default target)
   "Backend for `qutebrowser-launcher' based on `completing-read'."
