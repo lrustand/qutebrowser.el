@@ -99,7 +99,11 @@
         :narrow ?m
         :history nil
         :category 'url
-        :action #'qutebrowser-open-url
+        :action (lambda (url)
+		  (qutebrowser-open-url
+		   (string-remove-suffix
+		    (get-text-property 0 'qutebrowser-title url)
+		    url)))
 	:annotate #'qutebrowser-consult--annotate
         :items (lambda () (mapcar #'qutebrowser-consult--format (qutebrowser-bookmark-search))))
   "Consult source for Qutebrowser bookmark URLs.")
