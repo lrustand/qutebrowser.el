@@ -19,7 +19,7 @@
 ;; Author: Lars Rustand
 ;; URL: https://github.com/lrustand/qutebrowser.el
 ;; Version: 0
-;; Package-Requires: ((emacs "29.1") (consult "0.34"))
+;; Package-Requires: ((emacs "29.1"))
 
 ;;; Commentary:
 
@@ -35,7 +35,6 @@
 ;;; Code:
 
 (require 'sqlite)
-(require 'consult)
 (require 'exwm)
 (require 'json)
 (require 'jsonrpc)
