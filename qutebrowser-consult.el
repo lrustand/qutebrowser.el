@@ -55,8 +55,7 @@
 (defun qutebrowser-consult--format (entry)
   "Format ENTRY for completion."
   (let ((title (get-text-property 0 'qutebrowser-title entry)))
-    (concat (qutebrowser--shorten-display-url entry)
-	    (propertize title 'invisible t))))
+    (concat entry (propertize title 'invisible t))))
 
 ;;;; Buffer source
 (defvar qutebrowser-consult--exwm-buffer-source
@@ -150,8 +149,7 @@ Set initial completion input to INITIAL."
 	  :min-input 0
 	  :throttle 0
 	  :debounce 0
-	  :highlight t
-	  :transform (consult--async-map #'qutebrowser--shorten-display-url)))
+	  :highlight t))
   "Consult source for Qutebrowser history.")
 
 ;;;; `qutebrowser-launcher' backend
