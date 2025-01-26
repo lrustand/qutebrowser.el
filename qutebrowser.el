@@ -580,13 +580,20 @@ Return up to LIMIT results."
   "Return a list of all Qutebrowser buffers."
   (seq-filter #'qutebrowser-exwm-p (buffer-list)))
 
+(defun qutebrowser--shorten-display-string (string max-length)
+  "Shorten STRING by making the end invisible."
+  (let ((string-length (length string)))
+    (when (> string-length max-length)
+      (put-text-property max-length string-length 'invisible t string))
+    string))
+
 (defun qutebrowser--shorten-display-url (url)
   "Shorten URL by making the end invisible."
-  (let ((url-length (length url))
-        (max-length qutebrowser-url-display-length))
-    (when (> url-length max-length)
-      (put-text-property max-length url-length 'invisible t url))
-    url))
+  (qutebrowser--shorten-display-string url qutebrowser-url-display-length))
+
+(defun qutebrowser--shorten-display-title (title)
+  "Shorten TITLE by making the end invisible."
+  (qutebrowser--shorten-display-string title qutebrowser-title-display-length))
 
 ;;;; Bookmark functions
 
@@ -794,19 +801,33 @@ than `qutebrowser-url-display-length'."
     (dolist (table '("CompletionHistory" "History"))
       (sqlite-execute qutebrowser--db-object (format query table) (list url)))))
 
+(defun qutebrowser--candidate-type (item)
+  (get-text-property 0 :qutebrowser-candidate-type item))
+
+(defun qutebrowser--candidate-buffer (item)
+  (get-text-property 0 :qutebrowser-buffer item))
+
+(defun qutebrowser--switch-to-selected-buffer (item)
+  (switch-to-buffer (get-text-property 0 :qutebrowser-buffer item)))
+
 (defun qutebrowser-completing-read-launcher (&optional initial default target)
   "Backend for `qutebrowser-launcher' based on `completing-read'."
   (let* ((prompt (if default
 		     (format "Select (default %s): " default)
                    "Select: "))
 	 (minibuffer-allow-text-properties t)
-	 (selection (completing-read prompt #'qutebrowser--completion-table nil nil initial nil default))
-	 (cand-type (get-text-property 0 'qutebrowser-candidate-type selection))
-         (buffer (get-text-property 0 'qutebrowser-buffer selection)))
-    (cond
-     ((eq 'buffer cand-type) (switch-to-buffer buffer))
-     ((eq 'command cand-type) (qutebrowser-send-commands selection))
-     (t (qutebrowser-open-url selection target)))))
+	 (selection (completing-read prompt
+                                     #'qutebrowser--completion-table
+                                     nil       ; predicate
+                                     nil       ; require-match
+                                     initial   ; initial-input
+                                     nil       ; history
+                                     default)) ; default
+         (type (qutebrowser--candidate-type selection)))
+    (pcase type
+      ('buffer (qutebrowser--switch-to-selected-buffer selection))
+      ('command (qutebrowser-send-commands selection))
+      (_ (qutebrowser-open-url selection target)))))
 
 ;;;; Launcher functions
 
