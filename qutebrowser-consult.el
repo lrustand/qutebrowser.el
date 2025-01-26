@@ -118,6 +118,11 @@
 	:items (apply-partially #'qutebrowser-command-search '(":")))
   "Consult source for Qutebrowser commands.")
 
+(defvar qutebrowser-consult--command-source-hidden
+  `(:hidden t
+     ,@qutebrowser-consult--command-source)
+  "Like `qutebrowser-consult--command-source' but hidden by default.")
+
 ;;;###autoload
 (defun qutebrowser-consult-command (&optional initial)
   "Command entry for Qutebrowser based on Consult.
