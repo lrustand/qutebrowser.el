@@ -510,12 +510,12 @@ and BODY is one or more forms to execute if KEY is in PLIST."
     (setq qutebrowser--db-object (sqlite-open qutebrowser-history-database)))
   qutebrowser--db-object)
 
-(defun qutebrowser--history-search (&optional words limit)
+(defun qutebrowser--history-search (&optional string limit)
   "Search the sqlite database for entries matching WORDS.
 Return up to LIMIT results."
   (let* ((db (qutebrowser--get-db))
-         ;; Safeguarding to avoid nil value
-         (words (or words '("")))
+         (input (or string ""))
+         (words (or (string-split input) '("")))
          (inclusion (string-join (make-list (length words)
                                             qutebrowser-history-matching-pattern)
                                  " AND "))
@@ -617,17 +617,18 @@ Return up to LIMIT results."
 
 ;;;; Dynamic consult source
 
-(defun qutebrowser--filter-list (words list &rest field-getters)
+(defun qutebrowser--filter-list (input list &rest field-getters)
   "Generalized list filtering function.
-WORDS is a list of words to search for.
+INPUT will be split into a list of words to search for.
 LIST is the list to be filtered.
 FIELD-GETTERS is a list of functions for getting the fields from each
-that should be matched against WORDS. The function is called with the
+that should be matched against INPUT. The function is called with the
 element to filter.
 
 The elements in LIST are filtered to contain only elements that match
-all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
-  (let ((case-fold-search t))
+all the words in INPUT in any of the fields retrieved by FIELD-GETTERS."
+  (let ((case-fold-search t)
+        (words (string-split (or input ""))))
     (seq-filter
      (lambda (elem)
        ;; All search words matching
@@ -641,11 +642,11 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
         words))
      list)))
 
-(defun qutebrowser-bookmark-search (&optional words)
-  "Return a propertized list of Qutebrowser bookmarks matching WORDS."
+(defun qutebrowser-bookmark-search (&optional input)
+  "Return a propertized list of Qutebrowser bookmarks matching INPUT."
   (let* ((bookmarks (qutebrowser-bookmarks-list))
          (matching-bookmarks
-          (qutebrowser--filter-list words
+          (qutebrowser--filter-list input
                                     bookmarks
                                     #'identity
                                     #'qutebrowser-bookmark-url))
@@ -659,11 +660,11 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
                             :qutebrowser-title bookmark)))
             matching-bookmarks)))
 
-(defun qutebrowser-exwm-buffer-search (&optional words)
-  "Return a propertized list of Qutebrowser buffers matching WORDS."
+(defun qutebrowser-exwm-buffer-search (&optional input)
+  "Return a propertized list of Qutebrowser buffers matching INPUT."
   (let* ((buffers (qutebrowser-exwm-buffer-list))
          (matching-buffers
-          (qutebrowser--filter-list words
+          (qutebrowser--filter-list input
                                     buffers
                                     #'buffer-name
                                     #'qutebrowser-exwm-buffer-url))
@@ -686,12 +687,12 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
             matching-buffers)))
 
 
-(defun qutebrowser-command-search (words)
-  "Return a propertized list of Qutebrowser commands matching WORDS."
-  (when (string-prefix-p ":" (car words))
+(defun qutebrowser-command-search (&optional input)
+  "Return a propertized list of Qutebrowser commands matching INPUT."
+  (when (string-prefix-p ":" input)
     (let* ((all-commands (seq-into (qutebrowser-rpc-request :list-commands) 'list))
            (matching-commands
-            (qutebrowser--filter-list words
+            (qutebrowser--filter-list input
                                       all-commands
                                       (lambda (cmd)
                                         (concat ":" (plist-get cmd :command)))
@@ -780,13 +781,12 @@ than `qutebrowser-url-display-length'."
         ;; save the results here, and return them for all other actions.
         (if (listp action)
             (setq current-candidates
-                  (let ((words (string-split (or string ""))))
-                    (append
-                     (qutebrowser-command-search words)
-                     (qutebrowser-exwm-buffer-search words)
-                     (qutebrowser-bookmark-search words)
-                     (qutebrowser--history-search words qutebrowser-dynamic-results))))
-          current-candidates)))))
+                  (append
+                   (qutebrowser-command-search string)
+                   (qutebrowser-exwm-buffer-search string)
+                   (qutebrowser-bookmark-search string)
+                   (qutebrowser--history-search string qutebrowser-dynamic-results))))
+        current-candidates))))
 
 ;;;###autoload
 (defun qutebrowser-delete-from-history (url)

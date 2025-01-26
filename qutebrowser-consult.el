@@ -149,8 +149,7 @@ Set initial completion input to INITIAL."
 	:async
 	(consult--dynamic-collection
 	    (lambda (input)
-	      (qutebrowser--history-search (string-split (or input ""))
-					   qutebrowser-dynamic-results))
+	      (qutebrowser--history-search input qutebrowser-dynamic-results))
 	  :min-input 0
 	  :throttle 0
 	  :debounce 0
