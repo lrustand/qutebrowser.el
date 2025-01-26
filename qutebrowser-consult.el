@@ -99,7 +99,7 @@
         :action (lambda (url)
 		  (qutebrowser-open-url
 		   (string-remove-suffix
-		    (get-text-property 0 'qutebrowser-title url)
+		    (get-text-property 0 :qutebrowser-title url)
 		    url)))
 	:annotate #'qutebrowser-consult--annotate
         :items (lambda ()
