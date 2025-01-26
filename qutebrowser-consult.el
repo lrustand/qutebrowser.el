@@ -148,7 +148,8 @@ Set initial completion input to INITIAL."
 	:annotate #'qutebrowser-consult--annotate
 	:async
 	(consult--dynamic-collection
-	    #'qutebrowser--history-search
+            (lambda (input)
+	     (qutebrowser--history-search input))
 	  :min-input 0
 	  :throttle 0
 	  :debounce 0

@@ -509,7 +509,7 @@ and BODY is one or more forms to execute if KEY is in PLIST."
     (setq qutebrowser--db-object (sqlite-open qutebrowser-history-database)))
   qutebrowser--db-object)
 
-(defun qutebrowser--history-search (&optional string _)
+(defun qutebrowser--history-search (&optional string)
   "Search the sqlite database for entries matching WORDS.
 Return up to LIMIT results."
   (let* ((db (qutebrowser--get-db))
