@@ -540,7 +540,9 @@ Return up to LIMIT results."
     (mapcar (lambda (row)
               (let* ((url (car row))
                      (title (cadr row)))
-                (propertize (qutebrowser--shorten-display-url url) 'qutebrowser-candidate-type 'url 'qutebrowser-title title)))
+                (propertize (qutebrowser--shorten-display-url url)
+                            :qutebrowser-candidate-type 'url
+                            :qutebrowser-title title)))
             rows)))
 
 ;;;; Utility functions
@@ -652,7 +654,9 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
           (format qutebrowser-heading-bookmark matches))
     (mapcar (lambda (bookmark)
               (let* ((url (qutebrowser-bookmark-url bookmark)))
-                (propertize (qutebrowser--shorten-display-url url) 'qutebrowser-candidate-type 'bookmark 'qutebrowser-title bookmark)))
+                (propertize (qutebrowser--shorten-display-url url)
+                            :qutebrowser-candidate-type 'bookmark
+                            :qutebrowser-title bookmark)))
             matching-bookmarks)))
 
 (defun qutebrowser-exwm-buffer-search (&optional words)
@@ -674,9 +678,9 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
 
                      (icon-string (propertize "" 'display icon)))
                 (propertize (qutebrowser--shorten-display-url url)
-			    'qutebrowser-candidate-type 'buffer
-			    'qutebrowser-buffer buffer
-                            'qutebrowser-title (if qutebrowser-launcher-show-icons
+			    :qutebrowser-candidate-type 'buffer
+			    :qutebrowser-buffer buffer
+                            :qutebrowser-title (if qutebrowser-launcher-show-icons
 						   (concat icon-string " " title)
 						 title))))
             matching-buffers)))
@@ -699,7 +703,9 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
        (lambda (cmd)
          (let ((name (concat ":" (plist-get cmd :command)))
                (desc (car (string-lines (plist-get cmd :description)))))
-           (propertize (qutebrowser--shorten-display-url name) 'qutebrowser-candidate-type 'command 'qutebrowser-title desc)))
+           (propertize (qutebrowser--shorten-display-url name)
+                       :qutebrowser-candidate-type 'command
+                       :qutebrowser-title desc)))
        matching-commands))))
 
 (defun qutebrowser--highlight-matches (words str)
@@ -753,7 +759,7 @@ than `qutebrowser-url-display-length'."
 (defun qutebrowser-launcher--group-entries (entry transform)
   (if transform
       entry
-    (pcase (get-text-property 0 'qutebrowser-candidate-type entry)
+    (pcase (get-text-property 0 :qutebrowser-candidate-type entry)
       ('buffer qutebrowser-heading-buffer--with-count)
       ('bookmark qutebrowser-heading-bookmark--with-count)
       ('command qutebrowser-heading-command--with-count)

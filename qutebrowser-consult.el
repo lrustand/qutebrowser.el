@@ -49,12 +49,12 @@
 ;;;; Helper functions
 (defun qutebrowser-consult--annotate (entry)
   "Return annotation for ENTRY."
-  (propertize (get-text-property 0 'qutebrowser-title entry)
-	      'face 'completions-annotations))
+  (let ((title (get-text-property 0 :qutebrowser-title entry)))
+    (propertize title 'face 'completions-annotations)))
 
 (defun qutebrowser-consult--format (entry)
   "Format ENTRY for completion."
-  (let ((title (get-text-property 0 'qutebrowser-title entry)))
+  (let ((title (get-text-property 0 :qutebrowser-title entry)))
     (concat entry (propertize title 'invisible t))))
 
 ;;;; Buffer source
