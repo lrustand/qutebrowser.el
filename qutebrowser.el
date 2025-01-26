@@ -521,7 +521,9 @@ Return up to LIMIT results."
                                  " AND "))
          (exclusion (mapconcat (apply-partially 'format " url LIKE '%s'")
                                qutebrowser-history-exclusion-patterns " OR "))
-         (limit (if limit (format "LIMIT %d" limit) ""))
+         (limit (if qutebrowser-dynamic-results
+                    (format "LIMIT %d" qutebrowser-dynamic-results)
+                  ""))
          (query (format "SELECT url,substr(title,0,%d)
                          FROM CompletionHistory
                          WHERE %s AND NOT (%s)
@@ -792,7 +794,7 @@ than `qutebrowser-url-display-length'."
                    (qutebrowser-command-search string)
                    (qutebrowser-exwm-buffer-search string)
                    (qutebrowser-bookmark-search string)
-                   (qutebrowser--history-search string qutebrowser-dynamic-results))))
+                   (qutebrowser--history-search string))))
         current-candidates))))
 
 ;;;###autoload
