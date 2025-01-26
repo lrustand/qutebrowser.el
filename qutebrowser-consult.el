@@ -66,7 +66,9 @@
         :category 'url
 	:state #'qutebrowser-consult--exwm-buffer-state
         :annotate #'qutebrowser-consult--annotate
-        :items (lambda () (mapcar #'qutebrowser-consult--format (qutebrowser-exwm-buffer-search))))
+        :items (lambda ()
+                 (mapcar #'qutebrowser-consult--format
+                         (qutebrowser-exwm-buffer-search))))
   "Consult source for open Qutebrowser windows.")
 
 (defun qutebrowser-consult--exwm-buffer-state ()
@@ -96,7 +98,9 @@
         :category 'url
         :action #'qutebrowser-open-url
 	:annotate #'qutebrowser-consult--annotate
-        :items (lambda () (mapcar #'qutebrowser-consult--format (qutebrowser-bookmark-search))))
+        :items (lambda ()
+                 (mapcar #'qutebrowser-consult--format
+                         (qutebrowser-bookmark-search))))
   "Consult source for Qutebrowser bookmark URLs.")
 
 ;;;; Command source
