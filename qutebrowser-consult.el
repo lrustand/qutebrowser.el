@@ -144,11 +144,11 @@ Set initial completion input to INITIAL."
 	:annotate #'qutebrowser-consult--annotate
 	:async
 	(consult--dynamic-collection
-	    #'qutebrowser--history-search)
+	    #'qutebrowser--history-search
 	  :min-input 0
 	  :throttle 0
 	  :debounce 0
-	  :highlight t)
+	  :highlight t))
   "Consult source for Qutebrowser history.")
 
 ;;;; `qutebrowser-launcher' backend
