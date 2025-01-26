@@ -797,9 +797,11 @@ than `qutebrowser-url-display-length'."
       (sqlite-execute qutebrowser--db-object (format query table) (list url)))))
 
 (defun qutebrowser--candidate-type (item)
+  "Return completion candidate type of ITEM."
   (get-text-property 0 :qutebrowser-candidate-type item))
 
 (defun qutebrowser--candidate-buffer (item)
+  "Return buffer referenced by ITEM."
   (get-text-property 0 :qutebrowser-buffer item))
 
 (defun qutebrowser--switch-to-selected-buffer (item)
