@@ -148,7 +148,7 @@ Set initial completion input to INITIAL."
 	  :min-input 0
 	  :throttle 0
 	  :debounce 0
-	  :highlight t))
+	  :highlight t)
   "Consult source for Qutebrowser history.")
 
 ;;;; `qutebrowser-launcher' backend
