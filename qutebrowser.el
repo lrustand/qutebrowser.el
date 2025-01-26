@@ -946,19 +946,23 @@ The ORIG-FUN takes ARGS."
 
 (defun qutebrowser-rpc--make-network-process ()
   "Make a network process connected to the RPC socket."
-  (when (qutebrowser-is-running-p)
-    (unless (file-exists-p "/tmp/emacs-rpc")
-      (qutebrowser-rpc--bootstrap-server)
-      (sit-for 1))
+  (if (qutebrowser-is-running-p)
+      (progn
+        (unless (file-exists-p "/tmp/emacs-rpc")
+          (qutebrowser-rpc--bootstrap-server)
+          (sit-for 1))
+        (when (file-exists-p "/tmp/emacs-rpc")
+          (make-network-process
+           :name "qutebrowser-rpc"
+           :family 'local
+           :service "/tmp/emacs-rpc"
+           :noquery t
+           :sentinel (lambda (proc event)
+                       (when (string= event "connection broken by remote peer\n")
+                         (delete-process proc))))))
+    ;; If Qutebrowser isn't running, remove any lingering RPC socket
     (when (file-exists-p "/tmp/emacs-rpc")
-      (make-network-process
-       :name "qutebrowser-rpc"
-       :family 'local
-       :service "/tmp/emacs-rpc"
-       :noquery t
-       :sentinel (lambda (proc event)
-                   (when (string= event "connection broken by remote peer\n")
-                     (delete-process proc)))))))
+      (delete-file "/tmp/emacs-rpc"))))
 
 (defvar qutebrowser-rpc--connection nil)
 (defvar qutebrowser-rpc-should-reconnect t)
