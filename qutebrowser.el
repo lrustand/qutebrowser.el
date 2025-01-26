@@ -705,11 +705,12 @@ all the words in WORDS in any of the fields retrieved by FIELD-GETTERS."
 (defun qutebrowser--highlight-matches (words str)
   "Highlight all occurrences of words in WORDS in STR."
   (dolist (word words)
-    (let ((pos 0))
+    (let ((pos 0)
+          (case-fold-search t))
       (while-let ((start (cl-search word str :start2 pos :test #'char-equal))
                   (end (+ start (length word))))
         (setq pos end)
-        (put-text-property start end 'face 'link str)))))
+        (put-text-property start end 'face 'match str)))))
 
 (defun qutebrowser-annotate (entry &optional pad)
   "Return annotation for ENTRY.
@@ -724,8 +725,7 @@ hidden by setting the `invisible' property.
 
 If PAD is non-nil, add padding to the annotation if ENTRY is shorter
 than `qutebrowser-url-display-length'."
-  (let ((input qutebrowser-launcher--current-input)
-        (title (get-text-property 0 'qutebrowser-title entry)))
+  (let ((title (get-text-property 0 'qutebrowser-title entry)))
     ;; Set main face of annotation (title)
     (put-text-property 0 (length title) 'face 'completions-annotations title)
     ;; Highlight all matching words (both in url and title)
@@ -735,10 +735,9 @@ than `qutebrowser-url-display-length'."
     (qutebrowser--shorten-display-url entry)
     (let* ((pad-length (max 0 (- qutebrowser-url-display-length
                                  (length entry))))
-           ;; When used in the dynamic qutebrowser-select-url, we need
+           ;; When used in qutebrowser-completing-read-launcher, we need
            ;; to pad the annotations for alignment. This is not needed
-           ;; when the annotations are used in non-dynamic buffer
-           ;; sources.
+           ;; when the annotations are used in qutebrowser-consult-launcher.
            (padding (when pad (make-string pad-length ?\ ))))
       (concat padding " "  (truncate-string-to-width title qutebrowser-title-display-length)))))
 
@@ -760,31 +759,28 @@ than `qutebrowser-url-display-length'."
       ('command qutebrowser-heading-command--with-count)
       (_ qutebrowser-heading-history--with-count))))
 
-(defvar qutebrowser-launcher--current-input "")
 
-(defun qutebrowser--completion-table (string predicate action)
-  (if (eq action 'metadata)
-      `(metadata . ((category . url)
-                    (display-sort-function . identity)
-                    (annotation-function . ,(lambda (entry)
-                                              (qutebrowser-annotate entry t)))
-                    (group-function . qutebrowser-launcher--group-entries)))
-    ;; FIXME: This looks like an Emacs bug. Should probably report.
-    ;; The bug is: the collection function is called with the
-    ;; 'all-completions' action twice for every input. Once with the
-    ;; actual search string and once with an empty search string. Then
-    ;; it seems to do a union of these two result sets, ignoring
-    ;; anything not present in both. To avoid this we keep a copy of
-    ;; the input string and swap it in when 'string' is empty.
-    (if (string-empty-p string)
-        (setq string qutebrowser-launcher--current-input)
-      (setq qutebrowser-launcher--current-input string))
-    (let ((words (string-split (or string ""))))
-      (append
-       (qutebrowser-command-search words)
-       (qutebrowser-exwm-buffer-search words)
-       (qutebrowser-bookmark-search words)
-       (qutebrowser--history-search words qutebrowser-dynamic-results)))))
+(defalias 'qutebrowser--completion-table
+  (let ((current-candidates nil))
+    (lambda (string predicate action)
+      (if (eq action 'metadata)
+          `(metadata . ((category . url)
+                        (display-sort-function . identity)
+                        (annotation-function . ,(lambda (entry)
+                                                  (qutebrowser-annotate entry t)))
+                        (group-function . qutebrowser-launcher--group-entries)))
+        ;; Only compute the results once per input.  The 'boundaries
+        ;; action seems to be the only one that is passed the input, so we
+        ;; save the results here, and return them for all other actions.
+        (if (listp action)
+            (setq current-candidates
+                  (let ((words (string-split (or string ""))))
+                    (append
+                     (qutebrowser-command-search words)
+                     (qutebrowser-exwm-buffer-search words)
+                     (qutebrowser-bookmark-search words)
+                     (qutebrowser--history-search words qutebrowser-dynamic-results))))
+          current-candidates)))))
 
 ;;;###autoload
 (defun qutebrowser-delete-from-history (url)
@@ -794,7 +790,6 @@ than `qutebrowser-url-display-length'."
 
 (defun qutebrowser-completing-read-launcher (&optional initial default target)
   "Backend for `qutebrowser-launcher' based on `completing-read'."
-  (setq qutebrowser-launcher--current-input "")
   (let* ((prompt (if default
 		     (format "Select (default %s): " default)
                    "Select: "))
