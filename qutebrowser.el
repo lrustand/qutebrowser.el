@@ -681,7 +681,7 @@ all the words in INPUT in any of the fields retrieved by FIELD-GETTERS."
           (format qutebrowser-heading-buffer matches))
     (mapcar (lambda (buffer)
               (let* ((title (substring-no-properties (buffer-name buffer)))
-                     (url (qutebrowser-exwm-buffer-url buffer))
+                     (url (or (qutebrowser-exwm-buffer-url buffer) " "))
                      (win-id (buffer-local-value 'qutebrowser-exwm-win-id buffer))
                      (icon (buffer-local-value 'qutebrowser-exwm-favicon buffer))
 
