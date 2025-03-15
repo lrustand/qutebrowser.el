@@ -24,6 +24,7 @@
 
 (require 'qutebrowser)
 (require 'password-store)
+(require 'password-store-otp)
 (require 'url-parse)
 
 
