@@ -944,28 +944,33 @@ The ORIG-FUN takes ARGS."
           (qutebrowser-config-source hooks))
       (message "RPC Python backend not found. Did you install it? Tip: run `qutebrowser-rpc-ensure-installed'."))))
 
+(defvar qutebrowser-rpc--socket-path "/tmp/emacs-rpc"
+  "Path to the RPC socket.")
+
 (defun qutebrowser-rpc--make-network-process ()
   "Make a network process connected to the RPC socket."
   (if (qutebrowser-is-running-p)
       (progn
-        (unless (file-exists-p "/tmp/emacs-rpc")
+        (unless (file-exists-p qutebrowser-rpc--socket-path)
           (qutebrowser-rpc--bootstrap-server)
           (sit-for 1))
-        (when (file-exists-p "/tmp/emacs-rpc")
+        (when (file-exists-p qutebrowser-rpc--socket-path)
           (make-network-process
            :name "qutebrowser-rpc"
            :family 'local
-           :service "/tmp/emacs-rpc"
+           :service qutebrowser-rpc--socket-path
            :noquery t
            :sentinel (lambda (proc event)
                        (when (string= event "connection broken by remote peer\n")
                          (delete-process proc))))))
     ;; If Qutebrowser isn't running, remove any lingering RPC socket
-    (when (file-exists-p "/tmp/emacs-rpc")
-      (delete-file "/tmp/emacs-rpc"))))
+    (when (file-exists-p qutebrowser-rpc--socket-path)
+      (delete-file qutebrowser-rpc--socket-path))))
 
-(defvar qutebrowser-rpc--connection nil)
-(defvar qutebrowser-rpc-should-reconnect t)
+(defvar qutebrowser-rpc--connection nil
+  "The jsonrpc-connection to the Qutebrowser RPC backend.")
+(defvar qutebrowser-rpc-should-reconnect t
+  "If non-nil, try to reconnect to RPC every 10 seconds if connction is lost.")
 (defvar qutebrowser-rpc--reconnect-timer nil)
 
 (defun qutebrowser-rpc-maybe-reconnect (&rest _)
