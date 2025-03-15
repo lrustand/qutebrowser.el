@@ -137,7 +137,7 @@ Set initial completion input to INITIAL."
     (consult--multi '(qutebrowser-consult--command-source)
                     :group nil
 		    :prompt "Command: "
-		    :initial (or initial ":")
+		    :initial initial
 		    :history 'qutebrowser-consult--command-history)))
 
 ;;;; History source
