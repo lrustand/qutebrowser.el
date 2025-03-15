@@ -1,6 +1,6 @@
 ;;; qutebrowser-pass.el --- Pass autofill for Qutebrowser     -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 Lars Rustand.
+;; Copyright (C) 2025 Lars Rustand.
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
