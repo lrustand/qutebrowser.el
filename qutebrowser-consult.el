@@ -160,6 +160,34 @@ Set initial completion input to INITIAL."
 	  :highlight t))
   "Consult source for Qutebrowser history.")
 
+;;;; Google autosuggest source
+(defvar qutebrowser-consult--google-autosuggest-source
+  (list :name "Google suggestions"
+	:hidden nil
+	:narrow ?g
+	:history nil
+	:category 'url
+	:action #'qutebrowser-open-url
+	:new #'qutebrowser-open-url
+	:async
+	(consult--dynamic-collection
+            (lambda (input)
+              (let* ((buffer (url-retrieve-synchronously (concat "https://suggestqueries.google.com/complete/search?client=firefox&q=" (url-hexify-string input))))
+                     (json-array-type 'list)
+                     json-data)
+                (with-current-buffer buffer
+                  (goto-char (point-min))
+                  (re-search-forward "^$")
+                  (setq json-data (json-read)))
+                (kill-buffer buffer)
+                (cadr json-data)))
+	  :min-input 0
+	  :throttle 0
+	  :debounce 0
+	  :highlight t))
+  "Consult source for Google search suggestions.")
+
+
 ;;;; `qutebrowser-launcher' backend
 ;;;###autoload
 (defun qutebrowser-consult-launcher (&optional initial default target)
