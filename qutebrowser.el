@@ -583,7 +583,8 @@ Return up to LIMIT results."
 
 (defun qutebrowser--shorten-display-string (string max-length)
   "Shorten STRING by making the end invisible."
-  (let ((string-length (length string)))
+  (let ((string (substring string)) ; Copy it to avoid modifying the original
+        (string-length (length string)))
     (when (> string-length max-length)
       (put-text-property max-length string-length 'invisible t string))
     string))
