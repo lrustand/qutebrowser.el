@@ -297,6 +297,15 @@ config.bind(',P', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass-pas
 config.bind(',o', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass-otp \"{url}\")'")
 #+end_src
 
+Per default =username= is expected to be the last item of a pass entry, e.g.
+=site.com/username=. In case you store =username= encrypted along the password,
+configure the username extractor accordingly:
+
+#+begin_src elisp
+(setq qutebrowser-pass--username
+      (apply-partially #'auth-source-pass-get "login"))
+#+end_src
+
 * Recommended third-party packages
 
 - vertico-posframe-mode
