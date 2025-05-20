@@ -27,6 +27,23 @@
 (require 'password-store-otp)
 (require 'url-parse)
 
+(defgroup qutebrowser-pass nil
+  "Password store integration for Qutebrowser."
+  :group 'qutebrowser
+  :prefix "qutebrowser-pass")
+
+(defcustom qutebrowser-pass-username-function
+  #'qutebrowser-pass-username-from-path
+  "Function to retrieve the username for a pass entry."
+  :type 'symbol
+  :group 'qutebrowser-pass)
+
+(defalias 'qutebrowser-pass-username-from-path #'file-name-nondirectory
+  "Extract username as the last path segment of FILENAME.")
+
+(defsubst qutebrowser-pass-username-from-field (field)
+  "Extract username from FIELD of a pass entry."
+  (lambda (e) (password-store-get-field e field)))
 
 (defun qutebrowser-pass--select-entry (search)
   "Select an entry from password store matching SEARCH."
@@ -57,7 +74,7 @@ one.  If there is only one matching entry it is selected automatically."
   (interactive)
   (when-let ((selected (qutebrowser-pass--select-entry search)))
     (unless (eq :password-only limit)
-      (let ((username (car (last (string-split selected "/")))))
+      (let ((username (funcall qutebrowser-pass-username-function selected)))
         (qutebrowser-fake-keys username)))
     ;; Only tab when inputting both username and password
     (unless limit (qutebrowser-fake-keys--raw "<Tab>"))
