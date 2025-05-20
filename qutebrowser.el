@@ -1131,8 +1131,10 @@ PARAMS are the parameters given."
 CONN is the `jsonrpc-connection' the request was received on.
 METHOD is the method that was called.
 PARAMS are the parameters given."
-  (message "Receive request from QB: %s, %s" method params)
-  "Responding from Emacs!")
+  (cl-case method
+    (eval (eval (read (plist-get params :code))))
+    (t (message "Receive request from QB: %s, %s" method params)
+       "Responding from Emacs!")))
 
 ;;;; Command sending functions
 
