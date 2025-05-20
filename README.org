@@ -188,27 +188,6 @@ an Emacs server. Add this to your =init.el=:
   (server-start)
 #+end_src
 
-To open a URL in the current buffer through userscripts, Emacs needs
-the path to the FIFO, which Qutebrowser passes through an environment
-variable. Unfortunately, =emacsclient= does not pass on the environment
-variables to the command it is running, so we make the following small
-userscript wrapper around =emacslient= that simply let-binds the
-environment variable to a local variable before executing the given
-command:
-
-#+begin_src bash
-#!/usr/bin/env bash
-emacsclient -e \
-  "(let ((qutebrowser-fifo \"$QUTE_FIFO\")
-         (qutebrowser-command-backend 'qutebrowser-fifo-send))
-     (condition-case nil
-         $@
-       (t \"\")))" ; true
-#+end_src
-
-Because of a bug in emacsclient that causes a delay if a command
-returns a failure, we also wrap the command in a =condition-case=.
-
 * Usage
 :PROPERTIES:
 :CUSTOM_ID: usage
@@ -245,12 +224,12 @@ The URL launcher can be used instead of the default by binding it
 inside Qutebrowser:
 
 #+begin_src python
-config.bind("o", "spawn --userscript emacsclient-wrapper '(qutebrowser-launcher)'")
-config.bind("O", "spawn --userscript emacsclient-wrapper '(qutebrowser-launcher-tab)'")
-config.bind("wo", "spawn --userscript emacsclient-wrapper '(qutebrowser-launcher-window)'")
-config.bind("W", "spawn --userscript emacsclient-wrapper '(qutebrowser-launcher-private)'")
-config.bind("go", "spawn --userscript emacsclient-wrapper '(qutebrowser-launcher \"{url:pretty}\")'")
-config.bind("gO", "spawn --userscript emacsclient-wrapper '(qutebrowser-launcher-tab \"{url:pretty}\")'")
+config.bind("o", "emacs '(qutebrowser-launcher)'")
+config.bind("O", "emacs '(qutebrowser-launcher-tab)'")
+config.bind("wo", "emacs '(qutebrowser-launcher-window)'")
+config.bind("W", "emacs '(qutebrowser-launcher-private)'")
+config.bind("go", "emacs '(qutebrowser-launcher \"{url:pretty}\")'")
+config.bind("gO", "emacs '(qutebrowser-launcher-tab \"{url:pretty}\")'")
 #+end_src
 
 It can also be used directly from inside Emacs by running one of the
@@ -292,9 +271,9 @@ Username and password autofill can be accomplished by using the
 =qutebrowser-pass= command, which can be bound like this:
 
 #+begin_src python
-config.bind(',p', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass \"{url}\")'")
-config.bind(',P', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass-password-only \"{url}\")'")
-config.bind(',o', "spawn --userscript emacsclient-wrapper '(qutebrowser-pass-otp \"{url}\")'")
+config.bind(',p', "emacs '(qutebrowser-pass \"{url}\")'")
+config.bind(',P', "emacs '(qutebrowser-pass-password-only \"{url}\")'")
+config.bind(',o', "emacs '(qutebrowser-pass-otp \"{url}\")'")
 #+end_src
 
 Per default =username= is expected to be the last item of a pass entry, e.g.
