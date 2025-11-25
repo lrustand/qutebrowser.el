@@ -1132,7 +1132,11 @@ CONN is the `jsonrpc-connection' the request was received on.
 METHOD is the method that was called.
 PARAMS are the parameters given."
   (cl-case method
-    (eval (eval (read (plist-get params :code))))
+    (eval
+     (with-current-buffer
+         (or (and exwm-wm-mode (exwm--id->buffer (plist-get params :x11-win-id)))
+             (current-buffer))
+       (eval (read (plist-get params :code)))))
     (t (message "Receive request from QB: %s, %s" method params)
        "Responding from Emacs!")))
 

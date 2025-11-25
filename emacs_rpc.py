@@ -16,7 +16,9 @@ from dataclasses import dataclass
 from tempfile import mkstemp
 from typing import Sequence, Callable, Optional, Union
 
-from PyQt6.QtCore import QByteArray, pyqtSlot
+from qutebrowser.qt.core import QByteArray, pyqtSlot
+from qutebrowser.qt.widgets import QApplication
+
 from qutebrowser.api import message, cmdutils
 from qutebrowser.browser.browsertab import AbstractTab
 from qutebrowser.commands import runners
@@ -717,8 +719,11 @@ def emacs(code: str,
     """
 
     callback = print_result if show else nop
-    objreg.get("emacs-rpc").send_request("eval", {"code": code},
-                                         result_callback=callback)
+    objreg.get("emacs-rpc").send_request(
+        "eval",
+        {"code": code, "x11-win-id": int(QApplication.activeWindow().winId())},
+        result_callback=callback,
+    )
 
 
 if __name__ == "config":
