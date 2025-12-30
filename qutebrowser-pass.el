@@ -58,7 +58,8 @@
       (if (= (length pass-entries) 1)
           (car pass-entries)
         (completing-read "Select: " pass-entries))
-    (message "No pass entry found for %s" search)))
+    (message "No pass entry found for %s" search)
+    nil))
 
 ;;;###autoload
 (defun qutebrowser-pass (&optional search limit)
