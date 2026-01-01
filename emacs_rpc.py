@@ -107,10 +107,13 @@ def get_tabs(window: MainWindow) -> list[AbstractTab]:
     return tabs
 
 
-def get_window(win_id: int) -> MainWindow:
+def get_window(win_id: Optional[int] = None) -> MainWindow:
     """Return window."""
 
-    window = objreg.window_registry.get(win_id)
+    if win_id is not None:
+        window = objreg.window_registry.get(win_id)
+    else:
+        window = objreg.last_focused_window()
 
     if window is None:
         raise Exception(f"No such window {win_id}")
@@ -130,7 +133,7 @@ def find_window(x11_win_id: int) -> MainWindow:
 
 # pylint: disable=C0103, W0122, W0123
 @rpcmethod()
-def EVAL(code: str, repl: bool = False) -> str:
+def EVAL(code: str = "", repl: bool = False) -> str:
     """Evaluate or execute code.
 
     Will first try to evaluate as an expression to return a value.
@@ -263,7 +266,7 @@ def get_window_mode(win_id: int) -> str:
 
 
 @rpcmethod()
-def is_window_audible(win_id: int) -> bool:
+def is_window_audible(win_id: Optional[int] = None) -> bool:
     """Return a boolean indicating the audible status of window."""
     window = get_window(win_id)
 

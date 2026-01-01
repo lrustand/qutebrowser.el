@@ -1151,7 +1151,8 @@ PARAMS are the parameters given."
   (cl-case method
     (eval
      (with-current-buffer
-         (or (and exwm-wm-mode (exwm--id->buffer (plist-get params :x11-win-id)))
+         (or (and (fboundp 'exwm--id->buffer)
+                  (exwm--id->buffer (plist-get params :x11-win-id)))
              (current-buffer))
        (eval (read (plist-get params :code)))))
     (t (message "Receive request from QB: %s, %s" method params)
