@@ -408,6 +408,9 @@ This list is used to identify running Qutebrowser processes.")
 (defvar-local qutebrowser-exwm-recently-audible nil
   "Contains the recently audible status of Qutebrowser.")
 
+(defvar-local qutebrowser-exwm-private nil
+  "Contains the private status of Qutebrowser.")
+
 (defvar-local qutebrowser-exwm-x-scroll-perc nil
   "Contains the current x scroll percentage of Qutebrowser.")
 
@@ -498,6 +501,7 @@ and BODY is one or more forms to execute if KEY is in PLIST."
                            (string-replace "file://" "" url))))
         (x-scroll-perc (setq-local qutebrowser-exwm-x-scroll-perc x-scroll-perc))
         (y-scroll-perc (setq-local qutebrowser-exwm-y-scroll-perc y-scroll-perc))
+        (private (setq-local qutebrowser-exwm-private private))
         (recently-audible (setq-local qutebrowser-exwm-recently-audible recently-audible))))))
 
 
@@ -572,6 +576,16 @@ Return up to LIMIT results."
   (with-current-buffer (or buffer (current-buffer))
     (string-equal "qutebrowser"
                   exwm-class-name)))
+
+(defun qutebrowser-exwm-audible-p (&optional buffer)
+  "Return t if BUFFER is an audible Qutebrowser EXWM buffer."
+  (eq t
+      (buffer-local-value 'qutebrowser-exwm-recently-audible (or (get-buffer buffer) (current-buffer)))))
+
+(defun qutebrowser-exwm-private-p (&optional buffer)
+  "Return t if BUFFER is an audible Qutebrowser EXWM buffer."
+  (eq t
+      (buffer-local-value 'qutebrowser-exwm-private (or (get-buffer buffer) (current-buffer)))))
 
 (defun qutebrowser-exwm-buffer-url (&optional buffer)
   "Return the URL of BUFFER or the current buffer."
@@ -669,14 +683,17 @@ all the words in INPUT in any of the fields retrieved by FIELD-GETTERS."
                             :qutebrowser-title bookmark)))
             matching-bookmarks)))
 
-(defun qutebrowser-exwm-buffer-search (&optional input)
-  "Return a propertized list of Qutebrowser buffers matching INPUT."
+(defun qutebrowser-exwm-buffer-search (&optional input predicate)
+  "Return a propertized list of Qutebrowser buffers matching INPUT and PREDICATE."
   (let* ((buffers (qutebrowser-exwm-buffer-list))
-         (matching-buffers
-          (qutebrowser--filter-list input
-                                    buffers
-                                    #'buffer-name
-                                    #'qutebrowser-exwm-buffer-url))
+         (input-matching-buffers
+           (qutebrowser--filter-list input
+                                     buffers
+                                     #'buffer-name
+                                     #'qutebrowser-exwm-buffer-url))
+         (matching-buffers (if predicate
+                               (seq-filter predicate input-matching-buffers)
+                             input-matching-buffers))
          (matches (length matching-buffers)))
     (setq qutebrowser-heading-buffer--with-count
           (format qutebrowser-heading-buffer matches))

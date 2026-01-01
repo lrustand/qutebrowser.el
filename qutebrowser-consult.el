@@ -77,6 +77,36 @@
     (lambda (action cand)
       (funcall state action (qutebrowser--candidate-buffer cand)))))
 
+;;;; Audio playing buffer source
+
+(defvar qutebrowser-consult--audible-buffer-source
+  (list :name "Qutebrowser audible buffers"
+        :hidden nil
+        :narrow ?a
+        :history nil
+        :category 'url
+	:state #'qutebrowser-consult--exwm-buffer-state
+        :annotate #'qutebrowser-consult--annotate
+        :items (lambda ()
+                 (qutebrowser-exwm-buffer-search nil
+                                                 #'qutebrowser-exwm-audible-p)))
+  "Consult source for audible Qutebrowser windows.")
+
+;;;; Private buffer source
+
+(defvar qutebrowser-consult--private-buffer-source
+  (list :name "Qutebrowser private buffers"
+        :hidden nil
+        :narrow ?p
+        :history nil
+        :category 'url
+	:state #'qutebrowser-consult--exwm-buffer-state
+        :annotate #'qutebrowser-consult--annotate
+        :items (lambda ()
+                 (qutebrowser-exwm-buffer-search nil
+                                                 #'qutebrowser-exwm-private-p)))
+  "Consult source for private Qutebrowser windows.")
+
 ;;;; Bookmark source
 (defvar qutebrowser-consult--bookmark-source
   (list :name "Qutebrowser bookmarks"
