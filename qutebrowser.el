@@ -439,7 +439,7 @@ will be deleted."
   (if (and (file-regular-p icon-file)
            ;; Not empty
            (> (nth 7 (file-attributes icon-file)) 0))
-      (when-let ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
+      (when-let* ((image (create-image icon-file nil nil :height 16 :width 16 :ascent 'center)))
         (let ((old-icon-file (image-property qutebrowser-exwm-favicon :file)))
           (setq-local qutebrowser-exwm-favicon image)
           (when old-icon-file
@@ -449,7 +449,7 @@ will be deleted."
 
 (defun qutebrowser-exwm--delete-favicon-tempfile ()
   "Deletes the tempfile associated with the favicon of current buffer."
-  (when-let ((icon-file (image-property qutebrowser-exwm-favicon :file)))
+  (when-let* ((icon-file (image-property qutebrowser-exwm-favicon :file)))
     (delete-file icon-file)))
 
 (add-hook 'kill-buffer-hook #'qutebrowser-exwm--delete-favicon-tempfile)
@@ -991,7 +991,7 @@ If FLUSH is non-nil, delete any existing connection before reconnecting."
       (setq process nil))
     (unless (qutebrowser-rpc-connected-p)
       (condition-case err
-          (when-let ((proc (qutebrowser-rpc--make-network-process)))
+          (when-let* ((proc (qutebrowser-rpc--make-network-process)))
             (setq qutebrowser-rpc--connection
                   (qutebrowser-jsonrpc-process-connection
                    :name "qutebrowser-jsonrpc"
