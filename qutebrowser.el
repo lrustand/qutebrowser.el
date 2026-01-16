@@ -370,6 +370,12 @@ The window information plist contains (one or more of) the following keys:
   :group 'qutebrowser-hooks
   :type 'hook)
 
+(defcustom qutebrowser-theme-export-functions
+  (list #'qutebrowser-theme-export--face-mappings)
+  "Functions that insert content into the theme file."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
 ;;;; Variables
 
 (defvar qutebrowser-process-names
@@ -1491,6 +1497,17 @@ It runs the `%s' RPC method in Qutebrowser.\n\n" method-name)
     (remove-hook 'exwm-manage-finish-hook #'qutebrowser-exwm-mode-maybe-enable)))
 
 ;;;; Theme export mode
+(defun qutebrowser-theme-export--face-mappings ()
+  "Write `qutebrowser-theme-export-face-mappings' values."
+  (dolist (mapping qutebrowser-theme-export-face-mappings)
+    (let* ((qute-face (symbol-name (car mapping)))
+           (emacs-face (cdr mapping))
+           (is-fg (string-match-p "\\.fg$" qute-face))
+           (attribute (if is-fg :foreground :background))
+           (color (face-attribute emacs-face attribute nil 'default))
+           (hex-color (apply #'color-rgb-to-hex
+                             (append (color-name-to-rgb color) '(2)))))
+      (insert (format "c.colors.%s = '%s'\n" qute-face hex-color)))))
 
 ;;;###autoload
 (defun qutebrowser-theme-export ()
@@ -1499,15 +1516,7 @@ It runs the `%s' RPC method in Qutebrowser.\n\n" method-name)
   (with-temp-file (expand-file-name "emacs_theme.py"
                                     qutebrowser-config-directory)
     (insert "# Qutebrowser theme exported from Emacs\n\n")
-    (dolist (mapping qutebrowser-theme-export-face-mappings)
-      (let* ((qute-face (symbol-name (car mapping)))
-             (emacs-face (cdr mapping))
-             (is-fg (string-match-p "\\.fg$" qute-face))
-             (attribute (if is-fg :foreground :background))
-             (color (face-attribute emacs-face attribute nil 'default))
-             (hex-color (apply #'color-rgb-to-hex
-                               (append (color-name-to-rgb color) '(2)))))
-        (insert (format "c.colors.%s = '%s'\n" qute-face hex-color))))))
+    (run-hooks 'qutebrowser-theme-export-functions)))
 
 ;;;###autoload
 (defun qutebrowser-theme-export-and-apply (&rest _)
