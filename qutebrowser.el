@@ -164,6 +164,11 @@ to be installed in Qutebrowser."
   :risky t
   :group 'qutebrowser)
 
+(defcustom qutebrowser-rpc-timeout 1
+  "Timeout for RPC invocations."
+  :type 'number
+  :group 'qutebrowser)
+
 (defcustom qutebrowser-config-directory
   "~/.config/qutebrowser/"
   "Path to the Qutebrowser config directory."
@@ -1091,7 +1096,7 @@ PARAMS are the arguments for the method, and should be a plist
 containing keyword arguments."
   (let ((conn (qutebrowser-rpc-get-connection))
         (params (qutebrowser-rpc--format-params params)))
-    (jsonrpc-request conn method params :timeout 1)))
+    (jsonrpc-request conn method params :timeout qutebrowser-rpc-timeout)))
 
 (cl-defun qutebrowser-rpc-async-request
     (method &optional params &rest args &key success-fn error-fn timeout-fn)
@@ -1106,7 +1111,7 @@ SUCCESS-FN, ERROR-FN and TIMEOUT-FN as in `jsonrpc-async-request'."
              (qutebrowser-jsonrpc-process-connection-p conn)
              (process-live-p (jsonrpc--process conn)))
         (jsonrpc-async-request conn method params
-                               :timeout 1
+                               :timeout qutebrowser-rpc-timeout
                                :timeout-fn timeout-fn
                                :success-fn success-fn
                                :error-fn error-fn)
