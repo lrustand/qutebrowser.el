@@ -90,7 +90,7 @@
     (messages.info.bg . success)
     (messages.info.border . success)
     (prompts.fg . minibuffer-prompt)
-    (prompts.bg . highlight)
+    (prompts.bg . minibuffer-prompt)
     (prompts.border . minibuffer-prompt)
     (prompts.selected.fg . success)
     (prompts.selected.bg . success)
