@@ -90,7 +90,7 @@
     (messages.info.bg . success)
     (messages.info.border . success)
     (prompts.fg . minibuffer-prompt)
-    (prompts.bg . highlight)
+    (prompts.bg . minibuffer-prompt)
     (prompts.border . minibuffer-prompt)
     (prompts.selected.fg . success)
     (prompts.selected.bg . success)
@@ -162,6 +162,11 @@ to be installed in Qutebrowser."
                  (const :tag "Commandline" qutebrowser-commandline-send)
                  (function :tag "Custom command"))
   :risky t
+  :group 'qutebrowser)
+
+(defcustom qutebrowser-rpc-timeout 1
+  "Timeout for RPC invocations."
+  :type 'number
   :group 'qutebrowser)
 
 (defcustom qutebrowser-config-directory
@@ -367,6 +372,12 @@ The window information plist contains (one or more of) the following keys:
   - `:recently-audible' is t if the window is currently or was recently audible.
   - `:x-scroll-perc' is the scroll percentage in the x direction.
   - `:y-scroll-perc' is the scroll percentage in the y direction."
+  :group 'qutebrowser-hooks
+  :type 'hook)
+
+(defcustom qutebrowser-theme-export-functions
+  (list #'qutebrowser-theme-export--face-mappings)
+  "Functions that insert content into the theme file."
   :group 'qutebrowser-hooks
   :type 'hook)
 
@@ -1085,7 +1096,7 @@ PARAMS are the arguments for the method, and should be a plist
 containing keyword arguments."
   (let ((conn (qutebrowser-rpc-get-connection))
         (params (qutebrowser-rpc--format-params params)))
-    (jsonrpc-request conn method params :timeout 1)))
+    (jsonrpc-request conn method params :timeout qutebrowser-rpc-timeout)))
 
 (cl-defun qutebrowser-rpc-async-request
     (method &optional params &rest args &key success-fn error-fn timeout-fn)
@@ -1100,7 +1111,7 @@ SUCCESS-FN, ERROR-FN and TIMEOUT-FN as in `jsonrpc-async-request'."
              (qutebrowser-jsonrpc-process-connection-p conn)
              (process-live-p (jsonrpc--process conn)))
         (jsonrpc-async-request conn method params
-                               :timeout 1
+                               :timeout qutebrowser-rpc-timeout
                                :timeout-fn timeout-fn
                                :success-fn success-fn
                                :error-fn error-fn)
@@ -1491,6 +1502,17 @@ It runs the `%s' RPC method in Qutebrowser.\n\n" method-name)
     (remove-hook 'exwm-manage-finish-hook #'qutebrowser-exwm-mode-maybe-enable)))
 
 ;;;; Theme export mode
+(defun qutebrowser-theme-export--face-mappings ()
+  "Write `qutebrowser-theme-export-face-mappings' values."
+  (dolist (mapping qutebrowser-theme-export-face-mappings)
+    (let* ((qute-face (symbol-name (car mapping)))
+           (emacs-face (cdr mapping))
+           (is-fg (string-match-p "\\.fg$" qute-face))
+           (attribute (if is-fg :foreground :background))
+           (color (face-attribute emacs-face attribute nil 'default))
+           (hex-color (apply #'color-rgb-to-hex
+                             (append (color-name-to-rgb color) '(2)))))
+      (insert (format "c.colors.%s = '%s'\n" qute-face hex-color)))))
 
 ;;;###autoload
 (defun qutebrowser-theme-export ()
@@ -1499,15 +1521,7 @@ It runs the `%s' RPC method in Qutebrowser.\n\n" method-name)
   (with-temp-file (expand-file-name "emacs_theme.py"
                                     qutebrowser-config-directory)
     (insert "# Qutebrowser theme exported from Emacs\n\n")
-    (dolist (mapping qutebrowser-theme-export-face-mappings)
-      (let* ((qute-face (symbol-name (car mapping)))
-             (emacs-face (cdr mapping))
-             (is-fg (string-match-p "\\.fg$" qute-face))
-             (attribute (if is-fg :foreground :background))
-             (color (face-attribute emacs-face attribute nil 'default))
-             (hex-color (apply #'color-rgb-to-hex
-                               (append (color-name-to-rgb color) '(2)))))
-        (insert (format "c.colors.%s = '%s'\n" qute-face hex-color))))))
+    (run-hooks 'qutebrowser-theme-export-functions)))
 
 ;;;###autoload
 (defun qutebrowser-theme-export-and-apply (&rest _)
