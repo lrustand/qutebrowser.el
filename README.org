@@ -205,6 +205,20 @@ every Qutebrowser buffer.
 Currently the mode only activates the bookmark integration, but it can
 also potentially be used to set keybindings for Qutebrowser buffers.
 
+** Qutebrowser Fileselect mode
+:PROPERTIES:
+:CUSTOM_ID: qutebrowser-fileselect-mode
+:END:
+
+=qutebrowser-fileselect-mode= enables file selection using either =completing-read=
+or =dired= (see =qutebrowser-fileselect-handler=). To make it work add to =config.py=:
+
+#+begin_src python
+c.fileselect.handler = 'external'
+c.fileselect.single_file.command = ['emacsclient', '{}']
+c.fileselect.folder.command = ['emacsclient', '{}']
+c.fileselect.multiple_files.command = ['emacsclient', '{}']
+#+end_src
 ** Bookmarks
 :PROPERTIES:
 :CUSTOM_ID: bookmarks
