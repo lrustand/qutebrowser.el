@@ -75,7 +75,7 @@
 (defun qutebrowser--fileselect (&rest _)
   "Call `qutebrowser-fileselect-handler'.
 The handler receives as an argument a buffer where the selected files
-should be written. files should be written."
+should be written."
   (when (string-prefix-p "qutebrowser-fileselect-"
                          (file-name-nondirectory buffer-file-name))
     ;; run after `server-visit-hook' exits to not mess up its logic

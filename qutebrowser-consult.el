@@ -49,8 +49,11 @@
 ;;;; Helper functions
 (defun qutebrowser-consult--annotate (entry)
   "Return annotation for ENTRY."
-  (let ((title (get-text-property 0 :qutebrowser-title entry)))
-    (propertize title 'face 'completions-annotations)))
+  (let* ((title (get-text-property 0 :qutebrowser-title entry))
+         (timestamp (get-text-property 0 :qutebrowser-timestamp entry))
+         (date-str (when timestamp (format-time-string "[%F] " timestamp))))
+    (propertize (concat date-str title)
+                'face 'completions-annotations)))
 
 (defun qutebrowser-consult--format (entry)
   "Format ENTRY for completion."

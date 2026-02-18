@@ -538,7 +538,7 @@ Return up to LIMIT results."
          (limit (if qutebrowser-dynamic-results
                     (format "LIMIT %d" qutebrowser-dynamic-results)
                   ""))
-         (query (format "SELECT url,substr(title,0,%d)
+         (query (format "SELECT url,substr(title,0,%d),last_atime
                          FROM CompletionHistory
                          WHERE %s AND NOT (%s)
                          ORDER BY %s
@@ -555,10 +555,12 @@ Return up to LIMIT results."
     ;; Return list of URLs propertized with title
     (mapcar (lambda (row)
               (let* ((url (car row))
-                     (title (cadr row)))
+                     (title (cadr row))
+                     (atime (nth 2 row)))
                 (propertize (qutebrowser--shorten-display-url url)
                             :qutebrowser-candidate-type 'url
-                            :qutebrowser-title title)))
+                            :qutebrowser-title title
+                            :qutebrowser-timestamp atime)))
             rows)))
 
 ;;;; Utility functions
