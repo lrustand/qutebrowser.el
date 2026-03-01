@@ -38,8 +38,7 @@
   :prefix "qutebrowser-consult")
 
 (defcustom qutebrowser-consult-launcher-sources
-  '(qutebrowser-consult--exwm-buffer-source
-    qutebrowser-consult--bookmark-url-source
+  '(qutebrowser-consult--bookmark-url-source
     qutebrowser-consult--history-source
     qutebrowser-consult--command-source)
   "Sources used by `qutebrowser-consult-launcher'."
